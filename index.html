@@ -78,10 +78,10 @@
 
 .radio-group {
   display: flex;
-  gap: 5px;
-  border: 2px solid #888;
-  border-radius: 6px;
-  padding: 6px 10px;
+  gap: 3px;
+  border: 1px solid #888;
+  border-radius: 4px;
+  padding: 2px 4px;
   background: #f5f5f5;
   box-sizing: border-box;
   flex-wrap: wrap;
@@ -90,21 +90,21 @@
 
 .radio-label {
   white-space: nowrap;
-  gap: 4px;
+  gap: 2px;
   font-size: 12px;
 }
 .radio-group-compact {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-  gap: 1px;
-  padding: 1px 5px;
+  gap: 0px;
+  padding: 1px 2px;
   border: 1px solid #888;
   border-radius: 4px;
   background: #f5f5f5;
   max-width: 300px;
   align-items: center;
-  height: 26px;
+  height: 22px;
 }
 
 .radio-group-compact .radio-label {
@@ -112,14 +112,14 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-  padding: 1px 3px;
+  padding: 0px 2px;
   height: 100%;
 }
 
 .radio-label input[type="radio"] {
   margin: 0;
-  height: 14px;
-  width: 14px;
+  height: 12px;
+  width: 12px;
   vertical-align: middle;
 }
 
@@ -299,19 +299,20 @@
 
 <div class="header">
   <!-- Zeile 1: Logo + Verein -->
-  <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 0px; width: 100%;">
+  <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 0px;">
     <img src="Skat.png" alt="Skat-Logo" style="height: 40px;">
     <span style="font-size:20px; font-weight: bold;">1. Sintherner Skatclub 1992 e.V.</span>
-    <span style="margin-left:auto;">Spieler:</span>
-    <div class="radio-group radio-group-compact">
-      <label class="radio-label"><input type="radio" name="spieleranzahl" value="4" checked>4er</label>
-      <label class="radio-label"><input type="radio" name="spieleranzahl" value="3">3er</label>
-    </div>
   </div>
   <br>
 
   <!-- Zeile 2: Auswahlbuttons -->
   <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+    <span>Spieler:</span>
+    <div class="radio-group radio-group-compact">
+      <label class="radio-label"><input type="radio" name="spieleranzahl" value="3">3</label>
+      <label class="radio-label"><input type="radio" name="spieleranzahl" value="4" checked>4</label>
+    </div>
+
     <span>Serie:</span>
     <div class="radio-group radio-group-compact">
       <label class="radio-label"><input type="radio" name="serie" value="1" checked>1.</label>
@@ -326,8 +327,8 @@
       <label class="radio-label"><input type="radio" name="tisch" value="4">4</label>
       <label class="radio-label"><input type="radio" name="tisch" value="5">5</label>
       <label class="radio-label"><input type="radio" name="tisch" value="6">6</label>
-      <label class="radio-label"><input type="radio" name="tisch" value="7">7</label>
     </div>
+
     <span>Spiele:</span>
     <div id="karten-auswahl" class="radio-group radio-group-compact">
       <label class="radio-label"><input type="radio" name="karten" value="36" checked>36</label>
