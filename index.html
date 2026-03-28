@@ -370,7 +370,6 @@
       <button type="button" onclick="setGrundwert('♥')" style="padding:12px 18px; color:red;font-size:48px; min-width:80px; border-radius:6px;">♥</button>
       <button type="button" onclick="setGrundwert('♦')" style="padding:12px 18px; color:red; font-size:48px; min-width:80px; border-radius:6px;">♦</button>
       <button type="button" onclick="setGrundwert('Null')" style="padding:12px 18px; font-size:16px; min-width:80px; border-radius:6px;">Null</button>
-      <button type="button" onclick="setGrundwert('Pass')" style="padding:12px 18px; font-size:16px; min-width:80px; border-radius:6px;">Pass</button>
     </div>
 
     <div id="spitzen-buttons" style="display:flex; gap:10px; margin-top:5px;height: 80px">
@@ -398,17 +397,22 @@
   </label>
 </div>
 
-    <!-- Gewonnen / Verloren Buttons -->
+    <!-- Gewonnen / Verloren / Eingepasst Buttons -->
     <div style="display:flex; gap:16px; margin-top:20px; justify-content:center;">
       <button type="button" id="btn-gewonnen"
               style="padding:16px 40px; font-size:20px; font-weight:bold; border:none; border-radius:8px;
-                     background:#4CAF50; color:white; cursor:pointer; min-width:180px;">
+                     background:#4CAF50; color:white; cursor:pointer; min-width:150px;">
         Gewonnen
       </button>
       <button type="button" id="btn-verloren"
               style="padding:16px 40px; font-size:20px; font-weight:bold; border:none; border-radius:8px;
-                     background:#e53935; color:white; cursor:pointer; min-width:180px;">
+                     background:#e53935; color:white; cursor:pointer; min-width:150px;">
         Verloren
+      </button>
+      <button type="button" id="btn-eingepasst"
+              style="padding:16px 40px; font-size:20px; font-weight:bold; border:none; border-radius:8px;
+                     background:#1976D2; color:white; cursor:pointer; min-width:150px;">
+        Eingepasst
       </button>
     </div>
   </form>
@@ -1461,6 +1465,31 @@ document.getElementById("btn-verloren").addEventListener("click", () => {
   saveGame(false);
 });
 
+document.getElementById("btn-eingepasst").addEventListener("click", () => {
+  const form = document.getElementById("spiel-form");
+  const index = parseInt(form.dataset.spielIndex, 10);
+  if (isNaN(index)) {
+    alert("Kein gültiges Spiel ausgewählt.");
+    return;
+  }
+  const spiel = spielDaten[index];
+  spiel.grundwert = "E";
+  spiel.spieler = null;
+  spiel.gewonnen = null;
+  spiel.pluswert = "";
+  spiel.minuswert = "";
+  spiel.hand = "";
+  spiel.schneider = "";
+  spiel.schneiderang = "";
+  spiel.schwarz = "";
+  spiel.schwarzang = "";
+  spiel.offen = "";
+  spiel.mitSpitzen = 0;
+  spiel.ohneSpitzen = 0;
+  fillTable();
+  closeSpielDialog();
+});
+
 function saveGame(gewonnen) {
     const form = document.getElementById("spiel-form");
     const index = parseInt(form.dataset.spielIndex, 10);
@@ -1670,9 +1699,60 @@ function updateCopyright() {
 }
 
 
-// ── Spielstand speichern / laden (localStorage) ───────────────────
-function saveState() {
-  const state = {
+// ── Speicher-Abstraktion (localStorage → IndexedDB Fallback) ──────
+const STORE_KEY = 'skatSpielstand';
+let _db = null;
+
+function _storageOK() {
+  try {
+    localStorage.setItem('_test', '1');
+    localStorage.removeItem('_test');
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function _openDB() {
+  return new Promise((resolve, reject) => {
+    if (_db) { resolve(_db); return; }
+    const req = indexedDB.open('SkatDB', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('state');
+    req.onsuccess = () => { _db = req.result; resolve(_db); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function _idbSet(key, val) {
+  return _openDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction('state', 'readwrite');
+    tx.objectStore('state').put(val, key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+function _idbGet(key) {
+  return _openDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction('state', 'readonly');
+    const req = tx.objectStore('state').get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+function _idbDel(key) {
+  return _openDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction('state', 'readwrite');
+    tx.objectStore('state').delete(key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+// ── Spielstand speichern / laden ──────────────────────────────────
+function _buildState() {
+  return {
     spielDaten: spielDaten,
     spielerAnzahl: spielerAnzahl,
     spielerNamen: spielerNamen,
@@ -1680,54 +1760,76 @@ function saveState() {
     tisch: document.querySelector('input[name="tisch"]:checked')?.value || '1',
     karten: document.querySelector('input[name="karten"]:checked')?.value
   };
-  localStorage.setItem('skatSpielstand', JSON.stringify(state));
 }
 
-function loadState() {
-  const json = localStorage.getItem('skatSpielstand');
-  if (!json) return false;
-  try {
-    const state = JSON.parse(json);
+function saveState() {
+  const json = JSON.stringify(_buildState());
+  if (_storageOK()) {
+    localStorage.setItem(STORE_KEY, json);
+  }
+  // Immer auch in IndexedDB speichern (robuster auf iOS)
+  _idbSet(STORE_KEY, json).catch(e => console.log('IDB save:', e));
+}
 
-    // Spieleranzahl wiederherstellen
-    spielerAnzahl = state.spielerAnzahl || 4;
-    const saRadio = document.querySelector(`input[name="spieleranzahl"][value="${spielerAnzahl}"]`);
-    if (saRadio) saRadio.checked = true;
+function _applyState(state) {
+  spielerAnzahl = state.spielerAnzahl || 4;
+  const saRadio = document.querySelector(`input[name="spieleranzahl"][value="${spielerAnzahl}"]`);
+  if (saRadio) saRadio.checked = true;
 
-    // Spielernamen wiederherstellen
-    if (state.spielerNamen) {
-      for (let i = 0; i < state.spielerNamen.length; i++) {
-        spielerNamen[i] = state.spielerNamen[i];
-      }
+  if (state.spielerNamen) {
+    for (let i = 0; i < state.spielerNamen.length; i++) {
+      spielerNamen[i] = state.spielerNamen[i];
     }
+  }
 
-    // Serie / Tisch wiederherstellen
-    const serieRadio = document.querySelector(`input[name="serie"][value="${state.serie}"]`);
-    if (serieRadio) serieRadio.checked = true;
-    const tischRadio = document.querySelector(`input[name="tisch"][value="${state.tisch}"]`);
-    if (tischRadio) tischRadio.checked = true;
+  // Spieldaten VOR updateKartenAuswahl wiederherstellen,
+  // damit resizeSpielDaten/fillTable/saveState die Daten nicht überschreibt
+  if (state.spielDaten && state.spielDaten.length > 0) {
+    spielDaten = state.spielDaten;
+  }
 
-    // Karten-Auswahl anpassen und wiederherstellen
-    updateKartenAuswahl();
-    if (state.karten) {
-      const kartenRadio = document.querySelector(`input[name="karten"][value="${state.karten}"]`);
-      if (kartenRadio) kartenRadio.checked = true;
-    }
+  const serieRadio = document.querySelector(`input[name="serie"][value="${state.serie}"]`);
+  if (serieRadio) serieRadio.checked = true;
+  const tischRadio = document.querySelector(`input[name="tisch"][value="${state.tisch}"]`);
+  if (tischRadio) tischRadio.checked = true;
 
-    // Spieldaten wiederherstellen
-    if (state.spielDaten && state.spielDaten.length > 0) {
-      spielDaten = state.spielDaten;
-    }
-
-    return true;
-  } catch (e) {
-    console.log("Spielstand laden fehlgeschlagen:", e);
-    return false;
+  updateKartenAuswahl();
+  if (state.karten) {
+    const kartenRadio = document.querySelector(`input[name="karten"][value="${state.karten}"]`);
+    if (kartenRadio) kartenRadio.checked = true;
   }
 }
 
+function loadState() {
+  return new Promise(resolve => {
+    // 1. Versuch: localStorage
+    if (_storageOK()) {
+      const json = localStorage.getItem(STORE_KEY);
+      if (json) {
+        try {
+          _applyState(JSON.parse(json));
+          resolve(true);
+          return;
+        } catch (e) { /* weiter zu IDB */ }
+      }
+    }
+    // 2. Versuch: IndexedDB (Fallback für iOS file://)
+    _idbGet(STORE_KEY).then(json => {
+      if (json) {
+        try {
+          _applyState(JSON.parse(json));
+          resolve(true);
+          return;
+        } catch (e) { /* leer starten */ }
+      }
+      resolve(false);
+    }).catch(() => resolve(false));
+  });
+}
+
 function clearState() {
-  localStorage.removeItem('skatSpielstand');
+  if (_storageOK()) localStorage.removeItem(STORE_KEY);
+  _idbDel(STORE_KEY).catch(() => {});
 }
 
 // Serie/Tisch-Änderungen speichern
@@ -1736,17 +1838,18 @@ document.querySelectorAll('input[name="serie"], input[name="tisch"]').forEach(ra
 });
 
 window.addEventListener("load", () => {
-  const loaded = loadState();
-  if (!loaded) {
-    spielerAnzahl = getSpielerAnzahl();
-  }
-  buildTableStructure();
-  fillTable();
-  generatePlayerNameButtons();
-  createCSVButton();
-  createNeuStartButton();
-  updateCopyright();
-  console.log(screen.width + 'x' + screen.height);
+  loadState().then(loaded => {
+    if (!loaded) {
+      spielerAnzahl = getSpielerAnzahl();
+    }
+    buildTableStructure();
+    fillTable();
+    generatePlayerNameButtons();
+    createCSVButton();
+    createNeuStartButton();
+    updateCopyright();
+    console.log(screen.width + 'x' + screen.height);
+  });
 });
 
 
