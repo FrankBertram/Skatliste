@@ -117,7 +117,7 @@
 }
 
 .radio-label input[type="radio"] {
-  margin: 0;
+  margin: 0 4px 0 0;
   height: 14px;
   width: 14px;
   vertical-align: middle;
@@ -309,8 +309,8 @@
   <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
     <span>Spieler:</span>
     <div class="radio-group radio-group-compact">
-      <label class="radio-label"><input type="radio" name="spieleranzahl" value="3">3</label>
       <label class="radio-label"><input type="radio" name="spieleranzahl" value="4" checked>4</label>
+      <label class="radio-label"><input type="radio" name="spieleranzahl" value="3">3</label>
     </div>
 
     <span>Serie:</span>
@@ -320,14 +320,14 @@
     </div>
 
     <span>Tisch:</span>
-    <div class="radio-group radio-group-compact">
-      <label class="radio-label"><input type="radio" name="tisch" value="1" checked>1</label>
-      <label class="radio-label"><input type="radio" name="tisch" value="2">2</label>
-      <label class="radio-label"><input type="radio" name="tisch" value="3">3</label>
-      <label class="radio-label"><input type="radio" name="tisch" value="4">4</label>
-      <label class="radio-label"><input type="radio" name="tisch" value="5">5</label>
-      <label class="radio-label"><input type="radio" name="tisch" value="6">6</label>
-    </div>
+    <select id="tisch-auswahl" style="font-size:16px; padding:4px 8px; border-radius:4px; border:1px solid #888; height:34px;">
+      <option value="1" selected>1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+    </select>
 
     <span>Spiele:</span>
     <div id="karten-auswahl" class="radio-group radio-group-compact">
@@ -1021,7 +1021,7 @@ function exportCSV() {
   ).join('\n');
 
   const serieWert = document.querySelector('input[name="serie"]:checked')?.value || '0';
-  const tischWert = document.querySelector('input[name="tisch"]:checked')?.value || '0';
+  const tischWert = document.getElementById('tisch-auswahl')?.value || '0';
 
   downloadCSV(csvContent, `Spielliste_${n}er_S${serieWert}_T${tischWert}_${new Date().toLocaleDateString('de-DE')}.csv`);
 }
@@ -1764,7 +1764,7 @@ function _buildState() {
     spielerAnzahl: spielerAnzahl,
     spielerNamen: spielerNamen,
     serie: document.querySelector('input[name="serie"]:checked')?.value || '1',
-    tisch: document.querySelector('input[name="tisch"]:checked')?.value || '1',
+    tisch: document.getElementById('tisch-auswahl')?.value || '1',
     karten: document.querySelector('input[name="karten"]:checked')?.value
   };
 }
@@ -1797,8 +1797,8 @@ function _applyState(state) {
 
   const serieRadio = document.querySelector(`input[name="serie"][value="${state.serie}"]`);
   if (serieRadio) serieRadio.checked = true;
-  const tischRadio = document.querySelector(`input[name="tisch"][value="${state.tisch}"]`);
-  if (tischRadio) tischRadio.checked = true;
+  const tischSelect = document.getElementById('tisch-auswahl');
+  if (tischSelect && state.tisch) tischSelect.value = state.tisch;
 
   updateKartenAuswahl();
   if (state.karten) {
@@ -1840,9 +1840,10 @@ function clearState() {
 }
 
 // Serie/Tisch-Änderungen speichern
-document.querySelectorAll('input[name="serie"], input[name="tisch"]').forEach(radio => {
+document.querySelectorAll('input[name="serie"]').forEach(radio => {
   radio.addEventListener('change', saveState);
 });
+document.getElementById('tisch-auswahl').addEventListener('change', saveState);
 
 window.addEventListener("load", () => {
   loadState().then(loaded => {
