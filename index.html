@@ -517,9 +517,15 @@ function buildTableStructure() {
   tfoot.innerHTML = spielpunkteRow + bonusPRow + bonusGRow + gesamtRow;
 }
 
+function isOldIOS() {
+  const ua = navigator.userAgent;
+  const match = ua.match(/OS (\d+)_/);
+  return match && parseInt(match[1]) < 16;
+}
+
 function setStickyByScale(scale) {
   const tfoot = document.querySelector('#skat-table tfoot');
-  if (scale !== 1.0) {
+  if (scale !== 1.0 && !isOldIOS()) {
     tfoot.style.position = '-webkit-sticky';
     tfoot.style.position = 'sticky';
     tfoot.style.bottom = '0';
