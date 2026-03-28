@@ -299,20 +299,19 @@
 
 <div class="header">
   <!-- Zeile 1: Logo + Verein -->
-  <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 0px;">
+  <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 0px; width: 100%;">
     <img src="Skat.png" alt="Skat-Logo" style="height: 40px;">
     <span style="font-size:20px; font-weight: bold;">1. Sintherner Skatclub 1992 e.V.</span>
+    <span style="margin-left:auto;">Spieler:</span>
+    <div class="radio-group radio-group-compact">
+      <label class="radio-label"><input type="radio" name="spieleranzahl" value="4" checked>4er</label>
+      <label class="radio-label"><input type="radio" name="spieleranzahl" value="3">3er</label>
+    </div>
   </div>
   <br>
 
   <!-- Zeile 2: Auswahlbuttons -->
   <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-    <span>Spieler:</span>
-    <div class="radio-group radio-group-compact">
-      <label class="radio-label"><input type="radio" name="spieleranzahl" value="4" checked>4er</label>
-      <label class="radio-label"><input type="radio" name="spieleranzahl" value="3">3er</label>
-    </div>
-
     <span>Serie:</span>
     <div class="radio-group radio-group-compact">
       <label class="radio-label"><input type="radio" name="serie" value="1" checked>1.</label>
@@ -329,9 +328,8 @@
       <label class="radio-label"><input type="radio" name="tisch" value="6">6</label>
       <label class="radio-label"><input type="radio" name="tisch" value="7">7</label>
     </div>
-    <!-- 36er/48er Auswahl -->
     <span>Spiele:</span>
-    <div class="radio-group radio-group-compact">
+    <div id="karten-auswahl" class="radio-group radio-group-compact">
       <label class="radio-label"><input type="radio" name="karten" value="36" checked>36</label>
       <label class="radio-label"><input type="radio" name="karten" value="48">48</label>
     </div>
@@ -345,6 +343,7 @@
   <div id="player-btn-container-3"></div>
   <div id="player-btn-container-4"></div>
   <div id="csv-export-container"></div>
+  <div id="neu-start-container"></div>
 </div>
 
 <div class="table-wrapper" style="max-height:600px; overflow-y:auto; overflow-x:auto; width:100%; max-width:100%;">
@@ -737,6 +736,7 @@ function fillTable() {
   }
 
   updatePlayerNamesInTable();
+  saveState();
 }
 
 
@@ -913,6 +913,29 @@ function createCSVButton() {
   container.appendChild(csvBtn);
 }
 
+function createNeuStartButton() {
+  const container = document.getElementById("neu-start-container");
+  if (!container || container.children.length > 0) return;
+
+  const btn = document.createElement("button");
+  btn.innerHTML = "🗑 Neue Liste";
+  btn.style.cssText = `
+    padding: 6px 16px;
+    background: linear-gradient(135deg, #e53935, #c62828);
+    color: white; border: none; border-radius: 6px;
+    font-size: 15px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(229,57,53,0.3); transition: transform 0.2s;
+  `;
+  btn.addEventListener("mouseenter", () => btn.style.transform = "scale(1.05)");
+  btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
+  btn.addEventListener("click", () => {
+    if (!confirm("Alle Einträge löschen und neue Liste starten?")) return;
+    clearState();
+    location.reload();
+  });
+  container.appendChild(btn);
+}
+
 function getInt(id) {
   return parseInt(document.getElementById(id)?.textContent || 0, 10);
 }
@@ -1045,9 +1068,17 @@ function generatePlayerNameButtons() {
 
   const n = spielerAnzahl;
 
-  // Container 4 ein-/ausblenden
-  const container4 = document.getElementById("player-btn-container-4");
-  if (container4) container4.style.display = (n >= 4) ? "" : "none";
+  // Alle 4 Container behandeln: ein-/ausblenden und ggf. leeren
+  for (let p = 1; p <= 4; p++) {
+    const c = document.getElementById(`player-btn-container-${p}`);
+    if (!c) continue;
+    if (p > n) {
+      c.style.display = "none";
+      c.innerHTML = "";
+    } else {
+      c.style.display = "";
+    }
+  }
 
   for (let pos = 1; pos <= n; pos++) {
     const container = document.getElementById(`player-btn-container-${pos}`);
@@ -1116,6 +1147,7 @@ function generatePlayerNameButtons() {
           spielerNamen[pos - 1] = wert;
           btn.textContent = wert;
           updatePlayerNamesInTable();
+          saveState();
         }
         container.removeChild(select);
         if (gastInput.parentNode) container.removeChild(gastInput);
@@ -1137,6 +1169,7 @@ function generatePlayerNameButtons() {
           spielerNamen[pos - 1] = gastVollName;
           btn.textContent = gastVollName;
           updatePlayerNamesInTable();
+          saveState();
         }
         container.removeChild(select);
         container.removeChild(gastInput);
@@ -1557,45 +1590,77 @@ function saveGame(gewonnen) {
     closeSpielDialog();
 }
 
+function resizeSpielDaten(kartenAnzahl) {
+  if (spielDaten.length > kartenAnzahl) {
+    spielDaten.length = kartenAnzahl;
+  }
+  while (spielDaten.length < kartenAnzahl) {
+    spielDaten.push({
+      nr: spielDaten.length + 1,
+      grundwert: "", hand: "", schneider: "", schwarz: "",
+      schneiderang: "", schwarzang: "", offen: "",
+      mitSpitzen: "", ohneSpitzen: "", spielwert: "",
+      pluswert: "", minuswert: "",
+      p1_punkte: "", p1_gew: "", p1_verl: "",
+      p2_punkte: "", p2_gew: "", p2_verl: "",
+      p3_punkte: "", p3_gew: "", p3_verl: "",
+      p4_punkte: "", p4_gew: "", p4_verl: "",
+      p1_delta: "", p2_delta: "", p3_delta: "", p4_delta: "",
+      eingepasst: "", spieler: "",
+      gewonnen: null
+    });
+  }
+  console.log(`spielDaten: ${spielDaten.length} Zeilen, letzte nr: ${spielDaten[spielDaten.length-1]?.nr}`);
+  fillTable();
+}
+
+function onKartenChange() {
+  resizeSpielDaten(parseInt(this.value));
+}
+
 document.querySelectorAll('input[name="karten"]').forEach(radio => {
-  radio.addEventListener('change', function() {
-    const kartenAnzahl = parseInt(this.value);
-
-    if (spielDaten.length > kartenAnzahl) {
-      spielDaten.length = kartenAnzahl;
-    }
-
-    while (spielDaten.length < kartenAnzahl) {
-      spielDaten.push({
-        nr: spielDaten.length + 1,
-        grundwert: "", hand: "", schneider: "", schwarz: "",
-        schneiderang: "", schwarzang: "", offen: "",
-        mitSpitzen: "", ohneSpitzen: "", spielwert: "",
-        pluswert: "", minuswert: "",
-        p1_punkte: "", p1_gew: "", p1_verl: "",
-        p2_punkte: "", p2_gew: "", p2_verl: "",
-        p3_punkte: "", p3_gew: "", p3_verl: "",
-        p4_punkte: "", p4_gew: "", p4_verl: "",
-        p1_delta: "", p2_delta: "", p3_delta: "", p4_delta: "",
-        eingepasst: "", spieler: "",
-        gewonnen: null
-      });
-    }
-
-    console.log(`spielDaten: ${spielDaten.length} Zeilen, letzte nr: ${spielDaten[spielDaten.length-1]?.nr}`);
-    fillTable();
-  });
+  radio.addEventListener('change', onKartenChange);
 });
 
 // ── Spieleranzahl wechseln ─────────────────────────────────────────
 document.querySelectorAll('input[name="spieleranzahl"]').forEach(radio => {
   radio.addEventListener('change', function() {
+    // Prüfen ob bereits Spiele eingetragen sind
+    const hatEintraege = spielDaten.some(s => s.grundwert || s.hand || s.schneider ||
+      s.schneiderang || s.schwarz || s.schwarzang || s.offen);
+    if (hatEintraege) {
+      alert("⚠️ Wechsel nicht möglich — es sind bereits Spiele eingetragen!");
+      // Radio zurücksetzen
+      document.querySelector(`input[name="spieleranzahl"][value="${spielerAnzahl}"]`).checked = true;
+      return;
+    }
     spielerAnzahl = parseInt(this.value);
     buildTableStructure();
+    updateKartenAuswahl();
     generatePlayerNameButtons();
-    fillTable();
+    updateCopyright();
   });
 });
+
+function updateKartenAuswahl() {
+  const container = document.getElementById("karten-auswahl");
+  const ist3er = (spielerAnzahl === 3);
+  const wert1 = ist3er ? 27 : 36;
+  const wert2 = ist3er ? 36 : 48;
+
+  container.innerHTML = `
+    <label class="radio-label"><input type="radio" name="karten" value="${wert1}" checked>${wert1}</label>
+    <label class="radio-label"><input type="radio" name="karten" value="${wert2}">${wert2}</label>
+  `;
+
+  // Event-Listener für neue Radio-Buttons
+  container.querySelectorAll('input[name="karten"]').forEach(r => {
+    r.addEventListener('change', onKartenChange);
+  });
+
+  // spielDaten auf neuen Standard anpassen
+  resizeSpielDaten(wert1);
+}
 
 function updateCopyright() {
   const width = screen.width;
@@ -1605,12 +1670,81 @@ function updateCopyright() {
 }
 
 
+// ── Spielstand speichern / laden (localStorage) ───────────────────
+function saveState() {
+  const state = {
+    spielDaten: spielDaten,
+    spielerAnzahl: spielerAnzahl,
+    spielerNamen: spielerNamen,
+    serie: document.querySelector('input[name="serie"]:checked')?.value || '1',
+    tisch: document.querySelector('input[name="tisch"]:checked')?.value || '1',
+    karten: document.querySelector('input[name="karten"]:checked')?.value
+  };
+  localStorage.setItem('skatSpielstand', JSON.stringify(state));
+}
+
+function loadState() {
+  const json = localStorage.getItem('skatSpielstand');
+  if (!json) return false;
+  try {
+    const state = JSON.parse(json);
+
+    // Spieleranzahl wiederherstellen
+    spielerAnzahl = state.spielerAnzahl || 4;
+    const saRadio = document.querySelector(`input[name="spieleranzahl"][value="${spielerAnzahl}"]`);
+    if (saRadio) saRadio.checked = true;
+
+    // Spielernamen wiederherstellen
+    if (state.spielerNamen) {
+      for (let i = 0; i < state.spielerNamen.length; i++) {
+        spielerNamen[i] = state.spielerNamen[i];
+      }
+    }
+
+    // Serie / Tisch wiederherstellen
+    const serieRadio = document.querySelector(`input[name="serie"][value="${state.serie}"]`);
+    if (serieRadio) serieRadio.checked = true;
+    const tischRadio = document.querySelector(`input[name="tisch"][value="${state.tisch}"]`);
+    if (tischRadio) tischRadio.checked = true;
+
+    // Karten-Auswahl anpassen und wiederherstellen
+    updateKartenAuswahl();
+    if (state.karten) {
+      const kartenRadio = document.querySelector(`input[name="karten"][value="${state.karten}"]`);
+      if (kartenRadio) kartenRadio.checked = true;
+    }
+
+    // Spieldaten wiederherstellen
+    if (state.spielDaten && state.spielDaten.length > 0) {
+      spielDaten = state.spielDaten;
+    }
+
+    return true;
+  } catch (e) {
+    console.log("Spielstand laden fehlgeschlagen:", e);
+    return false;
+  }
+}
+
+function clearState() {
+  localStorage.removeItem('skatSpielstand');
+}
+
+// Serie/Tisch-Änderungen speichern
+document.querySelectorAll('input[name="serie"], input[name="tisch"]').forEach(radio => {
+  radio.addEventListener('change', saveState);
+});
+
 window.addEventListener("load", () => {
-  spielerAnzahl = getSpielerAnzahl();
+  const loaded = loadState();
+  if (!loaded) {
+    spielerAnzahl = getSpielerAnzahl();
+  }
   buildTableStructure();
   fillTable();
   generatePlayerNameButtons();
   createCSVButton();
+  createNeuStartButton();
   updateCopyright();
   console.log(screen.width + 'x' + screen.height);
 });
