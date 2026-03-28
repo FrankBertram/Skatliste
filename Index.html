@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sintherner Skatclub - Spielzettel</title>
+  <link rel="icon" type="image/png" href="Skat.png">
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;  /* Offline-fähig, kein Google Fonts nötig */
+      font-size: 14px;  /* Etwas größer für Touch (13px → 14px) */
+      margin: 15px;
+    }
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .header span { font-weight: bold; }
+    table {
+      border-collapse: collapse;
+      width: 780px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 3px 4px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    th {
+      background-color: #eee;
+      font-size: 13px;
+      line-height: 1.1;
+    }
+	.header label {
+	  cursor: pointer;
+	  margin-right: 10px;
+	  font-size: 10px;
+	}
+
+	.header input[type="radio"] {
+	  margin-right: 4px;
+	}
+
+    .player-name {
+      width: 90px;
+      text-align: left;
+      padding-left: 6px;
+    }
+	.rechts {
+	  text-align: right !important;
+	}
+
+.neuer-eintrag-btn {
+  background: #FFF9C4 !important;
+  color: #000 !important;
+  border: 2px solid #F57F17 !important;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.neuer-eintrag-btn:hover {
+  background: #FFF176 !important;
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(245,127,23,0.3);
+}
+
+.neuer-eintrag-btn:active {
+  transform: translateY(0); box-shadow: 0 2px 4px rgba(76,175,80,0.3);
+}
+
+.radio-group {
+  display: flex;
+  gap: 5px;
+  border: 2px solid #888;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: #f5f5f5;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  max-width: 200px;
+}
+
+.radio-label {
+  white-space: nowrap;
+  gap: 4px;
+  font-size: 12px;
+}
+.radio-group-compact {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 1px;
+  padding: 1px 5px;
+  border: 1px solid #888;
+  border-radius: 4px;
+  background: #f5f5f5;
+  max-width: 300px;
+  align-items: center;
+  height: 26px;
+}
+
+.radio-group-compact .radio-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 1px 3px;
+  height: 100%;
+}
+
+.radio-label input[type="radio"] {
+  margin: 0;
+  height: 14px;
+  width: 14px;
+  vertical-align: middle;
+}
+
+.radio-label:hover {
+  background: #e8e8e8;
+}
+
+    .gew-verl {
+      font-size: 9px;
+      line-height: 1;
+    }
+
+    .edit-btn {
+      font-size: 10px;
+      padding: 1px 1px;
+      cursor: pointer;
+      background: orange;
+      color: white;
+      border: 1px solid #888;
+    }
+    .spitzen-btn {
+      padding: 12px 20px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #888;
+      cursor: pointer;
+      background: #f5f5f5;
+      min-width: 200px;
+    }
+
+    .spitzen-btn.active {
+      background: #2196F3;
+      color: white;
+      font-weight: bold;
+    }
+
+    .spielwert-spalte {
+	  min-width: 30px;
+	  width: 30px;
+	  text-align: right;
+	}
+
+    .spitze-btn {
+      padding: 8px 14px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #888;
+      background: #f5f5f5;
+      cursor: pointer;
+      min-width: 50px;
+    }
+
+    .spitze-btn.active {
+      background: #2196F3;
+      color: white;
+      font-weight: bold;
+    }
+
+    .gw-btn {
+      display: inline-block;
+      margin-right: 5px;
+      font-size: 15px;
+      padding: 2px 10px;
+      cursor: pointer;
+      border-radius: 6px;
+      height: 80px;
+      min-width: 95px;
+      box-sizing: border-box;
+      border: 1px solid #888;
+      background-color: #fff;
+      color: #000;
+      font-weight: normal;
+      line-height: normal;
+      width: auto;
+      overflow: hidden;
+    }
+
+    .gw-btn.active {
+      background: #4CAF50;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .result-row td {
+      background-color: #f8f8f8;
+      font-weight: bold;
+    }
+    .money-row {
+      display: flex;
+      gap: 20px;
+      justify-content: flex-start;
+      margin: 8px 0;
+    }
+    .money-row input {
+      width: 90px;
+      text-align: right;
+    }
+    .signature {
+      margin-top: 30px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .vertical {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      white-space: nowrap;
+    }
+
+	.vertical-left {
+	  vertical-align: bottom;
+	  text-align: left !important;
+	}
+
+	.vertical-left span {
+	  writing-mode: vertical-lr;
+	  -webkit-writing-mode: vertical-lr;
+	  text-orientation: mixed;
+	  -webkit-text-orientation: mixed;
+	  display: inline-block;
+	  white-space: nowrap;
+	}
+
+.unten {
+  vertical-align: bottom !important;
+  text-align: center;
+  padding-bottom: 2px;
+}
+
+    input[type="text"] {
+      border: none;
+      border-bottom: 1px solid #333;
+      background: transparent;
+    }
+
+    #skat-table thead th {
+      position: -webkit-sticky;
+      position: sticky;
+      background: #f0f0f0;
+      border-bottom: 2px solid #ccc;
+      text-align: center;
+	  font-size: 11px;
+	  font-weight: 400;
+	  color: black;
+      padding: 4px 6px;
+      z-index: 2;
+    }
+
+    #skat-table thead tr:nth-child(1) th {
+      top: 1px;
+      z-index: 3;
+    }
+
+    #skat-table thead tr:nth-child(2) th {
+      top: 35px;
+      z-index: 2;
+    }
+
+    #skat-table tfoot {
+      position: static;
+      bottom: auto;
+      z-index: auto;
+    }
+
+    #skat-table tfoot td {
+      background: #f0f0f0;
+      border-top: 2px solid #ccc;
+      padding: 4px 6px;
+      text-align: center;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <!-- Zeile 1: Logo + Verein -->
+  <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 0px;">
+    <img src="Skat.png" alt="Skat-Logo" style="height: 40px;">
+    <span style="font-size:20px; font-weight: bold;">1. Sintherner Skatclub 1992 e.V.</span>
+  </div>
+  <br>
+
+  <!-- Zeile 2: Auswahlbuttons -->
+  <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+    <span>Spieler:</span>
+    <div class="radio-group radio-group-compact">
+      <label class="radio-label"><input type="radio" name="spieleranzahl" value="4" checked>4er</label>
+      <label class="radio-label"><input type="radio" name="spieleranzahl" value="3">3er</label>
+    </div>
+
+    <span>Serie:</span>
+    <div class="radio-group radio-group-compact">
+      <label class="radio-label"><input type="radio" name="serie" value="1" checked>1.</label>
+      <label class="radio-label"><input type="radio" name="serie" value="2">2.</label>
+    </div>
+
+    <span>Tisch:</span>
+    <div class="radio-group radio-group-compact">
+      <label class="radio-label"><input type="radio" name="tisch" value="1" checked>1</label>
+      <label class="radio-label"><input type="radio" name="tisch" value="2">2</label>
+      <label class="radio-label"><input type="radio" name="tisch" value="3">3</label>
+      <label class="radio-label"><input type="radio" name="tisch" value="4">4</label>
+      <label class="radio-label"><input type="radio" name="tisch" value="5">5</label>
+      <label class="radio-label"><input type="radio" name="tisch" value="6">6</label>
+      <label class="radio-label"><input type="radio" name="tisch" value="7">7</label>
+    </div>
+    <!-- 36er/48er Auswahl -->
+    <span>Spiele:</span>
+    <div class="radio-group radio-group-compact">
+      <label class="radio-label"><input type="radio" name="karten" value="36" checked>36</label>
+      <label class="radio-label"><input type="radio" name="karten" value="48">48</label>
+    </div>
+  </div>
+</div>
+
+
+<div id="spieler-buttons-container" style="margin-bottom:10px; display:flex; gap:10px;">
+  <div id="player-btn-container-1"></div>
+  <div id="player-btn-container-2"></div>
+  <div id="player-btn-container-3"></div>
+  <div id="player-btn-container-4"></div>
+  <div id="csv-export-container"></div>
+</div>
+
+<div class="table-wrapper" style="max-height:600px; overflow-y:auto; overflow-x:auto; width:100%; max-width:100%;">
+  <table id="skat-table">
+  <thead id="skat-thead">
+  </thead>
+  <tbody id="game-rows">
+  </tbody>
+  <tfoot id="skat-tfoot">
+  </tfoot>
+</table>
+</div>
+
+<dialog id="spiel-dialog" style="padding:20px; border-radius:8px; width:625px; max-width:90%; font-size:15px;">
+  <form method="dialog" id="spiel-form" style="display:flex; flex-direction:column; gap:10px;">
+    <h3 style="margin:0 0 5px 0; text-align:center;">Spiel eintragen:  <span id="spielnummer-display"></span></h3>
+
+    <div id="player-buttons" style="margin-bottom:5px;"></div>
+
+    <div id="grundwert-buttons" style="display:flex; flex-wrap:wrap; gap:8px;">
+      <button type="button" onclick="setGrundwert('Grand')" style="padding:12px 18px; font-size:16px; min-width:80px; border-radius:6px;">Grand</button>
+      <button type="button" onclick="setGrundwert('♣')" style="padding:12px 18px; font-size:48px; min-width:80px; border-radius:6px;">♣</button>
+      <button type="button" onclick="setGrundwert('♠')" style="padding:12px 18px; font-size:48px; min-width:80px; border-radius:6px;">♠</button>
+      <button type="button" onclick="setGrundwert('♥')" style="padding:12px 18px; color:red;font-size:48px; min-width:80px; border-radius:6px;">♥</button>
+      <button type="button" onclick="setGrundwert('♦')" style="padding:12px 18px; color:red; font-size:48px; min-width:80px; border-radius:6px;">♦</button>
+      <button type="button" onclick="setGrundwert('Null')" style="padding:12px 18px; font-size:16px; min-width:80px; border-radius:6px;">Null</button>
+      <button type="button" onclick="setGrundwert('Pass')" style="padding:12px 18px; font-size:16px; min-width:80px; border-radius:6px;">Pass</button>
+    </div>
+
+    <div id="spitzen-buttons" style="display:flex; gap:10px; margin-top:5px;height: 80px">
+      <button type="button" onclick="setSpitzen(true)" class="spitzen-btn">
+        mit Spitzen
+      </button>
+      <button type="button" onclick="setSpitzen(false)" class="spitzen-btn">
+        ohne Spitzen
+      </button>
+    </div>
+    <div id="spitzen-anzahl" style="display:none; flex-wrap:wrap; gap:6px; margin-top:5px;height: 80px"></div>
+    <div id="gewinnstufen-buttons" style="display:flex; flex-wrap:wrap; gap:2px;min-height:80px;"></div>
+
+<div style="margin-top:10px; display: none;">
+  <input type="text" id="grundwert" style="padding:8px; width:100%; text-align:center; font-weight:bold;" readonly placeholder="Bitte Spielart wählen">
+</div>
+<div style="display:flex; gap:10px; margin-top:8px; display: none;">
+  <label style="flex:1; display:flex; flex-direction:column; text-align:center;">
+    Mit Spitzen
+    <input type="number" id="mitSpitzen" min="0" max="11" style="padding:6px; text-align:center;">
+  </label>
+  <label style="flex:1; display:flex; flex-direction:column; text-align:center;">
+    Ohne Spitzen
+    <input type="number" id="ohneSpitzen" min="0" max="11" style="padding:6px; text-align:center;">
+  </label>
+</div>
+
+    <!-- Gewonnen / Verloren Buttons -->
+    <div style="display:flex; gap:16px; margin-top:20px; justify-content:center;">
+      <button type="button" id="btn-gewonnen"
+              style="padding:16px 40px; font-size:20px; font-weight:bold; border:none; border-radius:8px;
+                     background:#4CAF50; color:white; cursor:pointer; min-width:180px;">
+        Gewonnen
+      </button>
+      <button type="button" id="btn-verloren"
+              style="padding:16px 40px; font-size:20px; font-weight:bold; border:none; border-radius:8px;
+                     background:#e53935; color:white; cursor:pointer; min-width:180px;">
+        Verloren
+      </button>
+    </div>
+  </form>
+</dialog>
+
+
+<script>
+let spielDaten = [];
+let scale = 1.0;
+let spielerAnzahl = 4;  // 3 oder 4 — zentrale Steuerung
+
+function getSpielerAnzahl() {
+  return parseInt(document.querySelector('input[name="spieleranzahl"]:checked')?.value || '4');
+}
+
+// Bonus-Multiplikator: 30 bei 4 Spielern, 40 bei 3 Spielern
+function getBonusGMultiplikator() {
+  return spielerAnzahl === 3 ? 40 : 30;
+}
+
+const kartenDefault = 36;
+spielDaten = Array(kartenDefault).fill(null).map((_, i) => ({
+  nr: i + 1,
+  grundwert: "", hand: "", schneider: "", schwarz: "",
+  schneiderang: "", schwarzang: "", offen: "",
+  mitSpitzen: "", ohneSpitzen: "", spielwert: "",
+  pluswert: "", minuswert: "",
+  p1_punkte: "", p1_gew: "", p1_verl: "",
+  p2_punkte: "", p2_gew: "", p2_verl: "",
+  p3_punkte: "", p3_gew: "", p3_verl: "",
+  p4_punkte: "", p4_gew: "", p4_verl: "",
+  p1_delta: "", p2_delta: "", p3_delta: "", p4_delta: "",
+  eingepasst: "",
+  spieler: ""
+}));
+
+// ── Tabelle dynamisch aufbauen (thead + tfoot) ─────────────────────
+function buildTableStructure() {
+  const thead = document.getElementById("skat-thead");
+  const tfoot = document.getElementById("skat-tfoot");
+  const n = spielerAnzahl;
+
+  // THEAD
+  let headerRow1 = `
+    <tr>
+      <th rowspan="2" class="vertical-left"><span>Lfd. Nr. Spiel</span></th>
+      <th rowspan="2" class="unten">9 <br>10<br>11<br>12<br>23<br>24<br>E</th>
+      <th rowspan="2" class="vertical-left"><span>mit Spitzen</span></th>
+      <th rowspan="2" class="vertical-left"><span>ohne Spitzen</span></th>
+      <th colspan="6">Gewinnstufen</th>
+      <th colspan="2">Spiel-<br>werte</th>`;
+  for (let i = 1; i <= n; i++) {
+    headerRow1 += `<th colspan="3" class="player-name${i} player-name">Name${i === 1 ? ' (LF)' : ''}</th>`;
+  }
+  headerRow1 += `<th rowspan="2" class="vertical-left"><span>Eingepasst</span></th><th></th></tr>`;
+
+  let headerRow2 = `<tr>
+      <th class="vertical-left"><span>Hand</span></th>
+      <th class="vertical-left"><span>Schneider</span></th>
+      <th class="vertical-left"><span>Schn. ang.</span></th>
+      <th class="vertical-left"><span>Schwarz</span></th>
+      <th class="vertical-left"><span>Schw. ang.</span></th>
+      <th class="vertical-left"><span>Offen</span></th>
+      <th class="spielwert-spalte">+</th>
+      <th class="spielwert-spalte">-</th>`;
+  for (let i = 1; i <= n; i++) {
+    headerRow2 += `<th class="unten">Platz ${i}</th>
+      <th class="vertical-left"><span>gewonnen</span></th>
+      <th class="vertical-left"><span>verloren</span></th>`;
+  }
+  headerRow2 += `<th></th></tr>`;
+
+  thead.innerHTML = headerRow1 + headerRow2;
+
+  // TFOOT
+  const gMulti = getBonusGMultiplikator();
+  let spielpunkteRow = `<tr><th colspan="12" style="text-align:left; padding: 0 15px;font-size: 14px; background:#f0f0f0; font-weight: 400;">Spielpunkte:</th>`;
+  for (let i = 1; i <= n; i++) {
+    spielpunkteRow += `<td class="rechts" id="sum-p${i}">0</td><td id="gew-p${i}">0</td><td id="verl-p${i}">0</td>`;
+  }
+  spielpunkteRow += `<td id="sum-eingepasst">0</td><td></td></tr>`;
+
+  let bonusPRow = `<tr><th colspan="12" style="text-align:left; padding: 0 15px; font-size: 14px; background:#f0f0f0;font-weight: 400;">+ (gewonnene Spiele - verlorene Spiele) x 50:</th>`;
+  for (let i = 1; i <= n; i++) {
+    bonusPRow += `<td class="rechts" id="bonus-p${i}">0</td><td id="bogew-p${i}"></td><td></td>`;
+  }
+  bonusPRow += `<td></td><td></td></tr>`;
+
+  let bonusGRow = `<tr><th colspan="12" style="text-align:left; padding: 0 15px;font-size: 14px; background:#f0f0f0; font-weight: 400;">+ verlorene Spiele der Gegenspieler x ${gMulti}:</th>`;
+  for (let i = 1; i <= n; i++) {
+    bonusGRow += `<td class="rechts" id="bonus-g${i}">0</td><td id="bogew-g${i}"></td><td></td>`;
+  }
+  bonusGRow += `<td></td><td></td></tr>`;
+
+  let gesamtRow = `<tr><th colspan="12" style="text-align:left; padding: 0 15px;font-size: 14px; background:#f0f0f0; font-weight:bold;">Gesamtpunkte:</th>`;
+  for (let i = 1; i <= n; i++) {
+    gesamtRow += `<td class="rechts" id="gesamt-p${i}">0</td><td></td><td></td>`;
+  }
+  gesamtRow += `<td></td><td></td></tr>`;
+
+  tfoot.innerHTML = spielpunkteRow + bonusPRow + bonusGRow + gesamtRow;
+}
+
+function setStickyByScale(scale) {
+  const tfoot = document.querySelector('#skat-table tfoot');
+  if (scale !== 1.0) {
+    tfoot.style.position = '-webkit-sticky';
+    tfoot.style.position = 'sticky';
+    tfoot.style.bottom = '0';
+    tfoot.style.zIndex = '3';
+  } else {
+    tfoot.style.position = 'static';
+    tfoot.style.bottom = '';
+    tfoot.style.zIndex = '';
+  }
+}
+
+function setTableHeight() {
+  const swidth = screen.width;
+  const screenH = window.innerHeight;
+  const screenW = window.innerWidth;
+  const wrapper = document.querySelector('.table-wrapper');
+  const isLandscape = screenW > screenH;
+
+  let scale = 1.0;
+  if (isLandscape) {
+    scale = 1.35;
+    if (swidth>=1200) scale = 1.0;
+  } else {
+    if (screenW >= 810) scale = 1.0;
+    else scale = screenW / 825;
+  }
+
+  let maxH;
+  let maxW;
+  if (isLandscape) { maxH = screenH - 185;}
+  else { maxH = screenH - 150;}
+  maxW = screenW + 100;
+  maxH = maxH / scale;
+
+  wrapper.style.maxHeight = maxH + 'px';
+  wrapper.style.height = maxH + 'px';
+}
+
+function autoScalePage() {
+  const swidth = screen.width;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const isLandscape = width > height;
+
+  let scale = 1.0;
+  if (isLandscape) {
+    scale = 1.35;
+    if (swidth>=1200) scale = 1.0;
+  } else {
+    if (width >= 810) scale = 1.0;
+    else scale = width / 825;
+  }
+
+  const comp = 100 / scale;
+  const html = document.documentElement;
+  html.style.transform = `scale(${scale})`;
+  html.style.transformOrigin = '0 0';
+  html.style.width = comp + '%';
+  html.style.height = comp + '%';
+  html.style.overflow = 'hidden';
+
+  setStickyByScale(scale);
+  setTableHeight();
+  updateCopyright();
+
+  console.log(`Landscape: ${isLandscape}, Width: ${width}x${height}, Scale: ${scale.toFixed(2)}`);
+}
+
+window.addEventListener('load', autoScalePage);
+window.addEventListener('resize', autoScalePage);
+window.addEventListener('orientationchange', autoScalePage);
+
+function fillTable() {
+  const tbody = document.getElementById("game-rows");
+  tbody.innerHTML = "";
+  const n = spielerAnzahl;
+
+  console.log("Test-Tabelle: " + spielDaten.length + " Zeilen, Spieler: " + n);
+
+  let buttonInserted = false;
+
+  let punkteSummen     = [0, 0, 0, 0];
+  let gewinnZaehler    = [0, 0, 0, 0];
+  let verlustZaehler   = [0, 0, 0, 0];
+  let eingepasstZaehler = 0;
+
+  spielDaten.forEach((data, i) => {
+    const isEmpty = !data.grundwert && !data.hand && !data.schneider &&
+                    !data.schneiderang && !data.schwarz && !data.schwarzang && !data.offen;
+
+    if (isEmpty && !buttonInserted) {
+      createButtonRow(i);
+      buttonInserted = true;
+    }
+
+    let istEingepasst = false;
+    let istGueltigesSpiel = false;
+
+    if (!isEmpty) {
+      if (data.grundwert === "E" || data.grundwert === "Pass") {
+        istEingepasst = true;
+        eingepasstZaehler++;
+      }
+      else if (data.spieler && data.gewonnen !== null && data.gewonnen !== undefined) {
+        istGueltigesSpiel = true;
+        const pos = data.spieler - 1;
+        const delta = parseInt(data[`p${data.spieler}_delta`]) || 0;
+        punkteSummen[pos] += delta;
+        if (data.gewonnen === true) {
+          gewinnZaehler[pos]++;
+        } else if (data.gewonnen === false) {
+          verlustZaehler[pos]++;
+        }
+      }
+    }
+
+    // Anzeigewerte
+    let pPunkte = ["", "", "", ""];
+    let pGew = ["", "", "", ""];
+    let pVerl = ["", "", "", ""];
+    let eingepasstAnzeige = "";
+
+    if (!isEmpty) {
+      if (istEingepasst) {
+        eingepasstAnzeige = eingepasstZaehler;
+      }
+      if (istGueltigesSpiel && data.spieler) {
+        const pos = data.spieler - 1;
+        pPunkte[pos] = punkteSummen[pos];
+        pGew[pos] = data.gewonnen === true ? gewinnZaehler[pos] : "";
+        pVerl[pos] = data.gewonnen === false ? verlustZaehler[pos] : "";
+      }
+    }
+
+    const row = document.createElement("tr");
+    row.classList.add("data-row");
+    row.dataset.nr = data.nr;
+
+    if (istEingepasst) {
+      row.style.backgroundColor = "#ddd";
+      row.style.fontStyle = "italic";
+    }
+
+    let playerCols = "";
+    for (let p = 0; p < n; p++) {
+      playerCols += `<td class="rechts">${pPunkte[p]}</td><td>${pGew[p]}</td><td>${pVerl[p]}</td>`;
+    }
+
+    row.innerHTML = `
+      <td>${data.nr}</td>
+      <td>${data.grundwert || ""}</td>
+      <td>${data.mitSpitzen || ""}</td>
+      <td>${data.ohneSpitzen || ""}</td>
+      <td>${data.hand || ""}</td>
+      <td>${data.schneider || ""}</td>
+      <td>${data.schneiderang || ""}</td>
+      <td>${data.schwarz || ""}</td>
+      <td>${data.schwarzang || ""}</td>
+      <td>${data.offen || ""}</td>
+      <td>${data.pluswert || ""}</td>
+      <td>${data.minuswert ? `<span style="color:red;">${data.minuswert}</span>` : ""}</td>
+      ${playerCols}
+      <td>${eingepasstAnzeige}</td>
+      <td>
+        ${isEmpty ? "" : `<button class="edit-btn" onclick="openNewModal(${data.nr-1})">Edit</button>`}
+      </td>
+    `;
+
+    // Streifen-Styling für Geber
+    const colMap = n === 4 ? [13, 16, 19, 22] : [13, 16, 19];
+    const mod = (data.nr - 1) % n;
+    row.querySelector(`td:nth-child(${colMap[mod]})`).style.background = "repeating-linear-gradient(-45deg, #ddd, #ddd 3px, #fff 3px, #fff 6px)";
+    row.querySelector(`td:nth-child(${colMap[mod]+1})`).style.background = "repeating-linear-gradient(-45deg, #ddd, #ddd 3px, #fff 3px, #fff 6px)";
+    row.querySelector(`td:nth-child(${colMap[mod]+2})`).style.background = "repeating-linear-gradient(-45deg, #ddd, #ddd 3px, #fff 3px, #fff 6px)";
+
+    tbody.appendChild(row);
+  });
+
+  // Gesamtsummen in tfoot schreiben
+  for (let i = 0; i < n; i++) {
+    document.getElementById(`sum-p${i+1}`).textContent = punkteSummen[i] || 0;
+    document.getElementById(`gew-p${i+1}`).textContent = gewinnZaehler[i] || 0;
+    document.getElementById(`verl-p${i+1}`).textContent = verlustZaehler[i] || 0;
+  }
+  document.getElementById("sum-eingepasst").textContent = eingepasstZaehler || 0;
+
+  // Bonus-Zeile: (gew - verl) × 50
+  for (let i = 0; i < n; i++) {
+    const bonusP = (gewinnZaehler[i] - verlustZaehler[i]) * 50;
+    document.getElementById(`bonus-p${i+1}`).textContent = bonusP || 0;
+    document.getElementById(`bogew-p${i+1}`).textContent = gewinnZaehler[i] - verlustZaehler[i] || 0;
+  }
+
+  // Bonus-Zeile: (verl Gegner) × Multiplikator
+  const gMulti = getBonusGMultiplikator();
+  for (let i = 0; i < n; i++) {
+    let gegnerVerluste = 0;
+    for (let j = 0; j < n; j++) {
+      if (j !== i) gegnerVerluste += verlustZaehler[j];
+    }
+    const bonusG = gegnerVerluste * gMulti;
+    document.getElementById(`bonus-g${i+1}`).textContent = bonusG || 0;
+    document.getElementById(`bogew-g${i+1}`).textContent = gegnerVerluste || 0;
+  }
+
+  // Gesamtpunkte
+  for (let i = 0; i < n; i++) {
+    const bonusP = (gewinnZaehler[i] - verlustZaehler[i]) * 50;
+    let gegnerVerluste = 0;
+    for (let j = 0; j < n; j++) {
+      if (j !== i) gegnerVerluste += verlustZaehler[j];
+    }
+    const bonusG = gegnerVerluste * gMulti;
+    const gesamt = punkteSummen[i] + bonusP + bonusG;
+    const cell = document.getElementById(`gesamt-p${i+1}`);
+    cell.textContent = gesamt || 0;
+    cell.style.color = gesamt > 0 ? "green" : gesamt < 0 ? "red" : "black";
+    cell.style.fontWeight = "bold";
+  }
+
+  updatePlayerNamesInTable();
+}
+
+
+function closeSpielDialog() {
+  const dialog = document.getElementById("spiel-dialog");
+  if (dialog.open) {
+    dialog.close();
+  }
+}
+
+function updatePlayerNamesInTable() {
+  const n = spielerAnzahl;
+  for (let i = 1; i <= n; i++) {
+    const th = document.querySelector(`#skat-table thead tr:nth-child(1) th.player-name${i}`);
+    if (th) th.textContent = spielerNamen[i-1] + (i === 1 ? " (LF)" : "");
+  }
+}
+
+function createButtonRow(spielIndex) {
+  const tbody = document.getElementById("game-rows");
+  const btnRow = document.createElement("tr");
+  btnRow.classList.add("button-row");
+
+  const colCount = 12 + (spielerAnzahl * 3) + 2;
+
+  const td = document.createElement("td");
+  td.colSpan = colCount;
+  td.style.textAlign = "center";
+  td.style.background = "#f5f5f5";
+  td.style.padding = "6px 0";
+
+  td.innerHTML = `
+    <span style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">
+      <button onclick="openNewModal(${spielIndex})" class="neuer-eintrag-btn" style="flex-shrink: 0;">
+        📝 neuer Spieleintrag ...
+      </button>
+    </span>
+  `;
+
+  btnRow.appendChild(td);
+  tbody.appendChild(btnRow);
+}
+
+function berechneSpielwert(spiel) {
+    const grundwert = parseInt(spiel.grundwert) || 0;
+    if (grundwert === 0 || grundwert === "E") return 0;
+
+    // Null-Spiele
+    if (grundwert === 23) {
+        const hatHand   = spiel.hand === "X";
+        const hatOuvert = spiel.offen === "X";
+        if (hatHand && hatOuvert) return 59;
+        if (hatHand)              return 35;
+        if (hatOuvert)            return 46;
+        return 23;
+    }
+
+    // Farb- und Grand-Spiele
+    let multiplikator = 0;
+    if (spiel.hand        === "X") multiplikator++;
+    if (spiel.schneider   === "X") multiplikator++;
+    if (spiel.schneiderang === "X") multiplikator++;
+    if (spiel.schwarz     === "X") multiplikator++;
+    if (spiel.schwarzang  === "X") multiplikator++;
+    if (spiel.offen       === "X") multiplikator++;
+
+    const spitzen = parseInt(spiel.mitSpitzen) || parseInt(spiel.ohneSpitzen) || 0;
+    const spitzenFaktor = spitzen + 1;
+    const spielwert = grundwert * (spitzenFaktor + multiplikator);
+    return spielwert;
+}
+
+function setSpitzen(isMitSpitzen) {
+  const mit = document.getElementById("mitSpitzen");
+  const ohne = document.getElementById("ohneSpitzen");
+  const grundwert = document.getElementById("grundwert")?.value || "";
+
+  if (isMitSpitzen) {
+    mit.value = mit.value || "1";
+    ohne.value = "";
+  } else {
+    ohne.value = ohne.value || "1";
+    mit.value = "";
+  }
+
+  if (grundwert === "Eingepasst" || grundwert === "E") {
+    mit.value = "";
+    ohne.value = "";
+  }
+
+  document.querySelectorAll(".spitzen-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll("#spitzen-buttons button")[isMitSpitzen ? 0 : 1].classList.add("active");
+
+  const aktuelleAnzahl = isMitSpitzen ? parseInt(mit.value) || 1 : parseInt(ohne.value) || 1;
+  document.querySelectorAll("#spitzen-anzahl .spitze-btn").forEach(btn => {
+    btn.classList.toggle("active", parseInt(btn.textContent) === aktuelleAnzahl);
+  });
+}
+
+function selectSpitze(value) {
+  const mit = document.getElementById("mitSpitzen");
+  const ohne = document.getElementById("ohneSpitzen");
+
+  if (mit.value === "1") {
+    mit.value = value;
+  } else {
+    ohne.value = value;
+  }
+
+  document.querySelectorAll(".spitze-btn").forEach(b => {
+    b.classList.toggle("active", b.textContent == value);
+  });
+}
+
+function generatePlayerButtons(spielIndex) {
+  const container = document.getElementById("player-buttons");
+  container.innerHTML = "";
+  const n = spielerAnzahl;
+
+  const führenderSpieler = (spielIndex % n);
+  for (let i = 0; i < n; i++) {
+    if (n === 4 && i === führenderSpieler) continue;  // Bei 4er: Geber überspringen
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = spielerNamen[i];
+    btn.style.marginRight = "5px";
+    btn.style.fontSize = "16px";
+    btn.style.padding = "5px 5px";
+    btn.style.cursor = "pointer";
+    btn.style.width = "200px";
+    btn.style.height = "80px";
+    btn.style.borderRadius = "6px";
+
+    const ausgewaehlter = parseInt(document.getElementById("spiel-form").dataset.ausgewaehlterSpieler, 10);
+    if (ausgewaehlter === i + 1) {
+      btn.style.background = "#4CAF50";
+      btn.style.color = "#fff";
+    }
+
+    btn.addEventListener("click", () => {
+      Array.from(container.children).forEach(b => {
+        b.style.background = "";
+        b.style.color = "#000";
+      });
+
+      btn.style.background = "#4CAF50";
+      btn.style.color = "#fff";
+
+      document.getElementById("spiel-form").dataset.ausgewaehlterSpieler = i + 1;
+    });
+
+    container.appendChild(btn);
+  }
+}
+
+function createCSVButton() {
+  const container = document.getElementById("csv-export-container");
+  if (!container || container.children.length > 0) return;
+
+  const csvBtn = document.createElement("button");
+  csvBtn.innerHTML = "📊 Export";
+  csvBtn.style.cssText = `
+    padding: 6px 16px;
+    margin-left: auto;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white; border: none; border-radius: 6px;
+    font-size: 15px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(40,167,69,0.3); transition: transform 0.2s;
+  `;
+  csvBtn.addEventListener("mouseenter", () => csvBtn.style.transform = "scale(1.05)");
+  csvBtn.addEventListener("mouseleave", () => csvBtn.style.transform = "scale(1)");
+  csvBtn.onclick = exportCSV;
+  container.appendChild(csvBtn);
+}
+
+function getInt(id) {
+  return parseInt(document.getElementById(id)?.textContent || 0, 10);
+}
+
+function exportCSV() {
+  const n = spielerAnzahl;
+  const gMulti = getBonusGMultiplikator();
+
+  const headers = ['Nr','Grundwert','Mit','Ohne','Hand','Schneider','Schn.Ang','Schwarz','Schw.Ang','Offen','+', '-'];
+  for (let i = 0; i < n; i++) {
+    headers.push(spielerNamen[i], `Gew${i+1}`, `Verl${i+1}`);
+  }
+  headers.push('Eingepasst');
+
+  const csvRows = [headers];
+
+  spielDaten.forEach(spiel => {
+    const row = [
+      spiel.nr || '', spiel.grundwert || '', spiel.mitSpitzen || '', spiel.ohneSpitzen || '',
+      spiel.hand || '', spiel.schneider || '', spiel.schneiderang || '', spiel.schwarz || '',
+      spiel.schwarzang || '', spiel.offen || '', spiel.pluswert || '', spiel.minuswert || ''
+    ];
+    for (let i = 1; i <= n; i++) {
+      row.push(spiel[`p${i}_delta`] || '', spiel[`p${i}_gew`] || '', spiel[`p${i}_verl`] || '');
+    }
+    row.push(spiel.eingepasst || '');
+    csvRows.push(row);
+  });
+
+  // ENDSUMMEN
+  const sumRow = ['','','','','','','','','','','',''];
+  for (let i = 1; i <= n; i++) {
+    sumRow.push(
+      document.getElementById(`sum-p${i}`)?.textContent || '',
+      document.getElementById(`gew-p${i}`)?.textContent || '',
+      document.getElementById(`verl-p${i}`)?.textContent || ''
+    );
+  }
+  sumRow.push(document.getElementById('sum-eingepasst')?.textContent || '');
+  csvRows.push(sumRow);
+
+  // Bonus-Berechnungen
+  const bonusG = [], bonusP = [], gesamt = [];
+  for (let i = 1; i <= n; i++) {
+    let gv = 0;
+    for (let j = 1; j <= n; j++) {
+      if (j !== i) gv += getInt(`verl-p${j}`);
+    }
+    bonusG.push(gv);
+    bonusP.push(getInt(`gew-p${i}`) - getInt(`verl-p${i}`));
+    gesamt.push(getInt(`sum-p${i}`) + bonusP[i-1]*50 + gv*gMulti);
+  }
+
+  const bpRow = ['','','','','','','','','','','',''];
+  for (let i = 0; i < n; i++) { bpRow.push(bonusP[i] * 50, bonusP[i], ''); }
+  bpRow.push('');
+  csvRows.push(bpRow);
+
+  const bgRow = ['','','','','','','','','','','',''];
+  for (let i = 0; i < n; i++) { bgRow.push(bonusG[i] * gMulti, bonusG[i], ''); }
+  bgRow.push('');
+  csvRows.push(bgRow);
+
+  const gRow = ['','','','','','','','','','','',''];
+  for (let i = 0; i < n; i++) { gRow.push(gesamt[i], '', ''); }
+  gRow.push('');
+  csvRows.push(gRow);
+
+  // SEMIKOLON + UTF-8 BOM
+  const csvContent = '\uFEFF' + csvRows.map(row =>
+    row.map(cell => `"${cell}"`).join(';')
+  ).join('\n');
+
+  const serieWert = document.querySelector('input[name="serie"]:checked')?.value || '0';
+  const tischWert = document.querySelector('input[name="tisch"]:checked')?.value || '0';
+
+  downloadCSV(csvContent, `Spielliste_${n}er_S${serieWert}_T${tischWert}_${new Date().toLocaleDateString('de-DE')}.csv`);
+}
+
+function downloadCSV(csv, filename) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+}
+
+const spielerNamen = ["Spieler 1", "Spieler 2", "Spieler 3", "Spieler 4"];
+
+function generatePlayerNameButtons() {
+  const mitspielerListe = [
+	"Bertram, Frank",
+	"Bleckmann, Norbert",
+	"Böllsterling, Gottfried",
+	"Brand, Jo",
+	"Bühl, Heinz",
+	"Faßbender, Kai",
+	"Gebhardt, Harry",
+	"Götte, Norbert",
+	"Grapatin, Alexander",
+	"Gruschka, Alfred",
+	"Heimann, Klaus-Dieter",
+	"Hetz, Michael",
+	"Holtkamp, Bodo",
+	"Jeske, Joachim",
+	"Josek, Norbert",
+	"Jost, Uwe (Gle.)",
+	"Kraus, Max",
+	"Langer, Kurt",
+	"Maulshagen, Martin",
+	"Müller, Werner (Gle.)",
+	"Opitz, Jürgen (Gle.)",
+	"Pestotnik, Ralf",
+	"Puls, Wilfried",
+	"Schekerka, Herbert",
+	"Schnecke, Dieter",
+	"Schwarz, Peter",
+	"Selzer, Bernhard",
+	"Stümpges, Achim",
+	"Weyer, Wilfried (Gle.)",
+	"Winand, Hermann (Gle.)",
+	"Gast"
+  ];
+
+  const n = spielerAnzahl;
+
+  // Container 4 ein-/ausblenden
+  const container4 = document.getElementById("player-btn-container-4");
+  if (container4) container4.style.display = (n >= 4) ? "" : "none";
+
+  for (let pos = 1; pos <= n; pos++) {
+    const container = document.getElementById(`player-btn-container-${pos}`);
+    if (!container) continue;
+
+    container.innerHTML = "";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = spielerNamen[pos - 1] || `Spieler ${pos}`;
+    btn.style.fontSize = "15px";
+    btn.style.padding = "6px 12px";
+    btn.style.cursor = "pointer";
+    btn.style.minWidth = "100px";
+    btn.style.borderRadius = "6px";
+
+    btn.addEventListener("click", () => {
+      const select = document.createElement("select");
+      select.style.fontSize = "15px";
+      select.style.padding = "4px 8px";
+      select.style.minWidth = "180px";
+      select.style.maxWidth = "220px";
+      select.style.marginTop = "4px";
+
+      const optDefault = document.createElement("option");
+      optDefault.value = "";
+      optDefault.text = "— Namen wählen —";
+      select.appendChild(optDefault);
+
+      const aktuell = spielerNamen[pos - 1];
+      mitspielerListe.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.text = name === "Gast" ? "Gast (Name eingeben)" : name;
+        if (name === aktuell) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      const gastInput = document.createElement("input");
+      gastInput.type = "text";
+      gastInput.id = `gast-input-${pos}`;
+      gastInput.placeholder = "Gastname eingeben...";
+      gastInput.style.display = "none";
+      gastInput.style.marginTop = "4px";
+      gastInput.style.padding = "4px 8px";
+      gastInput.style.width = "200px";
+
+      select.addEventListener("change", () => {
+        const wert = select.value;
+        if (wert === "Gast") {
+          gastInput.style.display = "block";
+          gastInput.focus();
+          return;
+        } else if (gastInput.style.display === "block") {
+          gastInput.style.display = "none";
+        }
+
+        if (wert && wert !== "Gast") {
+          // Duplikat-Prüfung
+          const andererIndex = spielerNamen.findIndex((n, idx) => idx !== (pos - 1) && n === wert);
+          if (andererIndex >= 0) {
+            alert(`⚠️ "${wert}" ist bereits als Spieler ${andererIndex + 1} eingetragen!`);
+            select.value = "";
+            return;
+          }
+          spielerNamen[pos - 1] = wert;
+          btn.textContent = wert;
+          updatePlayerNamesInTable();
+        }
+        container.removeChild(select);
+        if (gastInput.parentNode) container.removeChild(gastInput);
+        container.appendChild(btn);
+      });
+
+      gastInput.addEventListener("change", () => {
+        const gastName = gastInput.value.trim();
+        if (gastName) {
+          const gastVollName = `Gast: ${gastName}`;
+          // Duplikat-Prüfung auch für Gast-Namen
+          const andererIndex = spielerNamen.findIndex((n, idx) => idx !== (pos - 1) && n === gastVollName);
+          if (andererIndex >= 0) {
+            alert(`⚠️ "${gastVollName}" ist bereits als Spieler ${andererIndex + 1} eingetragen!`);
+            gastInput.value = "";
+            gastInput.focus();
+            return;
+          }
+          spielerNamen[pos - 1] = gastVollName;
+          btn.textContent = gastVollName;
+          updatePlayerNamesInTable();
+        }
+        container.removeChild(select);
+        container.removeChild(gastInput);
+        container.appendChild(btn);
+      });
+
+      container.removeChild(btn);
+      container.appendChild(select);
+      container.appendChild(gastInput);
+      select.focus();
+    });
+
+    container.appendChild(btn);
+  }
+}
+
+
+function generateGewinnstufenButtons(spielIndex) {
+  const container = document.getElementById("gewinnstufen-buttons");
+  container.innerHTML = "";
+
+  if (spielIndex === null || spielIndex < 0) return;
+
+  const data = spielDaten[spielIndex];
+  const grundwert = document.getElementById("grundwert").value;
+
+  if (!grundwert || grundwert === "Pass" || grundwert === "E") return;
+
+  const MAP = {
+    "Hand": "hand",
+    "Schneider": "schneider",
+    "Schn.ang.": "schneiderang",
+    "Schwarz": "schwarz",
+    "Schw.ang.": "schwarzang",
+    "Ouvert": "offen"
+  };
+
+  const buttons =
+    grundwert == 23
+      ? ["Hand", "Ouvert"]
+      : ["Hand", "Schneider", "Schn.ang.", "Schwarz", "Schw.ang.", "Ouvert"];
+
+  buttons.forEach(label => {
+    const key = MAP[label];
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "gw-btn";
+    btn.innerHTML = label.replace(".", ".<br>");
+
+    if (data[key] === "X") {
+      btn.classList.add("active");
+    }
+
+    btn.addEventListener("click", () => {
+      data[key] = data[key] === "X" ? "" : "X";
+      btn.classList.toggle("active");
+
+	  // Schwarz angesagt
+	  if (label === "Schw.ang.") {
+		if (data.schwarzang === "X" && data.schwarz !== "X") {
+		  data.schwarz = "X";
+		  const setBtn = Array.from(container.children).find(b => b.innerHTML.includes("Schwarz"));
+		  if (setBtn) {setBtn.classList.add("active");}
+		}
+		if (data.schwarzang === "X" && data.schneiderang !== "X") {
+		  data.schneiderang = "X";
+		  const setBtn = Array.from(container.children).find(b => b.innerHTML.includes("Schn."));
+		  if (setBtn) {setBtn.classList.add("active");}
+		}
+		if (data.schwarzang === "X" && data.schneider !== "X") {
+		  data.schneider = "X";
+		  const setBtn = Array.from(container.children).find(b => b.innerHTML.includes("Schneider"));
+		  if (setBtn) {setBtn.classList.add("active");}
+		}
+		if (data.schwarzang === "X" && data.hand !== "X") {
+		  data.hand = "X";
+		  const setBtn = Array.from(container.children).find(b => b.innerHTML.includes("Hand"));
+		  if (setBtn) {setBtn.classList.add("active");}
+		}
+	  }
+
+	  // Schwarz
+	  if (label === "Schwarz") {
+		if (data.schwarz === "X" && data.schneider !== "X") {
+		  data.schneider = "X";
+		  const setBtn = Array.from(container.children).find(b => b.innerHTML.includes("Schneider"));
+		  if (setBtn) {setBtn.classList.add("active");}
+		}
+	  }
+
+	  // Schneider angesagt
+	  if (label === "Schn.ang.") {
+		if (data.schneiderang === "X" && data.schneider !== "X") {
+		  data.schneider = "X";
+		  const setBtn = Array.from(container.children).find(b => b.innerHTML.includes("Schneider"));
+		  if (setBtn) {setBtn.classList.add("active");}
+		}
+		if (data.schneiderang === "X" && data.hand !== "X") {
+		  data.hand = "X";
+		  const setBtn = Array.from(container.children).find(b => b.innerHTML.includes("Hand"));
+		  if (setBtn) {setBtn.classList.add("active");}
+		}
+	  }
+
+      fillTable();
+    });
+
+    container.appendChild(btn);
+  });
+}
+
+function resetButtons() {
+  document.querySelectorAll("#grundwert-buttons button").forEach(btn => {
+    btn.style.backgroundColor = "";
+    btn.style.fontWeight = "";
+    if (btn.textContent === "♥" || btn.textContent === "♦") {
+      btn.style.color = "red";
+    } else {
+      btn.style.color = "black";
+    }
+  });
+
+  document.getElementById("spitzen-buttons").style.display = "none";
+  document.getElementById("spitzen-anzahl").style.display = "none";
+  document.querySelectorAll(".spitzen-btn").forEach(btn => btn.classList.remove("active"));
+  document.querySelectorAll(".spitze-btn").forEach(btn => btn.classList.remove("active"));
+}
+
+function renderSpitzenButtons(max) {
+  const container = document.getElementById("spitzen-anzahl");
+  container.innerHTML = "";
+  container.style.display = "flex";
+
+  for (let i = 1; i <= max; i++) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "spitze-btn";
+    btn.textContent = i;
+    btn.onclick = () => selectSpitze(i);
+    container.appendChild(btn);
+  }
+}
+
+function setGrundwert(value) {
+  const input = document.getElementById("grundwert");
+  const spitzenBlock = document.getElementById("spitzen-buttons");
+  const spitzenAnzahlBlock = document.getElementById("spitzen-anzahl");
+  const gewinnstufenBlock = document.getElementById("gewinnstufen-buttons");
+
+  const grundwertMap = {
+    "Grand": 24, "♣": 12, "♠": 11, "♥": 10, "♦": 9, "Null": 23, "Pass": "E"
+  };
+
+  input.value = grundwertMap[value];
+
+  if (value === "Null" || value === "Pass") {
+    spitzenBlock.style.display = "none";
+    spitzenAnzahlBlock.style.display = "none";
+    document.getElementById("mitSpitzen").value = "";
+    document.getElementById("ohneSpitzen").value = "";
+    document.querySelectorAll(".spitzen-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".spitze-btn").forEach(b => b.classList.remove("active"));
+  } else {
+    spitzenBlock.style.display = "flex";
+    spitzenAnzahlBlock.style.display = "flex";
+    if (value === "Grand") {
+      renderSpitzenButtons(4);
+    } else {
+      renderSpitzenButtons(11);
+    }
+  }
+
+  gewinnstufenBlock.innerHTML = "";
+  const currentIndex = getCurrentSpielIndex();
+  if (currentIndex >= 0) {
+    generateGewinnstufenButtons(currentIndex);
+  }
+
+  const buttonsUI = document.querySelectorAll("#grundwert-buttons button");
+  buttonsUI.forEach(btn => {
+    let baseColor = "black";
+    if (btn.textContent === "♥" || btn.textContent === "♦") baseColor = "red";
+
+    if (btn.textContent === value) {
+      btn.style.backgroundColor = "#4CAF50";
+      btn.style.color = "white";
+      btn.style.fontWeight = "bold";
+    } else {
+      btn.style.backgroundColor = "";
+      btn.style.color = baseColor;
+      btn.style.fontWeight = "";
+    }
+  });
+}
+
+function getCurrentSpielIndex() {
+  const idx = parseInt(document.getElementById("spiel-form").dataset.spielIndex, 10);
+  return isNaN(idx) ? -1 : idx;
+}
+
+function openNewModal(spielIndex = null) {
+  const dialog = document.getElementById("spiel-dialog");
+  const spielNummerSpan = document.getElementById("spielnummer-display");
+  const spieleAnz = document.querySelector('input[name="karten"]:checked')?.value || '0';
+
+  dialog.style.transform = `scale(${scale*0.9})`;
+  dialog.style.transformOrigin = 'top center';
+
+  resetButtons();
+  document.getElementById("grundwert").value = "";
+  document.getElementById("mitSpitzen").value = "";
+  document.getElementById("ohneSpitzen").value = "";
+
+  if (spielIndex !== null && spielIndex >= 0) {
+    const spiel = spielDaten[spielIndex];
+    document.getElementById("grundwert").value = spiel.grundwert || "";
+    document.getElementById("mitSpitzen").value = spiel.mitSpitzen || "";
+    document.getElementById("ohneSpitzen").value = spiel.ohneSpitzen || "";
+    document.getElementById("spiel-form").dataset.spielIndex = spielIndex;
+    document.getElementById("spiel-form").dataset.ausgewaehlterSpieler = spiel.spieler || "";
+
+    generatePlayerButtons(spielIndex);
+    generateGewinnstufenButtons(spielIndex);
+    spielNummerSpan.textContent = spiel.nr + ' / '+spieleAnz;
+
+    const grundwertMapReverse = {
+      "24": "Grand", "12": "♣", "11": "♠", "10": "♥", "9": "♦", "23": "Null", "E": "Pass"
+    };
+    const selectedText = grundwertMapReverse[spiel.grundwert];
+    if (selectedText) {
+      setGrundwert(selectedText);
+    }
+    const mitSpitzenVal  = parseInt(spiel.mitSpitzen) || 0;
+    const ohneSpitzenVal = parseInt(spiel.ohneSpitzen) || 0;
+
+    if (mitSpitzenVal > 0) {
+        setSpitzen(true);
+        document.querySelectorAll('#spitzen-anzahl .spitze-btn')
+            .forEach(btn => {
+                btn.classList.toggle('active', btn.textContent == mitSpitzenVal);
+            });
+    } else if (ohneSpitzenVal > 0) {
+        setSpitzen(false);
+        document.querySelectorAll('#spitzen-anzahl .spitze-btn')
+            .forEach(btn => {
+                btn.classList.toggle('active', btn.textContent == ohneSpitzenVal);
+            });
+    } else {
+        document.querySelectorAll(".spitzen-btn").forEach(b => b.classList.remove("active"));
+        document.getElementById("spitzen-anzahl").style.display = "none";
+    }
+  } else {
+    const emptyIndex = spielDaten.findIndex(s =>
+      !s.grundwert && !s.hand && !s.schneider && !s.schneiderang &&
+      !s.schwarz && !s.schwarzang && !s.offen
+    );
+    const idx = emptyIndex >= 0 ? emptyIndex : spielDaten.length - 1;
+
+    const s = spielDaten[idx];
+    s.grundwert = "";
+    s.hand = "";
+    s.schneider = "";
+    s.schneiderang = "";
+    s.schwarz = "";
+    s.schwarzang = "";
+    s.offen = "";
+    s.mitSpitzen = "";
+    s.ohneSpitzen = "";
+    s.spieler = "";
+
+    document.getElementById("spiel-form").dataset.spielIndex = idx;
+    document.getElementById("spiel-form").dataset.ausgewaehlterSpieler = "";
+
+    generatePlayerButtons(idx);
+    document.getElementById("gewinnstufen-buttons").innerHTML = "";
+
+    spielNummerSpan.textContent = idx + 1;
+  }
+
+  dialog.showModal();
+}
+
+
+document.getElementById("btn-gewonnen").addEventListener("click", () => {
+  saveGame(true);
+});
+
+document.getElementById("btn-verloren").addEventListener("click", () => {
+  saveGame(false);
+});
+
+function saveGame(gewonnen) {
+    const form = document.getElementById("spiel-form");
+    const index = parseInt(form.dataset.spielIndex, 10);
+    const neuerSpieler = parseInt(form.dataset.ausgewaehlterSpieler, 10);
+    const n = spielerAnzahl;
+
+    if (isNaN(index)) {
+        alert("Kein gültiges Spiel ausgewählt.");
+        return;
+    }
+
+	const grundwertInput = document.getElementById("grundwert");
+	const grundwert = grundwertInput ? grundwertInput.value.trim() : form.dataset.grundwert || "E";
+	if (!grundwert) {
+		alert("Bitte Spielart (Grand,♣,♠,♥,♦,Null oder Eingepasst) auswählen.");
+		return;
+	}
+
+    const istPass = (grundwert === "E" || grundwert === "Pass");
+
+    let spielerGueltig = !isNaN(neuerSpieler) && neuerSpieler >= 1 && neuerSpieler <= n;
+    if (!spielerGueltig && !istPass) {
+        alert("Bitte einen Spieler auswählen (außer bei Pass).");
+        return;
+    }
+
+    const spiel = spielDaten[index];
+
+    if (spiel.offen === "X" && grundwert!="23" &&
+    	(spiel.hand === "" || spiel.schneider === ""  || spiel.schneiderang === "" || spiel.schwarz === ""  || spiel.schwarzang === "")) {
+        alert("❌ Ouvert nur bei Hand + Schneider + Schneider Ang. + Schwarz + Schwarz Ang. möglich!");
+        return;
+    }
+    if (spiel.schwarzang === "X" &&
+    	(spiel.hand === "" || spiel.schneider === ""  || spiel.schneiderang === "" || spiel.schwarz === "")) {
+        alert("❌ Schwarz angesagt nur bei Hand + Schneider + Schneider Ang. + Schwarz möglich!");
+        return;
+    }
+    if (spiel.schwarz === "X" && spiel.schneider === "") {
+        alert("❌ Schwarz nur bei Schneider möglich!");
+        return;
+    }
+    if (spiel.schneiderang === "X" && (spiel.hand === "" || spiel.schneider === "")) {
+        alert("❌ Schneider angesagt nur bei Hand + Schneider möglich!");
+        return;
+    }
+
+    const alterSpielerVorher = spiel.spieler;
+    const warGewonnen        = spiel.gewonnen;
+
+    spiel.grundwert     = grundwert;
+    spiel.spieler       = istPass ? null : neuerSpieler;
+    spiel.gewonnen      = istPass ? null : gewonnen;
+
+    const mitInput  = document.getElementById("mitSpitzen");
+    const ohneInput = document.getElementById("ohneSpitzen");
+
+    let mit  = mitInput  ? parseInt(mitInput.value)  || 0 : 0;
+    let ohne = ohneInput ? parseInt(ohneInput.value) || 0 : 0;
+
+    if (mit === 0 && ohne === 0) {
+        mit = 1;
+        ohne = 0;
+        if (mitInput)  mitInput.value  = "1";
+        if (ohneInput) ohneInput.value = "";
+        setSpitzen(true);
+    }
+
+    spiel.mitSpitzen  = mit;
+    spiel.ohneSpitzen = ohne;
+
+    if (spiel.schwarz === "X" && spiel.mitSpitzen === 0) {
+        alert("❌ Schwarz ohne Kreuz Bube nicht möglich!");
+        return;
+    }
+
+    if (istPass) {
+        spiel.pluswert  = "";
+        spiel.minuswert = "";
+        spiel.hand = "";
+        spiel.schneider = "";
+        spiel.schneiderang = "";
+        spiel.schwarz = "";
+        spiel.schwarzang = "";
+        spiel.offen = "";
+        spiel.mitSpitzen = 0;
+        fillTable();
+        closeSpielDialog();
+        return;
+    }
+
+    const basisWert = berechneSpielwert(spiel);
+    const spielwert = basisWert * (gewonnen ? 1 : 2);
+    const deltaNeu  = gewonnen ? spielwert : -spielwert;
+
+    if (alterSpielerVorher && alterSpielerVorher !== neuerSpieler) {
+        const altKey = `p${alterSpielerVorher}`;
+        spiel[`${altKey}_delta`] = 0;
+
+        if (warGewonnen === true) {
+            spiel[`${altKey}_gew`] = Math.max(0, (parseInt(spiel[`${altKey}_gew`]) || 0) - 1);
+        } else if (warGewonnen === false) {
+            spiel[`${altKey}_verl`] = Math.max(0, (parseInt(spiel[`${altKey}_verl`]) || 0) - 1);
+        }
+    }
+
+    const neuKey = `p${neuerSpieler}`;
+    spiel[`${neuKey}_delta`] = deltaNeu;
+
+    if (gewonnen) {
+        spiel[`${neuKey}_gew`]  = (parseInt(spiel[`${neuKey}_gew`])  || 0) + 1;
+        spiel[`${neuKey}_verl`] = parseInt(spiel[`${neuKey}_verl`]) || 0;
+    } else {
+        spiel[`${neuKey}_gew`]  = parseInt(spiel[`${neuKey}_gew`])  || 0;
+        spiel[`${neuKey}_verl`] = (parseInt(spiel[`${neuKey}_verl`]) || 0) + 1;
+    }
+
+    if (gewonnen) {
+        spiel.pluswert  = spielwert;
+        spiel.minuswert = "";
+    } else {
+        spiel.pluswert  = "";
+        spiel.minuswert = -spielwert;
+    }
+
+    fillTable();
+    closeSpielDialog();
+}
+
+document.querySelectorAll('input[name="karten"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    const kartenAnzahl = parseInt(this.value);
+
+    if (spielDaten.length > kartenAnzahl) {
+      spielDaten.length = kartenAnzahl;
+    }
+
+    while (spielDaten.length < kartenAnzahl) {
+      spielDaten.push({
+        nr: spielDaten.length + 1,
+        grundwert: "", hand: "", schneider: "", schwarz: "",
+        schneiderang: "", schwarzang: "", offen: "",
+        mitSpitzen: "", ohneSpitzen: "", spielwert: "",
+        pluswert: "", minuswert: "",
+        p1_punkte: "", p1_gew: "", p1_verl: "",
+        p2_punkte: "", p2_gew: "", p2_verl: "",
+        p3_punkte: "", p3_gew: "", p3_verl: "",
+        p4_punkte: "", p4_gew: "", p4_verl: "",
+        p1_delta: "", p2_delta: "", p3_delta: "", p4_delta: "",
+        eingepasst: "", spieler: "",
+        gewonnen: null
+      });
+    }
+
+    console.log(`spielDaten: ${spielDaten.length} Zeilen, letzte nr: ${spielDaten[spielDaten.length-1]?.nr}`);
+    fillTable();
+  });
+});
+
+// ── Spieleranzahl wechseln ─────────────────────────────────────────
+document.querySelectorAll('input[name="spieleranzahl"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    spielerAnzahl = parseInt(this.value);
+    buildTableStructure();
+    generatePlayerNameButtons();
+    fillTable();
+  });
+});
+
+function updateCopyright() {
+  const width = screen.width;
+  const height = screen.height;
+  document.getElementById('copyright').innerHTML =
+    `© 2026 by Frank Bertram (V10) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+}
+
+
+window.addEventListener("load", () => {
+  spielerAnzahl = getSpielerAnzahl();
+  buildTableStructure();
+  fillTable();
+  generatePlayerNameButtons();
+  createCSVButton();
+  updateCopyright();
+  console.log(screen.width + 'x' + screen.height);
+});
+
+
+</script>
+    <div id="copyright" style="font-size:8px;">
+    © 2026 by Frank Bertram (V10)
+    </div>
+</body>
+</html>
