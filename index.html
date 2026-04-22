@@ -363,7 +363,12 @@
 
 <dialog id="spiel-dialog" style="padding:20px; border-radius:8px; width:625px; max-width:90%; font-size:15px;">
   <form method="dialog" id="spiel-form" style="display:flex; flex-direction:column; gap:10px;">
-    <h3 style="margin:0 0 5px 0; text-align:center;">Spiel eintragen:  <span id="spielnummer-display"></span></h3>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin:0 0 5px 0;">
+      <div style="width:32px;"></div>
+      <h3 style="margin:0; text-align:center; flex:1;">Spiel eintragen:  <span id="spielnummer-display"></span></h3>
+      <button type="button" onclick="document.getElementById('spiel-dialog').close();"
+              style="width:28px; height:28px; border:1px solid #ccc; background:#f0f0f0; font-size:16px; cursor:pointer; color:#555; line-height:1; border-radius:4px;">✕</button>
+    </div>
 
     <div id="player-buttons" style="margin-bottom:5px;"></div>
 
@@ -1705,7 +1710,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V10) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V11) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -1866,7 +1871,7 @@ window.addEventListener("load", () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V10)
+    © 2026 by Frank Bertram (V11)
     </div>
 </body>
 </html>
