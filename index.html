@@ -365,7 +365,7 @@
   <form method="dialog" id="spiel-form" style="display:flex; flex-direction:column; gap:10px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin:0 0 5px 0;">
       <div style="width:32px;"></div>
-      <h3 style="margin:0; text-align:center; flex:1;">Spiel eintragen:  <span id="spielnummer-display"></span></h3>
+      <h3 style="margin:0; text-align:center; flex:1;">Spiel eintragen:  <span id="spielnummer-display"></span> <span id="kartengeber-display"></span></h3>
       <button type="button" onclick="document.getElementById('spiel-dialog').close();"
               style="width:28px; height:28px; border:1px solid #ccc; background:#f0f0f0; font-size:16px; cursor:pointer; color:#555; line-height:1; border-radius:4px;">✕</button>
     </div>
@@ -1467,6 +1467,10 @@ function openNewModal(spielIndex = null) {
 
     spielNummerSpan.textContent = idx + 1;
   }
+
+  const geberIdx = parseInt(document.getElementById("spiel-form").dataset.spielIndex, 10);
+  const geberName = spielerNamen[geberIdx % spielerAnzahl];
+  document.getElementById("kartengeber-display").textContent = "(Geber: " + geberName + ")";
 
   dialog.showModal();
 }
