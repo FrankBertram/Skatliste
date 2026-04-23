@@ -345,6 +345,7 @@
       <option value="4">4</option>
       <option value="5">5</option>
       <option value="6">6</option>
+      <option value="7">7</option>
     </select>
 
     <span>Spiele:</span>
@@ -595,8 +596,13 @@ function autoScalePage() {
 
   let scale = 1.0;
   if (isLandscape) {
-    scale = 1.35;
-    if (swidth>=1200) scale = 1.0;
+    if (width < 900) {
+      scale = width / 1200;   // Handy-Querformat: auf Tabellenbreite einpassen
+    } else if (swidth >= 1200) {
+      scale = 1.0;
+    } else {
+      scale = 1.35;           // Tablet-Querformat
+    }
   } else {
     if (width >= 810) scale = 1.0;
     else scale = width / 825;
