@@ -549,7 +549,9 @@ function isOldIOS() {
 
 function setStickyByScale(scale) {
   const tfoot = document.querySelector('#skat-table tfoot');
-  if (scale !== 1.0 && !isOldIOS()) {
+  // Sticky nur bei Zoom > 1 aktivieren (Tablet-Querformat).
+  // Bei Scale < 1 (Handy-Querformat) bricht Sticky auf iPhone Safari durch die CSS-Transform.
+  if (scale > 1.0 && !isOldIOS()) {
     tfoot.style.position = '-webkit-sticky';
     tfoot.style.position = 'sticky';
     tfoot.style.bottom = '0';
@@ -570,8 +572,13 @@ function setTableHeight() {
 
   let scale = 1.0;
   if (isLandscape) {
-    scale = 1.35;
-    if (swidth>=1200) scale = 1.0;
+    if (screenW < 900) {
+      scale = screenW / 1200;
+    } else if (swidth >= 1200) {
+      scale = 1.0;
+    } else {
+      scale = 1.35;
+    }
   } else {
     if (screenW >= 810) scale = 1.0;
     else scale = screenW / 825;
@@ -1831,7 +1838,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V12) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.13) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -1992,7 +1999,7 @@ window.addEventListener("load", () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V12)
+    © 2026 by Frank Bertram (V1.13)
     </div>
 </body>
 </html>
