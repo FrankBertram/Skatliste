@@ -8,6 +8,21 @@
   <title>Sintherner Skatclub - Skatliste</title>
   <link rel="icon" type="image/png" href="Skat.png">
   <link rel="apple-touch-icon" href="Skat.png">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyDmiQvDu0pxQYoidaZfRVY0BXZjLOHhw7w",
+      authDomain: "skatverein-b77ef.firebaseapp.com",
+      projectId: "skatverein-b77ef",
+      storageBucket: "skatverein-b77ef.firebasestorage.app",
+      messagingSenderId: "763387283518",
+      appId: "1:763387283518:web:9edf27d79876cf2059296f"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    window.__firestore = { db, doc, setDoc, getDoc };
+  </script>
   <style>
     body {
       font-family: 'Segoe UI', Arial, Helvetica, sans-serif;  /* Offline-fähig, kein Google Fonts nötig */
@@ -925,7 +940,7 @@ function createCSVButton() {
   if (!container || container.children.length > 0) return;
 
   const csvBtn = document.createElement("button");
-  csvBtn.innerHTML = "📊 Export";
+  csvBtn.innerHTML = "☁️ Speichern";
   csvBtn.style.cssText = `
     padding: 6px 16px;
     margin-left: auto;
@@ -936,7 +951,7 @@ function createCSVButton() {
   `;
   csvBtn.addEventListener("mouseenter", () => csvBtn.style.transform = "scale(1.05)");
   csvBtn.addEventListener("mouseleave", () => csvBtn.style.transform = "scale(1)");
-  csvBtn.onclick = exportCSV;
+  csvBtn.onclick = saveSerieToFirestore;
   container.appendChild(csvBtn);
 }
 
@@ -1517,6 +1532,94 @@ document.getElementById("btn-eingepasst").addEventListener("click", () => {
   closeSpielDialog();
 });
 
+async function saveSerieToFirestore() {
+  if (!window.__firestore) {
+    console.warn("Firestore noch nicht initialisiert");
+    return;
+  }
+
+  // Prüfen, ob alle Spieler einen echten Namen haben
+  for (let i = 0; i < spielerAnzahl; i++) {
+    if (!spielerNamen[i] || spielerNamen[i] === `Spieler ${i+1}`) {
+      alert(`⚠️ Bitte erst alle Spielernamen auswählen (Spieler ${i+1} fehlt)!`);
+      return;
+    }
+  }
+
+  const datum = new Date().toISOString().split('T')[0];
+  const serie = document.querySelector('input[name="serie"]:checked')?.value || '1';
+  const tisch = document.getElementById('tisch-auswahl')?.value || '1';
+
+  const docId = `${datum}_S${serie}_T${tisch}_${spielerAnzahl}er`;
+
+  const spieler = [];
+  for (let i = 0; i < spielerAnzahl; i++) {
+    const gesamtCell = document.getElementById(`gesamt-p${i+1}`);
+    spieler.push({
+      name: spielerNamen[i],
+      gesamtpunkte: parseInt(gesamtCell?.textContent) || 0
+    });
+  }
+
+  try {
+    const { db, doc, setDoc, getDoc } = window.__firestore;
+    const docRef = doc(db, "spieltage", docId);
+
+    // Kollisionsprüfung: existiert bereits ein Eintrag?
+    const vorhanden = await getDoc(docRef);
+    if (vorhanden.exists()) {
+      const altSpielerArr = vorhanden.data().spieler || [];
+      const altNamen = altSpielerArr.map(s => s.name);
+      const neuNamen = spieler.map(s => s.name);
+      const gleicheSpieler = altNamen.length === neuNamen.length &&
+        altNamen.every(n => neuNamen.includes(n));
+
+      if (!gleicheSpieler) {
+        // Andere Spieler — vermutlich falscher Tisch
+        const weiter = confirm(
+          `⚠️ Achtung: Für Tisch ${tisch}, Serie ${serie} am ${datum} ist bereits ein Eintrag vorhanden mit anderen Spielern:\n\n` +
+          `Vorhandener Eintrag:\n  ${altNamen.join(', ')}\n\n` +
+          `Aktueller Eintrag:\n  ${neuNamen.join(', ')}\n\n` +
+          `Wurde vielleicht der falsche Tisch gewählt?\n\n` +
+          `Trotzdem überschreiben?`
+        );
+        if (!weiter) return;
+      } else {
+        // Gleiche Spieler — prüfen, ob Punkte abweichen (evtl. falsche Serie gewählt)
+        const punkteGleich = altSpielerArr.every(alt => {
+          const neu = spieler.find(s => s.name === alt.name);
+          return neu && Number(neu.gesamtpunkte) === Number(alt.gesamtpunkte);
+        });
+        if (!punkteGleich) {
+          const altPunkte = altSpielerArr.map(s => `  ${s.name}: ${s.gesamtpunkte}`).join('\n');
+          const neuPunkte = spieler.map(s => `  ${s.name}: ${s.gesamtpunkte}`).join('\n');
+          const weiter = confirm(
+            `⚠️ Achtung: Für Tisch ${tisch}, Serie ${serie} am ${datum} ist bereits ein Eintrag mit abweichenden Gesamtpunkten vorhanden:\n\n` +
+            `Vorhandener Eintrag:\n${altPunkte}\n\n` +
+            `Aktueller Eintrag:\n${neuPunkte}\n\n` +
+            `Wurde vielleicht die falsche Serie gewählt?\n\n` +
+            `Trotzdem überschreiben?`
+          );
+          if (!weiter) return;
+        }
+      }
+    }
+
+    await setDoc(docRef, {
+      datum, serie, tisch, spielerAnzahl, spieler,
+      gespeichertAm: new Date().toISOString()
+    });
+    alert("✅ Serie in Firebase gespeichert!");
+  } catch (e) {
+    console.error("Firestore-Fehler:", e);
+    if (e.code === "permission-denied" || /permission/i.test(e.message)) {
+      alert("❌ Speichern nur am Clubabend möglich.");
+    } else {
+      alert("❌ Speichern in Firebase fehlgeschlagen: " + e.message);
+    }
+  }
+}
+
 function saveGame(gewonnen) {
     const form = document.getElementById("spiel-form");
     const index = parseInt(form.dataset.spielIndex, 10);
@@ -1722,7 +1825,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V11) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V12) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -1883,7 +1986,7 @@ window.addEventListener("load", () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V11)
+    © 2026 by Frank Bertram (V12)
     </div>
 </body>
 </html>
