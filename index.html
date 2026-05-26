@@ -317,6 +317,12 @@
       body { margin: 4px !important; }
     }
 
+    /* Handy-Hochformat: Liste ausblenden, Hinweis anzeigen */
+    @media (max-width: 500px) and (orientation: portrait) {
+      body > *:not(#portrait-warning) { display: none !important; }
+      #portrait-warning { display: flex !important; }
+    }
+
     /* Kompaktes Dialog-Layout für Handy-Querformat */
     @media (max-height: 500px) and (orientation: landscape) {
       #spiel-dialog {
@@ -358,35 +364,35 @@
       /* Kleine Reihen: Spieler (1.) und Gewinnstufen (5.) */
       #spiel-dialog #player-buttons,
       #spiel-dialog #gewinnstufen-buttons {
-        height: 32px !important;
-        min-height: 32px !important;
+        height: 26px !important;
+        min-height: 26px !important;
       }
       #spiel-dialog #player-buttons > *,
       #spiel-dialog #gewinnstufen-buttons > button {
-        height: 32px !important;
-        font-size: 13px !important;
+        height: 26px !important;
+        font-size: 12px !important;
       }
 
       /* Große Reihen: Grundwert, Spitzen, Spitzen-Anzahl */
       #spiel-dialog #grundwert-buttons,
       #spiel-dialog #spitzen-buttons,
       #spiel-dialog #spitzen-anzahl {
-        height: 50px !important;
-        min-height: 50px !important;
+        height: 58px !important;
+        min-height: 58px !important;
       }
       #spiel-dialog #grundwert-buttons > button,
       #spiel-dialog #spitzen-buttons > button,
       #spiel-dialog #spitzen-anzahl > * {
-        height: 50px !important;
+        height: 58px !important;
       }
       #spiel-dialog #grundwert-buttons button:nth-child(n+2):nth-child(-n+5) {
-        font-size: 30px !important;
+        font-size: 34px !important;
       }
       #spiel-dialog #grundwert-buttons button:nth-child(1),
       #spiel-dialog #grundwert-buttons button:nth-child(6) {
-        font-size: 14px !important;
+        font-size: 15px !important;
       }
-      #spiel-dialog .spitzen-btn { font-size: 14px !important; }
+      #spiel-dialog .spitzen-btn { font-size: 15px !important; }
 
       /* Untere Buttonreihe: Gewonnen/Verloren/Eingepasst */
       #spiel-dialog form > div[style*="margin-top:20px"] {
@@ -399,14 +405,21 @@
         flex: 1 1 0 !important;
         min-width: 0 !important;
         padding: 0 !important;
-        height: 50px !important;
-        font-size: 15px !important;
+        height: 58px !important;
+        font-size: 16px !important;
       }
     }
 
   </style>
 </head>
 <body>
+
+<div id="portrait-warning" style="display:none; position:fixed; inset:0; background:#fff; z-index:9999;
+     align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:20px;">
+  <img src="Skat.png" alt="Skat-Logo" style="height:80px; margin-bottom:20px;">
+  <div style="font-size:22px; font-weight:bold; margin-bottom:10px;">📱 ↻</div>
+  <div style="font-size:20px; font-weight:bold;">Bitte Querformat anwenden</div>
+</div>
 
 <div class="header">
   <!-- Zeile 1: Logo + Verein -->
