@@ -315,6 +315,8 @@
        damit die Tabelle die komplette Breite nutzen kann */
     @media (max-height: 500px) and (orientation: landscape) {
       body { margin: 4px !important; }
+      /* feste Tabellen-Natural-Width erzwingen, damit Skalierung greift */
+      #skat-table { min-width: 1100px; }
     }
 
     /* Handy-Hochformat: Liste ausblenden, Hinweis anzeigen */
@@ -364,13 +366,13 @@
       /* Kleine Reihen: Spieler (1.) und Gewinnstufen (5.) */
       #spiel-dialog #player-buttons,
       #spiel-dialog #gewinnstufen-buttons {
-        height: 26px !important;
-        min-height: 26px !important;
+        height: 38px !important;
+        min-height: 38px !important;
       }
       #spiel-dialog #player-buttons > *,
       #spiel-dialog #gewinnstufen-buttons > button {
-        height: 26px !important;
-        font-size: 12px !important;
+        height: 38px !important;
+        font-size: 13px !important;
       }
 
       /* Große Reihen: Grundwert, Spitzen, Spitzen-Anzahl */
@@ -694,8 +696,11 @@ function setTableHeight() {
 
   let maxH;
   let maxW;
-  if (isLandscape) { maxH = screenH - 210;}
-  else { maxH = screenH - 175;}
+  // Handy-Querformat: kompakter Header, mehr Platz für die Tabelle
+  const isPhoneLandscape = isLandscape && screenW < 900;
+  if (isPhoneLandscape) { maxH = screenH - 120; }
+  else if (isLandscape) { maxH = screenH - 210; }
+  else { maxH = screenH - 175; }
   maxW = screenW + 100;
   maxH = maxH / scale;
 
