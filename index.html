@@ -874,9 +874,10 @@ function fillTable() {
       row.style.fontStyle = "italic";
     }
 
+    const negFmt = v => (Number(v) < 0 ? `<span style="color:red;">${v}</span>` : v);
     let playerCols = "";
     for (let p = 0; p < n; p++) {
-      playerCols += `<td class="rechts">${pPunkte[p]}</td><td>${pGew[p]}</td><td>${pVerl[p]}</td>`;
+      playerCols += `<td class="rechts">${pPunkte[p] === "" || pPunkte[p] == null ? "" : negFmt(pPunkte[p])}</td><td>${pGew[p]}</td><td>${pVerl[p]}</td>`;
     }
 
     row.innerHTML = `
@@ -909,9 +910,14 @@ function fillTable() {
     tbody.appendChild(row);
   });
 
+  const setNumColor = (el, v) => { el.style.color = Number(v) < 0 ? "red" : ""; };
+
   // Gesamtsummen in tfoot schreiben
   for (let i = 0; i < n; i++) {
-    document.getElementById(`sum-p${i+1}`).textContent = punkteSummen[i] || 0;
+    const sumVal = punkteSummen[i] || 0;
+    const sumCell = document.getElementById(`sum-p${i+1}`);
+    sumCell.textContent = sumVal;
+    setNumColor(sumCell, sumVal);
     document.getElementById(`gew-p${i+1}`).textContent = gewinnZaehler[i] || 0;
     document.getElementById(`verl-p${i+1}`).textContent = verlustZaehler[i] || 0;
   }
@@ -920,8 +926,13 @@ function fillTable() {
   // Bonus-Zeile: (gew - verl) × 50
   for (let i = 0; i < n; i++) {
     const bonusP = (gewinnZaehler[i] - verlustZaehler[i]) * 50;
-    document.getElementById(`bonus-p${i+1}`).textContent = bonusP || 0;
-    document.getElementById(`bogew-p${i+1}`).textContent = gewinnZaehler[i] - verlustZaehler[i] || 0;
+    const diff = gewinnZaehler[i] - verlustZaehler[i];
+    const bpCell = document.getElementById(`bonus-p${i+1}`);
+    const bgCell = document.getElementById(`bogew-p${i+1}`);
+    bpCell.textContent = bonusP || 0;
+    bgCell.textContent = diff || 0;
+    setNumColor(bpCell, bonusP);
+    setNumColor(bgCell, diff);
   }
 
   // Bonus-Zeile: (verl Gegner) × Multiplikator
