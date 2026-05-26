@@ -263,6 +263,15 @@
 	  white-space: nowrap;
 	}
 
+	/* Mindestbreite für die schmalen Spalten:
+	   mit Spitzen, ohne Spitzen, Hand, Schneider, Schn.ang, Schwarz, Schw.ang, Offen */
+	#skat-table tbody td:nth-child(n+3):nth-child(-n+10),
+	#skat-table thead tr:nth-child(2) th:nth-child(-n+6),
+	#skat-table thead tr:nth-child(1) th:nth-child(3),
+	#skat-table thead tr:nth-child(1) th:nth-child(4) {
+	  min-width: 20px;
+	}
+
 .unten {
   vertical-align: bottom !important;
   text-align: center;
