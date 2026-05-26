@@ -28,6 +28,7 @@
       font-family: 'Segoe UI', Arial, Helvetica, sans-serif;  /* Offline-fähig, kein Google Fonts nötig */
       font-size: 14px;  /* Etwas größer für Touch (13px → 14px) */
       margin: 15px;
+      touch-action: manipulation;  /* Doppel-Tipp-Zoom deaktivieren */
     }
     .header {
       display: flex;
@@ -2024,7 +2025,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.15) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.16) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -2185,7 +2186,7 @@ window.addEventListener("load", () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.15)
+    © 2026 by Frank Bertram (V1.16)
     </div>
 </body>
 </html>
