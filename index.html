@@ -342,13 +342,19 @@
       #spiel-dialog form { gap: 4px !important; }
       #spiel-dialog h3 { font-size: 14px !important; }
 
-      /* Alle Buttonreihen: volle Breite */
+      /* Immer sichtbare Reihen: volle Breite */
       #spiel-dialog #player-buttons,
       #spiel-dialog #grundwert-buttons,
-      #spiel-dialog #spitzen-buttons,
-      #spiel-dialog #spitzen-anzahl,
       #spiel-dialog #gewinnstufen-buttons {
         display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 4px !important;
+        width: 100% !important;
+        margin: 0 !important;
+      }
+      /* Spitzen-Reihen: NICHT display erzwingen — JS steuert ein/aus */
+      #spiel-dialog #spitzen-buttons,
+      #spiel-dialog #spitzen-anzahl {
         flex-wrap: nowrap !important;
         gap: 4px !important;
         width: 100% !important;
