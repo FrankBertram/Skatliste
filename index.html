@@ -402,6 +402,47 @@
       }
     }
 
+    /* Sehr kurzer Viewport (z.B. iPhone 8 Querformat ≤ 400px Höhe):
+       Reihen und Abstände kompakter, damit alles ohne Scrollen passt */
+    @media (max-height: 400px) and (orientation: landscape) {
+      #spiel-dialog {
+        padding: 3px !important;
+        font-size: 11px !important;
+      }
+      #spiel-dialog form { gap: 2px !important; }
+      #spiel-dialog h3 { font-size: 12px !important; }
+
+      #spiel-dialog #player-buttons,
+      #spiel-dialog #gewinnstufen-buttons,
+      #spiel-dialog #grundwert-buttons,
+      #spiel-dialog #spitzen-buttons,
+      #spiel-dialog #spitzen-anzahl {
+        height: 40px !important;
+        min-height: 40px !important;
+      }
+      #spiel-dialog #player-buttons > *,
+      #spiel-dialog #gewinnstufen-buttons > button,
+      #spiel-dialog #grundwert-buttons > button,
+      #spiel-dialog #spitzen-buttons > button,
+      #spiel-dialog #spitzen-anzahl > * {
+        height: 40px !important;
+        font-size: 12px !important;
+      }
+      #spiel-dialog #grundwert-buttons button:nth-child(n+2):nth-child(-n+5) {
+        font-size: 26px !important;
+      }
+      #spiel-dialog form > div[style*="margin-top:20px"] {
+        margin-top: 2px !important;
+        gap: 4px !important;
+      }
+      #spiel-dialog #btn-gewonnen,
+      #spiel-dialog #btn-verloren,
+      #spiel-dialog #btn-eingepasst {
+        height: 40px !important;
+        font-size: 13px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
