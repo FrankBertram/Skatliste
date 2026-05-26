@@ -311,51 +311,96 @@
       text-align: center;
     }
 
+    /* Spielliste: schmalere Body-Margins im Handy-Querformat,
+       damit die Tabelle die komplette Breite nutzen kann */
+    @media (max-height: 500px) and (orientation: landscape) {
+      body { margin: 4px !important; }
+    }
+
     /* Kompaktes Dialog-Layout für Handy-Querformat */
     @media (max-height: 500px) and (orientation: landscape) {
       #spiel-dialog {
-        width: 96vw !important;
-        max-width: 96vw !important;
-        padding: 8px !important;
-        max-height: 96vh;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        padding: 6px !important;
+        margin: 0 !important;
+        max-height: 100vh;
         overflow-y: auto;
         font-size: 12px !important;
+        box-sizing: border-box;
       }
+      #spiel-dialog form { gap: 4px !important; }
       #spiel-dialog h3 { font-size: 14px !important; }
-      #spiel-dialog #grundwert-buttons { gap: 4px !important; }
-      #spiel-dialog #grundwert-buttons button {
-        padding: 4px 8px !important;
-        min-width: 50px !important;
+
+      /* Alle Buttonreihen: volle Breite */
+      #spiel-dialog #player-buttons,
+      #spiel-dialog #grundwert-buttons,
+      #spiel-dialog #spitzen-buttons,
+      #spiel-dialog #spitzen-anzahl,
+      #spiel-dialog #gewinnstufen-buttons {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 4px !important;
+        width: 100% !important;
+        margin: 0 !important;
+      }
+      #spiel-dialog #player-buttons > *,
+      #spiel-dialog #grundwert-buttons > button,
+      #spiel-dialog #spitzen-buttons > button,
+      #spiel-dialog #spitzen-anzahl > *,
+      #spiel-dialog #gewinnstufen-buttons > button {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+      }
+
+      /* Kleine Reihen: Spieler (1.) und Gewinnstufen (5.) */
+      #spiel-dialog #player-buttons,
+      #spiel-dialog #gewinnstufen-buttons {
+        height: 32px !important;
+        min-height: 32px !important;
+      }
+      #spiel-dialog #player-buttons > *,
+      #spiel-dialog #gewinnstufen-buttons > button {
+        height: 32px !important;
+        font-size: 13px !important;
+      }
+
+      /* Große Reihen: Grundwert, Spitzen, Spitzen-Anzahl */
+      #spiel-dialog #grundwert-buttons,
+      #spiel-dialog #spitzen-buttons,
+      #spiel-dialog #spitzen-anzahl {
+        height: 50px !important;
+        min-height: 50px !important;
+      }
+      #spiel-dialog #grundwert-buttons > button,
+      #spiel-dialog #spitzen-buttons > button,
+      #spiel-dialog #spitzen-anzahl > * {
+        height: 50px !important;
       }
       #spiel-dialog #grundwert-buttons button:nth-child(n+2):nth-child(-n+5) {
         font-size: 30px !important;
       }
       #spiel-dialog #grundwert-buttons button:nth-child(1),
       #spiel-dialog #grundwert-buttons button:nth-child(6) {
-        font-size: 13px !important;
+        font-size: 14px !important;
       }
-      #spiel-dialog #spitzen-buttons,
-      #spiel-dialog #spitzen-anzahl {
-        height: auto !important;
-        margin-top: 2px !important;
-      }
-      #spiel-dialog #gewinnstufen-buttons {
-        min-height: 0 !important;
-      }
-      #spiel-dialog .spitzen-btn {
-        padding: 6px 10px !important;
-        font-size: 13px !important;
+      #spiel-dialog .spitzen-btn { font-size: 14px !important; }
+
+      /* Untere Buttonreihe: Gewonnen/Verloren/Eingepasst */
+      #spiel-dialog form > div[style*="margin-top:20px"] {
+        margin-top: 4px !important;
+        gap: 6px !important;
       }
       #spiel-dialog #btn-gewonnen,
       #spiel-dialog #btn-verloren,
       #spiel-dialog #btn-eingepasst {
-        padding: 8px 20px !important;
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        height: 50px !important;
         font-size: 15px !important;
-        min-width: 100px !important;
-      }
-      #spiel-dialog form { gap: 4px !important; }
-      #spiel-dialog form > div[style*="margin-top:20px"] {
-        margin-top: 6px !important;
       }
     }
 
@@ -622,7 +667,7 @@ function setTableHeight() {
   if (isLandscape) {
     if (screenW < 900) {
       const tableEl = document.querySelector('#skat-table');
-      const naturalWidth = tableEl && tableEl.scrollWidth > 800 ? tableEl.scrollWidth + 30 : 1200;
+      const naturalWidth = tableEl && tableEl.scrollWidth > 800 ? tableEl.scrollWidth : 1100;
       scale = screenW / naturalWidth;
     } else if (swidth >= 1200) {
       scale = 1.0;
@@ -656,7 +701,7 @@ function autoScalePage() {
     if (width < 900) {
       // Handy-Querformat: Tabelle auf volle Bildschirmbreite skalieren
       const tableEl = document.querySelector('#skat-table');
-      const naturalWidth = tableEl && tableEl.scrollWidth > 800 ? tableEl.scrollWidth + 30 : 1200;
+      const naturalWidth = tableEl && tableEl.scrollWidth > 800 ? tableEl.scrollWidth : 1100;
       scale = width / naturalWidth;
     } else if (swidth >= 1200) {
       scale = 1.0;
