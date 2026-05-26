@@ -311,6 +311,54 @@
       text-align: center;
     }
 
+    /* Kompaktes Dialog-Layout für Handy-Querformat */
+    @media (max-height: 500px) and (orientation: landscape) {
+      #spiel-dialog {
+        width: 96vw !important;
+        max-width: 96vw !important;
+        padding: 8px !important;
+        max-height: 96vh;
+        overflow-y: auto;
+        font-size: 12px !important;
+      }
+      #spiel-dialog h3 { font-size: 14px !important; }
+      #spiel-dialog #grundwert-buttons { gap: 4px !important; }
+      #spiel-dialog #grundwert-buttons button {
+        padding: 4px 8px !important;
+        min-width: 50px !important;
+      }
+      #spiel-dialog #grundwert-buttons button:nth-child(n+2):nth-child(-n+5) {
+        font-size: 30px !important;
+      }
+      #spiel-dialog #grundwert-buttons button:nth-child(1),
+      #spiel-dialog #grundwert-buttons button:nth-child(6) {
+        font-size: 13px !important;
+      }
+      #spiel-dialog #spitzen-buttons,
+      #spiel-dialog #spitzen-anzahl {
+        height: auto !important;
+        margin-top: 2px !important;
+      }
+      #spiel-dialog #gewinnstufen-buttons {
+        min-height: 0 !important;
+      }
+      #spiel-dialog .spitzen-btn {
+        padding: 6px 10px !important;
+        font-size: 13px !important;
+      }
+      #spiel-dialog #btn-gewonnen,
+      #spiel-dialog #btn-verloren,
+      #spiel-dialog #btn-eingepasst {
+        padding: 8px 20px !important;
+        font-size: 15px !important;
+        min-width: 100px !important;
+      }
+      #spiel-dialog form { gap: 4px !important; }
+      #spiel-dialog form > div[style*="margin-top:20px"] {
+        margin-top: 6px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -520,13 +568,13 @@ function buildTableStructure() {
   }
   spielpunkteRow += `<td id="sum-eingepasst">0</td><td></td></tr>`;
 
-  let bonusPRow = `<tr><th colspan="12" style="text-align:left; padding: 0 15px; font-size: 14px; background:#f0f0f0;font-weight: 400;">+ (gewonnene Spiele - verlorene Spiele) x 50:</th>`;
+  let bonusPRow = `<tr><th colspan="12" style="text-align:left; padding: 0 15px; font-size: 14px; background:#f0f0f0;font-weight: 400;">+ (gew. Spiele - verl. Spiele) x 50:</th>`;
   for (let i = 1; i <= n; i++) {
     bonusPRow += `<td class="rechts" id="bonus-p${i}">0</td><td id="bogew-p${i}"></td><td></td>`;
   }
   bonusPRow += `<td></td><td></td></tr>`;
 
-  let bonusGRow = `<tr><th colspan="12" style="text-align:left; padding: 0 15px;font-size: 14px; background:#f0f0f0; font-weight: 400;">+ verlorene Spiele der Gegenspieler x ${gMulti}:</th>`;
+  let bonusGRow = `<tr><th colspan="12" style="text-align:left; padding: 0 15px;font-size: 14px; background:#f0f0f0; font-weight: 400;">+ verl. Spiele der Gegenspieler x ${gMulti}:</th>`;
   for (let i = 1; i <= n; i++) {
     bonusGRow += `<td class="rechts" id="bonus-g${i}">0</td><td id="bogew-g${i}"></td><td></td>`;
   }
@@ -573,7 +621,9 @@ function setTableHeight() {
   let scale = 1.0;
   if (isLandscape) {
     if (screenW < 900) {
-      scale = screenW / 1200;
+      const tableEl = document.querySelector('#skat-table');
+      const naturalWidth = tableEl && tableEl.scrollWidth > 800 ? tableEl.scrollWidth + 30 : 1200;
+      scale = screenW / naturalWidth;
     } else if (swidth >= 1200) {
       scale = 1.0;
     } else {
@@ -586,8 +636,8 @@ function setTableHeight() {
 
   let maxH;
   let maxW;
-  if (isLandscape) { maxH = screenH - 185;}
-  else { maxH = screenH - 150;}
+  if (isLandscape) { maxH = screenH - 210;}
+  else { maxH = screenH - 175;}
   maxW = screenW + 100;
   maxH = maxH / scale;
 
@@ -604,7 +654,10 @@ function autoScalePage() {
   let scale = 1.0;
   if (isLandscape) {
     if (width < 900) {
-      scale = width / 1200;   // Handy-Querformat: auf Tabellenbreite einpassen
+      // Handy-Querformat: Tabelle auf volle Bildschirmbreite skalieren
+      const tableEl = document.querySelector('#skat-table');
+      const naturalWidth = tableEl && tableEl.scrollWidth > 800 ? tableEl.scrollWidth + 30 : 1200;
+      scale = width / naturalWidth;
     } else if (swidth >= 1200) {
       scale = 1.0;
     } else {
@@ -1430,8 +1483,14 @@ function openNewModal(spielIndex = null) {
   const spielNummerSpan = document.getElementById("spielnummer-display");
   const spieleAnz = document.querySelector('input[name="karten"]:checked')?.value || '0';
 
-  dialog.style.transform = `scale(${scale*0.9})`;
-  dialog.style.transformOrigin = 'top center';
+  const isPhoneLandscape = window.innerWidth > window.innerHeight && window.innerHeight <= 500;
+  if (isPhoneLandscape) {
+    // Handy-Querformat: Dialog auf native Größe, CSS-Media-Query macht ihn kompakt
+    dialog.style.transform = '';
+  } else {
+    dialog.style.transform = `scale(${scale*0.9})`;
+    dialog.style.transformOrigin = 'top center';
+  }
 
   resetButtons();
   document.getElementById("grundwert").value = "";
@@ -1838,7 +1897,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.13) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.14) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -1999,7 +2058,7 @@ window.addEventListener("load", () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.13)
+    © 2026 by Frank Bertram (V1.14)
     </div>
 </body>
 </html>
