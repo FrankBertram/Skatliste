@@ -874,7 +874,7 @@ window.addEventListener('orientationchange', autoScalePage);
 let _lastTouchEnd = 0;
 document.addEventListener('touchend', function (e) {
   const now = Date.now();
-  if (now - _lastTouchEnd <= 350) {
+  if (now - _lastTouchEnd <= 150) {
     e.preventDefault();
   }
   _lastTouchEnd = now;
