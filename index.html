@@ -615,41 +615,41 @@
 </dialog>
 
 <!-- Start-Dialog (nur Handy-Querformat bei neuer Liste) -->
-<dialog id="start-dialog" style="padding:18px; border-radius:10px; width:92vw; max-width:560px; border:1px solid #888; font-size:16px;">
-  <form method="dialog" id="start-form" style="display:flex; flex-direction:column; gap:14px;">
-    <h3 style="margin:0; text-align:center; font-size:22px;">Neue Liste</h3>
+<dialog id="start-dialog" style="padding:10px 14px; border-radius:10px; width:90vw; max-width:520px; border:1px solid #888; font-size:14px;">
+  <form method="dialog" id="start-form" style="display:flex; flex-direction:column; gap:8px;">
+    <h3 style="margin:0 0 2px 0; text-align:center; font-size:18px;">Neue Liste</h3>
 
-    <div>
-      <div style="font-weight:bold; margin-bottom:6px; font-size:18px;">Spieler:</div>
-      <div id="start-spieler-buttons" data-group="spieler" style="display:flex; gap:8px;">
-        <button type="button" data-val="3" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">3</button>
-        <button type="button" data-val="4" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">4</button>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="font-weight:bold; font-size:15px; width:62px; flex-shrink:0;">Spieler:</div>
+      <div id="start-spieler-buttons" data-group="spieler" style="display:flex; gap:6px; flex:1;">
+        <button type="button" data-val="3" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">3</button>
+        <button type="button" data-val="4" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">4</button>
       </div>
     </div>
 
-    <div>
-      <div style="font-weight:bold; margin-bottom:6px; font-size:18px;">Serie:</div>
-      <div id="start-serie-buttons" data-group="serie" style="display:flex; gap:8px;">
-        <button type="button" data-val="1" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">1</button>
-        <button type="button" data-val="2" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">2</button>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="font-weight:bold; font-size:15px; width:62px; flex-shrink:0;">Serie:</div>
+      <div id="start-serie-buttons" data-group="serie" style="display:flex; gap:6px; flex:1;">
+        <button type="button" data-val="1" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">1</button>
+        <button type="button" data-val="2" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">2</button>
       </div>
     </div>
 
-    <div>
-      <div style="font-weight:bold; margin-bottom:6px; font-size:18px;">Tisch:</div>
-      <div id="start-tisch-buttons" data-group="tisch" style="display:flex; gap:6px;">
-        <button type="button" data-val="1" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">1</button>
-        <button type="button" data-val="2" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">2</button>
-        <button type="button" data-val="3" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">3</button>
-        <button type="button" data-val="4" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">4</button>
-        <button type="button" data-val="5" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">5</button>
-        <button type="button" data-val="6" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">6</button>
-        <button type="button" data-val="7" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">7</button>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="font-weight:bold; font-size:15px; width:62px; flex-shrink:0;">Tisch:</div>
+      <div id="start-tisch-buttons" data-group="tisch" style="display:flex; gap:5px; flex:1;">
+        <button type="button" data-val="1" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">1</button>
+        <button type="button" data-val="2" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">2</button>
+        <button type="button" data-val="3" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">3</button>
+        <button type="button" data-val="4" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">4</button>
+        <button type="button" data-val="5" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">5</button>
+        <button type="button" data-val="6" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">6</button>
+        <button type="button" data-val="7" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">7</button>
       </div>
     </div>
 
     <button type="button" id="start-confirm-btn"
-            style="margin-top:6px; padding:16px; font-size:20px; font-weight:bold; color:white; border:none; border-radius:8px;
+            style="margin-top:4px; padding:10px; font-size:16px; font-weight:bold; color:white; border:none; border-radius:6px;
                    background:linear-gradient(135deg,#28a745,#1e7e34); box-shadow:0 4px 12px rgba(40,167,69,0.3); cursor:pointer;">
       Start
     </button>
