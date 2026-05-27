@@ -614,6 +614,48 @@
   </form>
 </dialog>
 
+<!-- Start-Dialog (nur Handy-Querformat bei neuer Liste) -->
+<dialog id="start-dialog" style="padding:18px; border-radius:10px; width:92vw; max-width:560px; border:1px solid #888; font-size:16px;">
+  <form method="dialog" id="start-form" style="display:flex; flex-direction:column; gap:14px;">
+    <h3 style="margin:0; text-align:center; font-size:22px;">Neue Liste</h3>
+
+    <div>
+      <div style="font-weight:bold; margin-bottom:6px; font-size:18px;">Spieler:</div>
+      <div id="start-spieler-buttons" data-group="spieler" style="display:flex; gap:8px;">
+        <button type="button" data-val="3" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">3</button>
+        <button type="button" data-val="4" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">4</button>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-weight:bold; margin-bottom:6px; font-size:18px;">Serie:</div>
+      <div id="start-serie-buttons" data-group="serie" style="display:flex; gap:8px;">
+        <button type="button" data-val="1" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">1</button>
+        <button type="button" data-val="2" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">2</button>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-weight:bold; margin-bottom:6px; font-size:18px;">Tisch:</div>
+      <div id="start-tisch-buttons" data-group="tisch" style="display:flex; gap:6px;">
+        <button type="button" data-val="1" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">1</button>
+        <button type="button" data-val="2" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">2</button>
+        <button type="button" data-val="3" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">3</button>
+        <button type="button" data-val="4" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">4</button>
+        <button type="button" data-val="5" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">5</button>
+        <button type="button" data-val="6" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">6</button>
+        <button type="button" data-val="7" class="start-opt-btn" style="flex:1; padding:14px 0; font-size:22px; font-weight:bold; border-radius:8px; border:2px solid #ccc; background:#f5f5f5;">7</button>
+      </div>
+    </div>
+
+    <button type="button" id="start-confirm-btn"
+            style="margin-top:6px; padding:16px; font-size:20px; font-weight:bold; color:white; border:none; border-radius:8px;
+                   background:linear-gradient(135deg,#28a745,#1e7e34); box-shadow:0 4px 12px rgba(40,167,69,0.3); cursor:pointer;">
+      Start
+    </button>
+  </form>
+</dialog>
+
 
 <script>
 let spielDaten = [];
@@ -827,6 +869,20 @@ function autoScalePage() {
 window.addEventListener('load', autoScalePage);
 window.addEventListener('resize', autoScalePage);
 window.addEventListener('orientationchange', autoScalePage);
+
+// Doppel-Tipp-Zoom auf iOS Safari unterbinden (touch-action allein reicht nicht zuverlässig)
+let _lastTouchEnd = 0;
+document.addEventListener('touchend', function (e) {
+  const now = Date.now();
+  if (now - _lastTouchEnd <= 350) {
+    e.preventDefault();
+  }
+  _lastTouchEnd = now;
+}, { passive: false });
+// Zusätzlich: gesture-Events von iOS Safari komplett blocken
+document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+document.addEventListener('gesturechange', function (e) { e.preventDefault(); });
+document.addEventListener('gestureend',   function (e) { e.preventDefault(); });
 
 function fillTable() {
   const tbody = document.getElementById("game-rows");
@@ -2049,7 +2105,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.16) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.17) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -2192,6 +2248,74 @@ document.querySelectorAll('input[name="serie"]').forEach(radio => {
 });
 document.getElementById('tisch-auswahl').addEventListener('change', saveState);
 
+// ── Start-Dialog (Handy-Querformat bei neuer Liste) ──────────────
+function isPhoneLandscape() {
+  return window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+}
+
+function _highlightStartBtn(btn, active) {
+  if (active) {
+    btn.style.background = 'linear-gradient(135deg,#1976d2,#0d47a1)';
+    btn.style.color = 'white';
+    btn.style.borderColor = '#0d47a1';
+  } else {
+    btn.style.background = '#f5f5f5';
+    btn.style.color = '#333';
+    btn.style.borderColor = '#ccc';
+  }
+}
+
+function _setupStartGroup(groupId, currentVal) {
+  const container = document.getElementById(groupId);
+  container.dataset.selected = String(currentVal);
+  container.querySelectorAll('button').forEach(btn => {
+    _highlightStartBtn(btn, btn.dataset.val == currentVal);
+    btn.onclick = () => {
+      container.querySelectorAll('button').forEach(b => _highlightStartBtn(b, false));
+      _highlightStartBtn(btn, true);
+      container.dataset.selected = btn.dataset.val;
+    };
+  });
+}
+
+function openStartDialog() {
+  const dlg = document.getElementById('start-dialog');
+  if (!dlg) return;
+  const curSp = spielerAnzahl;
+  const curSr = document.querySelector('input[name="serie"]:checked')?.value || '1';
+  const curTi = document.getElementById('tisch-auswahl')?.value || '1';
+  _setupStartGroup('start-spieler-buttons', curSp);
+  _setupStartGroup('start-serie-buttons',   curSr);
+  _setupStartGroup('start-tisch-buttons',   curTi);
+  if (!dlg.open) dlg.showModal();
+}
+
+document.getElementById('start-confirm-btn').addEventListener('click', () => {
+  const sp = document.getElementById('start-spieler-buttons').dataset.selected || '4';
+  const sr = document.getElementById('start-serie-buttons').dataset.selected   || '1';
+  const ti = document.getElementById('start-tisch-buttons').dataset.selected   || '1';
+
+  const newSp = parseInt(sp);
+  if (newSp !== spielerAnzahl) {
+    spielerAnzahl = newSp;
+    const spRadio = document.querySelector(`input[name="spieleranzahl"][value="${sp}"]`);
+    if (spRadio) spRadio.checked = true;
+    buildTableStructure();
+    updateKartenAuswahl();
+    fillTable();
+    generatePlayerNameButtons();
+    updateCopyright();
+  }
+  const srRadio = document.querySelector(`input[name="serie"][value="${sr}"]`);
+  if (srRadio) srRadio.checked = true;
+  const tiSelect = document.getElementById('tisch-auswahl');
+  if (tiSelect) tiSelect.value = ti;
+
+  saveState();
+  document.getElementById('start-dialog').close();
+  autoScalePage();
+});
+
 window.addEventListener("load", () => {
   loadState().then(loaded => {
     if (!loaded) {
@@ -2204,13 +2328,18 @@ window.addEventListener("load", () => {
     createNeuStartButton();
     updateCopyright();
     console.log(screen.width + 'x' + screen.height);
+
+    // Bei neuer Liste im Handy-Querformat: Start-Dialog zeigen
+    if (!loaded && isPhoneLandscape()) {
+      openStartDialog();
+    }
   });
 });
 
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.16)
+    © 2026 by Frank Bertram (V1.17)
     </div>
 </body>
 </html>
