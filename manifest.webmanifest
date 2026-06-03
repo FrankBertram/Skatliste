@@ -1,0 +1,26 @@
+{
+  "name": "Sintherner Skatclub - Spielliste",
+  "short_name": "Skatliste",
+  "description": "Digitale Spielliste für 4er/3er Skatabende des 1. Sintherner Skatclub 1992 e.V.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#ffffff",
+  "theme_color": "#1976d2",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "Skat.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "Skat.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -5,9 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1976d2">
   <title>Sintherner Skatclub - Skatliste</title>
   <link rel="icon" type="image/png" href="Skat.png">
   <link rel="apple-touch-icon" href="Skat.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <script>
+    // PWA-Service-Worker (minimal, ohne Caching)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+          console.log('SW-Registrierung fehlgeschlagen:', err);
+        });
+      });
+    }
+  </script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -2106,7 +2118,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.17) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.18) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -2340,7 +2352,7 @@ window.addEventListener("load", () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.17)
+    © 2026 by Frank Bertram (V1.18)
     </div>
 </body>
 </html>
