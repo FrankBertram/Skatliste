@@ -501,8 +501,8 @@
 <div class="header">
   <!-- Zeile 1: Logo + Verein -->
   <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 0px;">
-    <img src="Skat.png" alt="Skat-Logo" style="height: 40px;">
-    <span style="font-size:20px; font-weight: bold;">1. Sintherner Skatclub 1992 e.V.</span>
+    <img id="club-logo" src="Skat.png" alt="Skat-Logo" style="height: 40px;">
+    <span id="club-name" style="font-size:20px; font-weight: bold;">1. Sintherner Skatclub 1992 e.V.</span>
   </div>
   <br>
 
@@ -1486,17 +1486,16 @@ function generatePlayerNameButtons() {
       gastInput.addEventListener("change", () => {
         const gastName = gastInput.value.trim();
         if (gastName) {
-          const gastVollName = `Gast: ${gastName}`;
           // Duplikat-Prüfung auch für Gast-Namen
-          const andererIndex = spielerNamen.findIndex((n, idx) => idx !== (pos - 1) && n === gastVollName);
+          const andererIndex = spielerNamen.findIndex((n, idx) => idx !== (pos - 1) && n === gastName);
           if (andererIndex >= 0) {
-            alert(`⚠️ "${gastVollName}" ist bereits als Spieler ${andererIndex + 1} eingetragen!`);
+            alert(`⚠️ "${gastName}" ist bereits als Spieler ${andererIndex + 1} eingetragen!`);
             gastInput.value = "";
             gastInput.focus();
             return;
           }
-          spielerNamen[pos - 1] = gastVollName;
-          btn.textContent = gastVollName;
+          spielerNamen[pos - 1] = gastName;
+          btn.textContent = gastName;
           updatePlayerNamesInTable();
           saveState();
         }
@@ -2094,9 +2093,67 @@ document.querySelectorAll('input[name="spieleranzahl"]').forEach(radio => {
   });
 });
 
+function isSpecialDay() {
+  const t = new Date();
+  const ymd = t.getFullYear() + '-' +
+              String(t.getMonth()+1).padStart(2,'0') + '-' +
+              String(t.getDate()).padStart(2,'0');
+  // 43. Pulheimer Stadtmeisterschaft 2026: 11.07.2026 + Testtag 10.06.2026
+  return ymd === '2026-07-11' || ymd === '2026-06-10';
+}
+
+function applyDayConfig() {
+  const special = isSpecialDay();
+  const logo = document.getElementById('club-logo');
+  const name = document.getElementById('club-name');
+  if (logo) logo.src = special ? 'de4buure.png' : 'Skat.png';
+  if (name) name.textContent = special
+    ? '43. Pulheimer Stadtmeisterschaft 2026'
+    : '1. Sintherner Skatclub 1992 e.V.';
+
+  // Sondertag: Tisch-Auswahl auf 1-10 erweitern (Kopfzeile + Start-Dialog)
+  if (special) {
+    const sel = document.getElementById('tisch-auswahl');
+    if (sel && !sel.querySelector('option[value="8"]')) {
+      for (let i = 8; i <= 10; i++) {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = String(i);
+        sel.appendChild(opt);
+      }
+    }
+    const startTisch = document.getElementById('start-tisch-buttons');
+    if (startTisch && !startTisch.querySelector('button[data-val="8"]')) {
+      for (let i = 8; i <= 10; i++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'start-opt-btn';
+        b.dataset.val = String(i);
+        b.textContent = String(i);
+        b.style.cssText = 'flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;';
+        startTisch.appendChild(b);
+      }
+    }
+  }
+}
+
 function updateKartenAuswahl() {
   const container = document.getElementById("karten-auswahl");
   const ist3er = (spielerAnzahl === 3);
+  const special = isSpecialDay();
+
+  if (special) {
+    // Sondertag: nur EIN Wert (40 bzw. 30), keine Auswahl
+    const wert = ist3er ? 30 : 40;
+    container.innerHTML =
+      `<label class="radio-label"><input type="radio" name="karten" value="${wert}" checked>${wert}</label>`;
+    container.querySelectorAll('input[name="karten"]').forEach(r => {
+      r.addEventListener('change', onKartenChange);
+    });
+    resizeSpielDaten(wert);
+    return;
+  }
+
   const wert1 = ist3er ? 27 : 36;
   const wert2 = ist3er ? 36 : 48;
 
@@ -2118,7 +2175,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.18) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.19) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -2330,11 +2387,15 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
 });
 
 window.addEventListener("load", () => {
+  applyDayConfig();  // Logo + Vereinsname je nach Datum
   loadState().then(loaded => {
     if (!loaded) {
       spielerAnzahl = getSpielerAnzahl();
     }
-    buildTableStructure();
+    buildTableStructure();   // muss VOR updateKartenAuswahl/fillTable laufen
+    if (!loaded) {
+      updateKartenAuswahl(); // jetzt sind sum-p1/gew-p1/... bereits im DOM
+    }
     fillTable();
     generatePlayerNameButtons();
     createCSVButton();
@@ -2352,7 +2413,7 @@ window.addEventListener("load", () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.18)
+    © 2026 by Frank Bertram (V1.19)
     </div>
 </body>
 </html>
