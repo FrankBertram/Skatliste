@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#1976d2">
@@ -790,8 +790,11 @@ function setStickyByScale(scale) {
 
 function setTableHeight() {
   const swidth = screen.width;
-  const screenH = window.innerHeight;
-  const screenW = window.innerWidth;
+  // visualViewport liefert auf Android Chrome den tatsaechlich sichtbaren Bereich
+  // (nach Einklappen der URL-Leiste); iOS/Tablet verhalten sich identisch zum Fallback
+  const vv = window.visualViewport;
+  const screenH = vv ? vv.height : window.innerHeight;
+  const screenW = vv ? vv.width  : window.innerWidth;
   const wrapper = document.querySelector('.table-wrapper');
   const isLandscape = screenW > screenH;
 
@@ -842,8 +845,9 @@ function resetZoom() {
 
 function autoScalePage() {
   const swidth = screen.width;
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  const vv = window.visualViewport;
+  const width  = vv ? vv.width  : window.innerWidth;
+  const height = vv ? vv.height : window.innerHeight;
   const isLandscape = width > height;
 
   let scale = 1.0;
@@ -881,6 +885,10 @@ function autoScalePage() {
 window.addEventListener('load', autoScalePage);
 window.addEventListener('resize', autoScalePage);
 window.addEventListener('orientationchange', autoScalePage);
+// Android Chrome: URL-Leiste ein-/ausklappen aendert die sichtbare Hoehe
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', autoScalePage);
+}
 
 // Doppel-Tipp-Zoom auf iOS Safari unterbinden (touch-action allein reicht nicht zuverlässig)
 let _lastTouchEnd = 0;
@@ -2174,7 +2182,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.19) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.20) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -2412,7 +2420,7 @@ window.addEventListener("load", () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.19)
+    © 2026 by Frank Bertram (V1.20)
     </div>
 </body>
 </html>
