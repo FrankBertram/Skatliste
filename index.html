@@ -2082,9 +2082,34 @@ function showSpielStatus(name, delta) {
         `style="position:absolute; top:8px; right:12px; width:44px; height:44px;` +
         ` border:none; background:transparent; font-size:32px; font-weight:bold;` +
         ` color:#555; cursor:pointer; pointer-events:auto; line-height:1;">×</button>` +
-        `<div style="font-size:15vh; font-weight:bold; line-height:1;">${name}</div>` +
-        `<div style="font-size:25vh; font-weight:bold; line-height:1; color:${farbe};">${vorzeichen}${delta}</div>`;
+        `<div id="status-name" style="font-weight:bold; line-height:1; white-space:nowrap;">${name}</div>` +
+        `<div id="status-delta" style="font-weight:bold; line-height:1; color:${farbe};">${vorzeichen}${delta}</div>`;
     el.style.display = 'flex';
+
+    // Groessen dynamisch auf Popup-Dimension anpassen (Tablet quer wie hoch, langer Name)
+    requestAnimationFrame(() => {
+        const popupW = el.clientWidth;
+        const popupH = el.clientHeight;
+        const nameEl  = el.querySelector('#status-name');
+        const deltaEl = el.querySelector('#status-delta');
+        if (!nameEl || !deltaEl) return;
+
+        // Delta (Zahl): 30% der Hoehe, aber max. 25% der Breite
+        const deltaSize = Math.min(popupH * 0.30, popupW * 0.25);
+        deltaEl.style.fontSize = deltaSize + 'px';
+
+        // Name: Startgroesse 18% der Hoehe bzw. 20% der Breite; dann verkleinern,
+        // bis er in 92% der Popupbreite passt
+        let nameSize = Math.min(popupH * 0.18, popupW * 0.20);
+        nameEl.style.fontSize = nameSize + 'px';
+        const maxNameWidth = popupW * 0.92;
+        let guard = 60;
+        while (nameEl.scrollWidth > maxNameWidth && nameSize > 12 && guard-- > 0) {
+            nameSize -= 2;
+            nameEl.style.fontSize = nameSize + 'px';
+        }
+    });
+
     clearTimeout(el._hideTimer);
     el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 5000);
     const closeBtn = document.getElementById('spiel-status-close');
@@ -2228,7 +2253,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.21) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.22) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -2466,7 +2491,7 @@ window.addEventListener("load", () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.21)
+    © 2026 by Frank Bertram (V1.22)
     </div>
 </body>
 </html>
