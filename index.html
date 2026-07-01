@@ -2064,23 +2064,34 @@ function showSpielStatus(name, delta) {
     if (!el) {
         el = document.createElement('div');
         el.id = 'spiel-status-popup';
+        // Groesse ~75% des Viewports; %-Werte, damit die html-transform (autoScalePage) korrekt mitskaliert
         el.style.cssText =
-            'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);' +
-            'background:#fff; border:2px solid #333; border-radius:12px;' +
-            'padding:14px 24px; font-family:sans-serif; text-align:center;' +
-            'box-shadow:0 6px 20px rgba(0,0,0,0.35); z-index:9999;' +
-            'min-width:170px; pointer-events:none;';
+            'position:fixed; top:12.5%; left:12.5%; width:75%; height:75%;' +
+            'background:#fff; border:3px solid #333; border-radius:24px;' +
+            'display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4%;' +
+            'font-family:sans-serif; text-align:center;' +
+            'box-shadow:0 10px 40px rgba(0,0,0,0.45); z-index:9999;' +
+            'pointer-events:none;';
         document.body.appendChild(el);
     }
     const positive = delta >= 0;
     const farbe = positive ? '#2e7d32' : '#c62828';
     const vorzeichen = positive ? '+' : '';
     el.innerHTML =
-        `<div style="font-size:20px; font-weight:bold; margin-bottom:6px;">${name}</div>` +
-        `<div style="font-size:28px; font-weight:bold; color:${farbe};">${vorzeichen}${delta}</div>`;
-    el.style.display = 'block';
+        `<button type="button" id="spiel-status-close" ` +
+        `style="position:absolute; top:8px; right:12px; width:44px; height:44px;` +
+        ` border:none; background:transparent; font-size:32px; font-weight:bold;` +
+        ` color:#555; cursor:pointer; pointer-events:auto; line-height:1;">×</button>` +
+        `<div style="font-size:12vh; font-weight:bold; line-height:1;">${name}</div>` +
+        `<div style="font-size:18vh; font-weight:bold; line-height:1; color:${farbe};">${vorzeichen}${delta}</div>`;
+    el.style.display = 'flex';
     clearTimeout(el._hideTimer);
-    el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 3000);
+    el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 5000);
+    const closeBtn = document.getElementById('spiel-status-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => {
+        clearTimeout(el._hideTimer);
+        el.style.display = 'none';
+    });
 }
 
 function resizeSpielDaten(kartenAnzahl) {
