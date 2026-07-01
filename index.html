@@ -2082,8 +2082,8 @@ function showSpielStatus(name, delta) {
         `style="position:absolute; top:8px; right:12px; width:44px; height:44px;` +
         ` border:none; background:transparent; font-size:32px; font-weight:bold;` +
         ` color:#555; cursor:pointer; pointer-events:auto; line-height:1;">×</button>` +
-        `<div style="font-size:12vh; font-weight:bold; line-height:1;">${name}</div>` +
-        `<div style="font-size:18vh; font-weight:bold; line-height:1; color:${farbe};">${vorzeichen}${delta}</div>`;
+        `<div style="font-size:18vh; font-weight:bold; line-height:1;">${name}</div>` +
+        `<div style="font-size:28vh; font-weight:bold; line-height:1; color:${farbe};">${vorzeichen}${delta}</div>`;
     el.style.display = 'flex';
     clearTimeout(el._hideTimer);
     el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 5000);
