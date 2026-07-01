@@ -2056,10 +2056,10 @@ function saveGame(gewonnen) {
     closeSpielDialog();
 
     const spielerName = spielerNamen[neuerSpieler - 1] || `Spieler ${neuerSpieler}`;
-    showSpielStatus(spielerName, deltaNeu);
+    showSpielStatus(spielerName, deltaNeu, index + 1);
 }
 
-function showSpielStatus(name, delta) {
+function showSpielStatus(name, delta, spielNr) {
     let el = document.getElementById('spiel-status-popup');
     if (!el) {
         el = document.createElement('div');
@@ -2078,6 +2078,8 @@ function showSpielStatus(name, delta) {
     const farbe = positive ? '#2e7d32' : '#c62828';
     const vorzeichen = positive ? '+' : '';
     el.innerHTML =
+        `<div style="position:absolute; top:10px; left:16px; font-size:20px; font-weight:bold; color:#333;">` +
+        `Ergebnis Spiel: ${spielNr != null ? spielNr : ''}</div>` +
         `<button type="button" id="spiel-status-close" ` +
         `style="position:absolute; top:8px; right:12px; width:44px; height:44px;` +
         ` border:none; background:transparent; font-size:32px; font-weight:bold;` +
