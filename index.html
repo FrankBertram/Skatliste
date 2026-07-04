@@ -1375,8 +1375,7 @@ function downloadCSV(csv, filename) {
 
 const spielerNamen = ["Spieler 1", "Spieler 2", "Spieler 3", "Spieler 4"];
 
-function generatePlayerNameButtons() {
-  const mitspielerListe = [
+const MITSPIELER_STANDARD = [
 	"Bertram, Frank",
 	"Bleckmann, Norbert",
 	"Böllsterling, Gottfried",
@@ -1408,7 +1407,44 @@ function generatePlayerNameButtons() {
 	"Weyer, Wilfried (Gle.)",
 	"Winand, Hermann (Gle.)",
 	"Gast"
-  ];
+];
+
+let firebaseMitspielerListe = null;
+
+async function loadFirebaseMitspieler() {
+  try {
+    const fs = window.__firestore;
+    if (!fs || !fs.db || !fs.doc || !fs.getDoc) {
+      console.warn("Firestore nicht verfügbar für Mitspieler-Liste");
+      return null;
+    }
+    const snap = await fs.getDoc(fs.doc(fs.db, "mitspieler", "Liste"));
+    if (!snap.exists()) {
+      console.warn("Firestore-Dokument 'mitspieler/Liste' nicht gefunden");
+      return null;
+    }
+    const data = snap.data() || {};
+    const arr = Array.isArray(data.Mitspieler) ? data.Mitspieler : [];
+    const namen = arr
+      .filter(m => m && m.preisskat === 'J' && m.name)
+      .map(m => m.name)
+      .sort((a, b) => a.localeCompare(b, 'de'));
+    namen.push("Gast");
+    return namen;
+  } catch (e) {
+    console.warn("Firebase-Mitspieler konnten nicht geladen werden:", e);
+    return null;
+  }
+}
+
+function getAktuelleMitspielerListe() {
+  if (isSpecialDay() && Array.isArray(firebaseMitspielerListe) && firebaseMitspielerListe.length > 0) {
+    return firebaseMitspielerListe;
+  }
+  return MITSPIELER_STANDARD;
+}
+
+function generatePlayerNameButtons() {
 
   const n = spielerAnzahl;
 
@@ -1453,7 +1489,8 @@ function generatePlayerNameButtons() {
       select.appendChild(optDefault);
 
       const aktuell = spielerNamen[pos - 1];
-      mitspielerListe.forEach(name => {
+      const listeAktuell = getAktuelleMitspielerListe();
+      listeAktuell.forEach(name => {
         const opt = document.createElement("option");
         opt.value = name;
         opt.text = name === "Gast" ? "Gast (Name eingeben)" : name;
@@ -2178,8 +2215,8 @@ function isSpecialDay() {
   const ymd = t.getFullYear() + '-' +
               String(t.getMonth()+1).padStart(2,'0') + '-' +
               String(t.getDate()).padStart(2,'0');
-  // 43. Pulheimer Stadtmeisterschaft 2026: 11.07.2026 + Testtag 03.07.2026
-  return ymd === '2026-07-11' || ymd === '2026-07-03';
+  // 43. Pulheimer Stadtmeisterschaft 2026: 11.07.2026 + Testtag 04.07.2026
+  return ymd === '2026-07-11' || ymd === '2026-07-04';
 }
 
 function applyDayConfig() {
@@ -2468,6 +2505,17 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
 
 window.addEventListener("load", () => {
   applyDayConfig();  // Logo + Vereinsname je nach Datum
+
+  // An Sondertagen die Mitspieler-Liste aus Firebase nachladen (Preisskat = 'J')
+  if (isSpecialDay()) {
+    loadFirebaseMitspieler().then(list => {
+      if (list && list.length > 0) {
+        firebaseMitspielerListe = list;
+        console.log(`Firebase-Mitspielerliste geladen: ${list.length} Einträge`);
+      }
+    });
+  }
+
   loadState().then(loaded => {
     if (!loaded) {
       spielerAnzahl = getSpielerAnzahl();
