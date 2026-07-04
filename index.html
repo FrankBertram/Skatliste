@@ -1425,8 +1425,9 @@ async function loadFirebaseMitspieler() {
     }
     const data = snap.data() || {};
     const arr = Array.isArray(data.Mitspieler) ? data.Mitspieler : [];
+    const istPreisskat = (v) => v === true || v === 'J' || v === 'j' || v === 'Ja' || v === 'ja';
     const namen = arr
-      .filter(m => m && m.preisskat === 'J' && m.name)
+      .filter(m => m && istPreisskat(m.preisskat) && m.name)
       .map(m => m.name)
       .sort((a, b) => a.localeCompare(b, 'de'));
     namen.push("Gast");
