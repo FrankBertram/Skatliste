@@ -1471,24 +1471,18 @@ async function loadNeuesteTurnierauslosung(serie) {
   }
 }
 
-function anwendenAuslosungFuerTisch(auslosung, tischNr) {
-  if (!auslosung || !Array.isArray(auslosung.tische)) return false;
+function findeAuslosungTischEintrag(auslosung, tischNr) {
+  if (!auslosung || !Array.isArray(auslosung.tische)) return null;
   const tischNum = Number(tischNr);
   const eintrag = auslosung.tische.find(t => Number(t.tisch) === tischNum);
   if (!eintrag || !Array.isArray(eintrag.spieler)) {
-    console.warn(`Kein Tisch ${tischNr} in Auslosung gefunden`);
-    return false;
+    console.warn(`[Auslosung] Kein Tisch ${tischNr} in Auslosung gefunden`);
+    return null;
   }
-  const groesse = Number(eintrag.groesse) || eintrag.spieler.length;
-  let geaendert = false;
-  for (let i = 0; i < groesse && i < 4; i++) {
-    const neu = eintrag.spieler[i] || `Spieler ${i + 1}`;
-    if (spielerNamen[i] !== neu) {
-      spielerNamen[i] = neu;
-      geaendert = true;
-    }
-  }
-  return geaendert;
+  return {
+    groesse: Number(eintrag.groesse) || eintrag.spieler.length,
+    spieler: eintrag.spieler
+  };
 }
 
 async function refreshTurnierauslosung() {
@@ -1501,14 +1495,50 @@ async function refreshTurnierauslosung() {
   console.log(`[Auslosung] Serie=${serie}, Tisch=${tisch} → lade …`);
   const auslosung = await loadNeuesteTurnierauslosung(serie);
   if (!auslosung) return;
-  const geaendert = anwendenAuslosungFuerTisch(auslosung, tisch);
-  if (geaendert) {
-    console.log(`[Auslosung] Namen für Tisch ${tisch} übernommen:`, spielerNamen.slice(0, spielerAnzahl));
+
+  const eintrag = findeAuslosungTischEintrag(auslosung, tisch);
+  if (!eintrag) return;
+
+  const zielGroesse = (eintrag.groesse === 3 || eintrag.groesse === 4) ? eintrag.groesse : spielerAnzahl;
+  const groesseAendert = zielGroesse !== spielerAnzahl;
+
+  // Namen setzen
+  let namenAendern = false;
+  for (let i = 0; i < zielGroesse; i++) {
+    const neu = eintrag.spieler[i] || `Spieler ${i + 1}`;
+    if (spielerNamen[i] !== neu) {
+      spielerNamen[i] = neu;
+      namenAendern = true;
+    }
+  }
+  // Restliche Slots auf Default zurücksetzen (falls von 4 → 3 gewechselt wird)
+  for (let i = zielGroesse; i < 4; i++) {
+    const def = `Spieler ${i + 1}`;
+    if (spielerNamen[i] !== def) {
+      spielerNamen[i] = def;
+      namenAendern = true;
+    }
+  }
+
+  if (groesseAendert) {
+    console.log(`[Auslosung] Spielerzahl wechselt: ${spielerAnzahl} → ${zielGroesse}`);
+    spielerAnzahl = zielGroesse;
+    const spRadio = document.querySelector(`input[name="spieleranzahl"][value="${zielGroesse}"]`);
+    if (spRadio) spRadio.checked = true;
+    buildTableStructure();
+    updateKartenAuswahl();
+    fillTable();
+    generatePlayerNameButtons();
+    updateCopyright();
+    saveState();
+    console.log(`[Auslosung] Namen für Tisch ${tisch} (${zielGroesse}er) gesetzt:`, spielerNamen.slice(0, zielGroesse));
+  } else if (namenAendern) {
+    console.log(`[Auslosung] Namen für Tisch ${tisch} übernommen:`, spielerNamen.slice(0, zielGroesse));
     generatePlayerNameButtons();
     if (typeof updatePlayerNamesInTable === 'function') updatePlayerNamesInTable();
     saveState();
   } else {
-    console.log(`[Auslosung] Keine Änderung nötig (Namen bereits aktuell oder Tisch nicht in Auslosung)`);
+    console.log(`[Auslosung] Keine Änderung nötig`);
   }
 }
 
