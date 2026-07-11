@@ -1504,22 +1504,28 @@ function findeAuslosungTischEintrag(auslosung, tischNr) {
 }
 
 async function refreshTurnierauslosung() {
-  if (!isSpecialDay()) {
-    console.log("[Auslosung] Kein Sondertag – übersprungen");
-    return;
-  }
   const serie = document.querySelector('input[name="serie"]:checked')?.value || '1';
   const tisch = document.getElementById('tisch-auswahl')?.value || '1';
-  console.log(`[Auslosung] Serie=${serie}, Tisch=${tisch} → lade …`);
+  const sondertag = isSpecialDay();
+  // Normaler Tag: nur bei Serie 2 die neueste Auslosung übernehmen (still, keine Meldung wenn keine).
+  // Sondertag: für beide Serien immer laden, mit Meldung falls nichts gefunden.
+  const modusNormalSerie2 = !sondertag && serie === '2';
+  if (!sondertag && !modusNormalSerie2) {
+    console.log("[Auslosung] Kein Sondertag und nicht Serie 2 – übersprungen");
+    return;
+  }
+  console.log(`[Auslosung] Serie=${serie}, Tisch=${tisch}, Modus=${sondertag ? 'Sondertag' : 'NormalSerie2'} → lade …`);
   const auslosung = await loadNeuesteTurnierauslosung(serie);
   if (!auslosung) {
-    showKurzMeldung(`Keine Auslosung für Serie ${serie} gefunden`);
+    if (sondertag) showKurzMeldung(`Keine Auslosung für Serie ${serie} gefunden`);
+    else console.log("[Auslosung] Keine Serie-2-Auslosung vorhanden – ignoriert");
     return;
   }
 
   const eintrag = findeAuslosungTischEintrag(auslosung, tisch);
   if (!eintrag) {
-    showKurzMeldung(`Keine Spieler für Serie ${serie} / Tisch ${tisch}`);
+    if (sondertag) showKurzMeldung(`Keine Spieler für Serie ${serie} / Tisch ${tisch}`);
+    else console.log(`[Auslosung] Tisch ${tisch} nicht in neuester Serie-2-Auslosung – ignoriert`);
     return;
   }
 
