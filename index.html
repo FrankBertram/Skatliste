@@ -22,7 +22,7 @@
   </script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
     const firebaseConfig = {
       apiKey: "AIzaSyDmiQvDu0pxQYoidaZfRVY0BXZjLOHhw7w",
       authDomain: "skatverein-b77ef.firebaseapp.com",
@@ -33,7 +33,7 @@
     };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    window.__firestore = { db, doc, setDoc, getDoc };
+    window.__firestore = { db, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs };
   </script>
   <style>
     body {
@@ -1438,6 +1438,65 @@ async function loadFirebaseMitspieler() {
   }
 }
 
+async function loadNeuesteTurnierauslosung(serie) {
+  try {
+    const fs = window.__firestore;
+    if (!fs || !fs.db || !fs.collection || !fs.query || !fs.where || !fs.orderBy || !fs.limit || !fs.getDocs) {
+      console.warn("Firestore-Query-APIs nicht verfügbar");
+      return null;
+    }
+    const q = fs.query(
+      fs.collection(fs.db, "turnierauslosungen"),
+      fs.where("serie", "==", String(serie)),
+      fs.orderBy("createdAt", "desc"),
+      fs.limit(1)
+    );
+    const snap = await fs.getDocs(q);
+    if (snap.empty) {
+      console.warn(`Keine Turnierauslosung für Serie ${serie} gefunden`);
+      return null;
+    }
+    return snap.docs[0].data();
+  } catch (e) {
+    console.warn("Turnierauslosung konnte nicht geladen werden:", e);
+    return null;
+  }
+}
+
+function anwendenAuslosungFuerTisch(auslosung, tischNr) {
+  if (!auslosung || !Array.isArray(auslosung.tische)) return false;
+  const tischNum = Number(tischNr);
+  const eintrag = auslosung.tische.find(t => Number(t.tisch) === tischNum);
+  if (!eintrag || !Array.isArray(eintrag.spieler)) {
+    console.warn(`Kein Tisch ${tischNr} in Auslosung gefunden`);
+    return false;
+  }
+  const groesse = Number(eintrag.groesse) || eintrag.spieler.length;
+  let geaendert = false;
+  for (let i = 0; i < groesse && i < 4; i++) {
+    const neu = eintrag.spieler[i] || `Spieler ${i + 1}`;
+    if (spielerNamen[i] !== neu) {
+      spielerNamen[i] = neu;
+      geaendert = true;
+    }
+  }
+  return geaendert;
+}
+
+async function refreshTurnierauslosung() {
+  if (!isSpecialDay()) return;
+  const serie = document.querySelector('input[name="serie"]:checked')?.value || '1';
+  const tisch = document.getElementById('tisch-auswahl')?.value || '1';
+  const auslosung = await loadNeuesteTurnierauslosung(serie);
+  if (!auslosung) return;
+  const geaendert = anwendenAuslosungFuerTisch(auslosung, tisch);
+  if (geaendert) {
+    generatePlayerNameButtons();
+    if (typeof updatePlayerNamesInTable === 'function') updatePlayerNamesInTable();
+    saveState();
+  }
+}
+
 function getAktuelleMitspielerListe() {
   if (isSpecialDay() && Array.isArray(firebaseMitspielerListe) && firebaseMitspielerListe.length > 0) {
     return firebaseMitspielerListe;
@@ -2430,11 +2489,13 @@ function clearState() {
   _idbDel(STORE_KEY).catch(() => {});
 }
 
-// Serie/Tisch-Änderungen speichern
+// Serie/Tisch-Änderungen speichern + ggf. Turnierauslosung neu laden
 document.querySelectorAll('input[name="serie"]').forEach(radio => {
   radio.addEventListener('change', saveState);
+  radio.addEventListener('change', refreshTurnierauslosung);
 });
 document.getElementById('tisch-auswahl').addEventListener('change', saveState);
+document.getElementById('tisch-auswahl').addEventListener('change', refreshTurnierauslosung);
 
 // ── Start-Dialog (Handy-Querformat bei neuer Liste) ──────────────
 function isPhoneLandscape() {
@@ -2502,6 +2563,7 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
   saveState();
   document.getElementById('start-dialog').close();
   autoScalePage();
+  refreshTurnierauslosung();
 });
 
 window.addEventListener("load", () => {
@@ -2531,6 +2593,9 @@ window.addEventListener("load", () => {
     createNeuStartButton();
     updateCopyright();
     console.log(screen.width + 'x' + screen.height);
+
+    // An Sondertagen: Turnierauslosung für aktuelle Serie/Tisch laden und Namen setzen
+    refreshTurnierauslosung();
 
     // Bei neuer Liste im Handy-Querformat: Start-Dialog zeigen
     if (!loaded && isPhoneLandscape()) {
