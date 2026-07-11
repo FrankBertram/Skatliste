@@ -1441,24 +1441,32 @@ async function loadFirebaseMitspieler() {
 async function loadNeuesteTurnierauslosung(serie) {
   try {
     const fs = window.__firestore;
-    if (!fs || !fs.db || !fs.collection || !fs.query || !fs.where || !fs.orderBy || !fs.limit || !fs.getDocs) {
-      console.warn("Firestore-Query-APIs nicht verfügbar");
+    if (!fs || !fs.db || !fs.collection || !fs.query || !fs.where || !fs.getDocs) {
+      console.warn("[Auslosung] Firestore-Query-APIs nicht verfügbar");
       return null;
     }
+    // Kein orderBy in der Query → kein zusammengesetzter Firestore-Index nötig.
+    // Sortierung + limit werden client-seitig gemacht.
     const q = fs.query(
       fs.collection(fs.db, "turnierauslosungen"),
-      fs.where("serie", "==", String(serie)),
-      fs.orderBy("createdAt", "desc"),
-      fs.limit(1)
+      fs.where("serie", "==", String(serie))
     );
     const snap = await fs.getDocs(q);
     if (snap.empty) {
-      console.warn(`Keine Turnierauslosung für Serie ${serie} gefunden`);
+      console.warn(`[Auslosung] Keine Turnierauslosung für Serie ${serie} gefunden`);
       return null;
     }
-    return snap.docs[0].data();
+    // Neuesten Eintrag über createdAt (Firestore-Timestamp) bestimmen
+    const docs = snap.docs.map(d => d.data());
+    docs.sort((a, b) => {
+      const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds || 0) * 1000;
+      const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds || 0) * 1000;
+      return tb - ta;
+    });
+    console.log(`[Auslosung] ${docs.length} Eintrag/Einträge für Serie ${serie} geladen, neuester genommen`);
+    return docs[0];
   } catch (e) {
-    console.warn("Turnierauslosung konnte nicht geladen werden:", e);
+    console.warn("[Auslosung] Konnte nicht geladen werden:", e);
     return null;
   }
 }
@@ -1484,16 +1492,23 @@ function anwendenAuslosungFuerTisch(auslosung, tischNr) {
 }
 
 async function refreshTurnierauslosung() {
-  if (!isSpecialDay()) return;
+  if (!isSpecialDay()) {
+    console.log("[Auslosung] Kein Sondertag – übersprungen");
+    return;
+  }
   const serie = document.querySelector('input[name="serie"]:checked')?.value || '1';
   const tisch = document.getElementById('tisch-auswahl')?.value || '1';
+  console.log(`[Auslosung] Serie=${serie}, Tisch=${tisch} → lade …`);
   const auslosung = await loadNeuesteTurnierauslosung(serie);
   if (!auslosung) return;
   const geaendert = anwendenAuslosungFuerTisch(auslosung, tisch);
   if (geaendert) {
+    console.log(`[Auslosung] Namen für Tisch ${tisch} übernommen:`, spielerNamen.slice(0, spielerAnzahl));
     generatePlayerNameButtons();
     if (typeof updatePlayerNamesInTable === 'function') updatePlayerNamesInTable();
     saveState();
+  } else {
+    console.log(`[Auslosung] Keine Änderung nötig (Namen bereits aktuell oder Tisch nicht in Auslosung)`);
   }
 }
 
