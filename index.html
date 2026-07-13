@@ -622,6 +622,11 @@
                      background:#1976D2; color:white; cursor:pointer; min-width:150px;">
         Eingepasst
       </button>
+      <button type="button" id="btn-loeschen"
+              style="display:none; padding:16px 40px; font-size:20px; font-weight:bold; border:none; border-radius:8px;
+                     background:#757575; color:white; cursor:pointer; min-width:150px;">
+        Löschen
+      </button>
     </div>
   </form>
 </dialog>
@@ -1175,11 +1180,15 @@ function setSpitzen(isMitSpitzen) {
 function selectSpitze(value) {
   const mit = document.getElementById("mitSpitzen");
   const ohne = document.getElementById("ohneSpitzen");
+  const toggles = document.querySelectorAll("#spitzen-buttons button");
+  const istMit = toggles[0]?.classList.contains("active");
 
-  if (mit.value === "1") {
+  if (istMit) {
     mit.value = value;
+    ohne.value = "";
   } else {
     ohne.value = value;
+    mit.value = "";
   }
 
   document.querySelectorAll(".spitze-btn").forEach(b => {
@@ -1974,6 +1983,31 @@ function openNewModal(spielIndex = null) {
   const geberName = spielerNamen[geberIdx % spielerAnzahl];
   document.getElementById("kartengeber-display").textContent = "(Geber: " + geberName + ")";
 
+  const loeschBtn = document.getElementById("btn-loeschen");
+  if (loeschBtn) {
+    let letzterGefuellt = -1;
+    for (let i = spielDaten.length - 1; i >= 0; i--) {
+      if (spielDaten[i].grundwert) { letzterGefuellt = i; break; }
+    }
+    const zeige = (geberIdx === letzterGefuellt && letzterGefuellt >= 0);
+    loeschBtn.style.display = zeige ? "" : "none";
+    ["btn-gewonnen", "btn-verloren", "btn-eingepasst", "btn-loeschen"].forEach(id => {
+      const b = document.getElementById(id);
+      if (!b) return;
+      if (zeige) {
+        b.style.textAlign = "center";
+        b.style.minWidth = "0";
+        b.style.padding = "16px 8px";
+        b.style.flex = "1 1 0";
+      } else {
+        b.style.textAlign = "";
+        b.style.minWidth = "150px";
+        b.style.padding = "16px 40px";
+        b.style.flex = "";
+      }
+    });
+  }
+
   dialog.showModal();
 }
 
@@ -1984,6 +2018,31 @@ document.getElementById("btn-gewonnen").addEventListener("click", () => {
 
 document.getElementById("btn-verloren").addEventListener("click", () => {
   saveGame(false);
+});
+
+document.getElementById("btn-loeschen").addEventListener("click", () => {
+  const form = document.getElementById("spiel-form");
+  const index = parseInt(form.dataset.spielIndex, 10);
+  if (isNaN(index)) return;
+  let letzterGefuellt = -1;
+  for (let i = spielDaten.length - 1; i >= 0; i--) {
+    if (spielDaten[i].grundwert) { letzterGefuellt = i; break; }
+  }
+  if (index !== letzterGefuellt) return;
+  if (!confirm("Letzten Spieleintrag (Nr. " + (index + 1) + ") wirklich löschen?")) return;
+  const s = spielDaten[index];
+  s.grundwert = ""; s.hand = ""; s.schneider = ""; s.schneiderang = "";
+  s.schwarz = ""; s.schwarzang = ""; s.offen = "";
+  s.mitSpitzen = ""; s.ohneSpitzen = ""; s.spielwert = "";
+  s.pluswert = ""; s.minuswert = "";
+  s.p1_punkte = ""; s.p1_gew = ""; s.p1_verl = "";
+  s.p2_punkte = ""; s.p2_gew = ""; s.p2_verl = "";
+  s.p3_punkte = ""; s.p3_gew = ""; s.p3_verl = "";
+  s.p4_punkte = ""; s.p4_gew = ""; s.p4_verl = "";
+  s.p1_delta = ""; s.p2_delta = ""; s.p3_delta = ""; s.p4_delta = "";
+  s.eingepasst = ""; s.spieler = ""; s.gewonnen = null;
+  fillTable();
+  closeSpielDialog();
 });
 
 document.getElementById("btn-eingepasst").addEventListener("click", () => {
@@ -2158,6 +2217,13 @@ function saveGame(gewonnen) {
 
     let mit  = mitInput  ? parseInt(mitInput.value)  || 0 : 0;
     let ohne = ohneInput ? parseInt(ohneInput.value) || 0 : 0;
+
+    if (mit > 0 && ohne > 0) {
+        const toggles = document.querySelectorAll("#spitzen-buttons button");
+        const istMit = toggles[0]?.classList.contains("active");
+        if (istMit) { ohne = 0; if (ohneInput) ohneInput.value = ""; }
+        else        { mit  = 0; if (mitInput)  mitInput.value  = ""; }
+    }
 
     if (mit === 0 && ohne === 0) {
         mit = 1;
@@ -2427,7 +2493,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.22) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.23) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -2682,7 +2748,7 @@ window.addEventListener("load", () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.22)
+    © 2026 by Frank Bertram (V1.23)
     </div>
 </body>
 </html>
