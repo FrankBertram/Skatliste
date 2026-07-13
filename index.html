@@ -1651,6 +1651,12 @@ function generatePlayerNameButtons() {
       gastInput.style.padding = "4px 8px";
       gastInput.style.width = "200px";
 
+      const restoreButton = () => {
+        if (select.parentNode) container.removeChild(select);
+        if (gastInput.parentNode) container.removeChild(gastInput);
+        if (!container.contains(btn)) container.appendChild(btn);
+      };
+
       select.addEventListener("change", () => {
         const wert = select.value;
         if (wert === "Gast") {
@@ -1674,9 +1680,7 @@ function generatePlayerNameButtons() {
           updatePlayerNamesInTable();
           saveState();
         }
-        container.removeChild(select);
-        if (gastInput.parentNode) container.removeChild(gastInput);
-        container.appendChild(btn);
+        restoreButton();
       });
 
       gastInput.addEventListener("change", () => {
@@ -1695,9 +1699,21 @@ function generatePlayerNameButtons() {
           updatePlayerNamesInTable();
           saveState();
         }
-        container.removeChild(select);
-        container.removeChild(gastInput);
-        container.appendChild(btn);
+        restoreButton();
+      });
+
+      select.addEventListener("blur", () => {
+        setTimeout(() => {
+          if (document.activeElement === gastInput) return;
+          if (select.parentNode) restoreButton();
+        }, 150);
+      });
+
+      gastInput.addEventListener("blur", () => {
+        setTimeout(() => {
+          if (document.activeElement === select) return;
+          if (gastInput.parentNode || select.parentNode) restoreButton();
+        }, 150);
       });
 
       container.removeChild(btn);
