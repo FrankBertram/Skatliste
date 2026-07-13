@@ -2100,6 +2100,14 @@ async function saveSerieToFirestore() {
     }
   }
 
+  // Prüfen, ob die ausgewählte Spielanzahl erreicht ist
+  const gewaehlteSpielAnz = parseInt(document.querySelector('input[name="karten"]:checked')?.value) || 0;
+  const eingetragen = spielDaten.slice(0, gewaehlteSpielAnz).filter(s => s.grundwert).length;
+  if (gewaehlteSpielAnz > 0 && eingetragen < gewaehlteSpielAnz) {
+    alert(`⚠️ Speichern erst möglich, wenn alle ${gewaehlteSpielAnz} Spiele eingetragen sind (aktuell ${eingetragen}).`);
+    return;
+  }
+
   const datum = new Date().toISOString().split('T')[0];
   const serie = document.querySelector('input[name="serie"]:checked')?.value || '1';
   const tisch = document.getElementById('tisch-auswahl')?.value || '1';
