@@ -35,6 +35,9 @@
     const db = getFirestore(app);
     window.__firestore = { db, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs };
   </script>
+  <!-- PDF-Export: html2canvas + jsPDF -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', Arial, Helvetica, sans-serif;  /* Offline-fähig, kein Google Fonts nötig */
@@ -546,6 +549,7 @@
   <div id="player-btn-container-3"></div>
   <div id="player-btn-container-4"></div>
   <div id="csv-export-container"></div>
+  <div id="pdf-export-container"></div>
   <div id="neu-start-container"></div>
 </div>
 
@@ -1302,6 +1306,10 @@ function createCSVButton() {
   const container = document.getElementById("csv-export-container");
   if (!container || container.children.length > 0) return;
 
+  // Speichern-Button nur beim Sintherner Skatclub (nicht bei "de 4 Buure")
+  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
+  if (vereinMode === '4buure') return;
+
   const csvBtn = document.createElement("button");
   csvBtn.innerHTML = "☁️ Speichern";
   csvBtn.style.cssText = `
@@ -1316,6 +1324,113 @@ function createCSVButton() {
   csvBtn.addEventListener("mouseleave", () => csvBtn.style.transform = "scale(1)");
   csvBtn.onclick = saveSerieToFirestore;
   container.appendChild(csvBtn);
+}
+
+function createPDFButton() {
+  const container = document.getElementById("pdf-export-container");
+  if (!container || container.children.length > 0) return;
+
+  const btn = document.createElement("button");
+  btn.id = "btn-pdf-export";
+  btn.innerHTML = "📄 PDF";
+  btn.style.cssText = `
+    padding: 6px 16px;
+    background: linear-gradient(135deg, #1976d2, #0d47a1);
+    color: white; border: none; border-radius: 6px;
+    font-size: 15px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(25,118,210,0.3); transition: transform 0.2s;
+  `;
+  btn.addEventListener("mouseenter", () => btn.style.transform = "scale(1.05)");
+  btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
+  btn.onclick = exportPDF;
+  container.appendChild(btn);
+}
+
+async function exportPDF() {
+  // Spielernamen vollständig?
+  for (let i = 0; i < spielerAnzahl; i++) {
+    if (!spielerNamen[i] || spielerNamen[i] === `Spieler ${i+1}`) {
+      alert(`⚠️ Bitte erst alle Spielernamen auswählen (Spieler ${i+1} fehlt)!`);
+      return;
+    }
+  }
+  // Serie komplett?
+  const gewaehlteSpielAnz = parseInt(document.querySelector('input[name="karten"]:checked')?.value) || 0;
+  const eingetragen = spielDaten.slice(0, gewaehlteSpielAnz).filter(s => s.grundwert).length;
+  if (gewaehlteSpielAnz > 0 && eingetragen < gewaehlteSpielAnz) {
+    alert(`⚠️ PDF-Export erst möglich, wenn alle ${gewaehlteSpielAnz} Spiele eingetragen sind (aktuell ${eingetragen}).`);
+    return;
+  }
+  if (typeof html2canvas === 'undefined' || !window.jspdf) {
+    alert('⚠️ PDF-Bibliotheken noch nicht geladen — bitte kurz warten und erneut versuchen.');
+    return;
+  }
+
+  const table = document.getElementById('skat-table');
+  if (!table) return;
+
+  const btn = document.getElementById('btn-pdf-export');
+  const alterText = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '⏳ Erzeuge PDF…'; btn.disabled = true; }
+
+  // Body-Skalierung (autoScalePage) temporär zurücksetzen, damit html2canvas sauber rendert
+  const htmlEl = document.documentElement;
+  const savedTransform = htmlEl.style.transform;
+  const savedOrigin = htmlEl.style.transformOrigin;
+  htmlEl.style.transform = '';
+  htmlEl.style.transformOrigin = '';
+
+  try {
+    const canvas = await html2canvas(table, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      windowWidth: Math.max(table.scrollWidth, table.offsetWidth),
+      windowHeight: Math.max(table.scrollHeight, table.offsetHeight)
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const pageW = pdf.internal.pageSize.getWidth();   // 210
+    const pageH = pdf.internal.pageSize.getHeight();  // 297
+    const marginX = 8;
+
+    // Kopfzeile
+    const datum = new Date().toLocaleDateString('de-DE');
+    const serie = document.querySelector('input[name="serie"]:checked')?.value || '1';
+    const tisch = document.getElementById('tisch-auswahl')?.value || '1';
+    const vereinName = document.getElementById('club-name')?.textContent || '';
+    const spielerListe = spielerNamen.slice(0, spielerAnzahl).join(', ');
+
+    pdf.setFontSize(14); pdf.setFont(undefined, 'bold');
+    pdf.text(vereinName, marginX, 10);
+
+    pdf.setFontSize(11); pdf.setFont(undefined, 'normal');
+    pdf.text(`Datum: ${datum}    Serie: ${serie}    Tisch: ${tisch}`, marginX, 16);
+    pdf.text(`Spieler: ${spielerListe}`, marginX, 22);
+
+    // Tabellen-Bild einbetten
+    const imgTopY = 26;
+    const availW = pageW - 2 * marginX;
+    const availH = pageH - imgTopY - marginX;
+    const imgRatio = canvas.width / canvas.height;
+    let imgW = availW;
+    let imgH = imgW / imgRatio;
+    if (imgH > availH) { imgH = availH; imgW = imgH * imgRatio; }
+    const imgX = marginX + (availW - imgW) / 2;
+    pdf.addImage(imgData, 'PNG', imgX, imgTopY, imgW, imgH);
+
+    const isoDatum = new Date().toISOString().split('T')[0];
+    pdf.save(`Skatliste_${isoDatum}_S${serie}_T${tisch}.pdf`);
+  } catch (e) {
+    console.error('PDF-Export fehlgeschlagen:', e);
+    alert('⚠️ PDF-Export fehlgeschlagen: ' + (e && e.message ? e.message : e));
+  } finally {
+    htmlEl.style.transform = savedTransform;
+    htmlEl.style.transformOrigin = savedOrigin;
+    if (btn) { btn.innerHTML = alterText; btn.disabled = false; }
+  }
 }
 
 function createNeuStartButton() {
@@ -2847,6 +2962,7 @@ window.addEventListener("load", async () => {
     fillTable();
     generatePlayerNameButtons();
     createCSVButton();
+    createPDFButton();
     createNeuStartButton();
     updateCopyright();
     console.log(screen.width + 'x' + screen.height);
