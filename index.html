@@ -1585,12 +1585,15 @@ const MITSPIELER_SINTHERN = [
 // ── Mitspieler-Liste de 4 Buure ────────────────────────────────────
 // Doppelmitgliedschaften: Name zusätzlich in MITSPIELER_SINTHERN eintragen.
 const MITSPIELER_BUURE = [
+	"Bleckmann, Norbert",
 	"Gebhardt, Harry",
 	"Jost, Uwe",
 	"Langer, Kurt",
 	"Müller, Werner",
 	"Opitz, Jürgen",
 	"Pestotnik, Ralf",
+	"Schekerka, Herbert",
+	"Schwarz, Peter",
 	"Weyer, Wilfried",
 	"Winand, Hermann",
 	"Gast"
@@ -2684,15 +2687,19 @@ function updateKartenAuswahl() {
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
   const special = isSpecialDay();
 
-  // Feste Spielanzahl 40 (4er) / 30 (3er) bei "4 Buure" oder Sondertag (ohne Verein-Override)
-  if (vereinMode === '4buure' || (special && !vereinMode)) {
-    const wert = ist3er ? 30 : 40;
+  // Feste Spielanzahl (nur EIN Wert, keine Auswahl):
+  //   "de 4 Buure" → 48 (4er) / 36 (3er)
+  //   Sondertag ohne Verein-Override → 40 (4er) / 30 (3er)
+  let festwert = null;
+  if (vereinMode === '4buure')      festwert = ist3er ? 36 : 48;
+  else if (special && !vereinMode)  festwert = ist3er ? 30 : 40;
+  if (festwert !== null) {
     container.innerHTML =
-      `<label class="radio-label"><input type="radio" name="karten" value="${wert}" checked>${wert}</label>`;
+      `<label class="radio-label"><input type="radio" name="karten" value="${festwert}" checked>${festwert}</label>`;
     container.querySelectorAll('input[name="karten"]').forEach(r => {
       r.addEventListener('change', onKartenChange);
     });
-    resizeSpielDaten(wert);
+    resizeSpielDaten(festwert);
     return;
   }
 
