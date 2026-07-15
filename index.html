@@ -674,6 +674,24 @@
 </dialog>
 
 
+<!-- Verein-Dialog (nur bei URL-Parameter ?Verein=1) -->
+<dialog id="verein-dialog" style="padding:20px 24px; border-radius:10px; width:90vw; max-width:420px; border:1px solid #888;">
+  <h3 style="margin:0 0 16px 0; text-align:center; font-size:18px;">Verein auswählen</h3>
+  <div style="display:flex; flex-direction:column; gap:10px;">
+    <button type="button" id="btn-verein-sinthern"
+            style="padding:14px; font-size:16px; font-weight:bold; color:white; border:none; border-radius:6px;
+                   background:linear-gradient(135deg,#1976d2,#0d47a1); box-shadow:0 4px 12px rgba(25,118,210,0.3); cursor:pointer;">
+      1. Sintherner Skatclub 1992 e.V.
+    </button>
+    <button type="button" id="btn-verein-buure"
+            style="padding:14px; font-size:16px; font-weight:bold; color:white; border:none; border-radius:6px;
+                   background:linear-gradient(135deg,#28a745,#1e7e34); box-shadow:0 4px 12px rgba(40,167,69,0.3); cursor:pointer;">
+      de 4 Buure
+    </button>
+  </div>
+</dialog>
+
+
 <script>
 let spielDaten = [];
 let scale = 1.0;
@@ -686,6 +704,40 @@ function getSpielerAnzahl() {
 // Bonus-Multiplikator: 30 bei 4 Spielern, 40 bei 3 Spielern
 function getBonusGMultiplikator() {
   return spielerAnzahl === 3 ? 40 : 30;
+}
+
+// ── Verein-Auswahl (URL-Parameter ?Verein=1) ──────────────────────
+function isVereinParamActive() {
+  try {
+    return new URLSearchParams(window.location.search).get('Verein') === '1';
+  } catch { return false; }
+}
+
+function getVereinsMode() {
+  try { return localStorage.getItem('VEREINS_MODE') || null; }
+  catch { return null; }
+}
+
+function setVereinsMode(mode) {
+  try {
+    if (mode) localStorage.setItem('VEREINS_MODE', mode);
+    else localStorage.removeItem('VEREINS_MODE');
+  } catch {}
+}
+
+function zeigeVereinDialog() {
+  return new Promise(resolve => {
+    const dlg = document.getElementById('verein-dialog');
+    if (!dlg) { resolve(); return; }
+    const finish = (mode) => {
+      setVereinsMode(mode);
+      dlg.close();
+      resolve();
+    };
+    document.getElementById('btn-verein-sinthern').onclick = () => finish('sinthern');
+    document.getElementById('btn-verein-buure').onclick   = () => finish('4buure');
+    dlg.showModal();
+  });
 }
 
 const kartenDefault = 36;
@@ -1384,7 +1436,9 @@ function downloadCSV(csv, filename) {
 
 const spielerNamen = ["Spieler 1", "Spieler 2", "Spieler 3", "Spieler 4"];
 
-const MITSPIELER_STANDARD = [
+// ── Mitspieler-Liste Sintherner Skatclub ───────────────────────────
+// Doppelmitgliedschaften: Name zusätzlich in MITSPIELER_BUURE eintragen.
+const MITSPIELER_SINTHERN = [
 	"Bertram, Frank",
 	"Bleckmann, Norbert",
 	"Böllsterling, Gottfried",
@@ -1400,23 +1454,40 @@ const MITSPIELER_STANDARD = [
 	"Holtkamp, Bodo",
 	"Jeske, Joachim",
 	"Josek, Norbert",
-	"Jost, Uwe (Gle.)",
 	"Kraus, Max",
 	"Langer, Kurt",
 	"Mauelshagen, Martin",
 	"Maus, Benni",
-	"Müller, Werner (Gle.)",
-	"Opitz, Jürgen (Gle.)",
 	"Pestotnik, Ralf",
 	"Puls, Wilfried",
 	"Schekerka, Herbert",
 	"Schnecke, Dieter",
 	"Schwarz, Peter",
 	"Selzer, Bernhard",
-	"Weyer, Wilfried (Gle.)",
-	"Winand, Hermann (Gle.)",
 	"Gast"
 ];
+
+// ── Mitspieler-Liste de 4 Buure ────────────────────────────────────
+// Doppelmitgliedschaften: Name zusätzlich in MITSPIELER_SINTHERN eintragen.
+const MITSPIELER_BUURE = [
+	"Gebhardt, Harry",
+	"Jost, Uwe",
+	"Langer, Kurt",
+	"Müller, Werner",
+	"Opitz, Jürgen",
+	"Pestotnik, Ralf",
+	"Weyer, Wilfried",
+	"Winand, Hermann",
+	"Gast"
+];
+
+// Gesamt-Union für Standard-Dropdown (ohne ?Verein-Parameter, kein Sondertag)
+const MITSPIELER_STANDARD = (() => {
+  const set = new Set();
+  MITSPIELER_SINTHERN.forEach(n => { if (n !== 'Gast') set.add(n); });
+  MITSPIELER_BUURE.forEach(n => { if (n !== 'Gast') set.add(n); });
+  return [...set].sort((a, b) => a.localeCompare(b, 'de')).concat('Gast');
+})();
 
 let firebaseMitspielerListe = null;
 
@@ -1582,6 +1653,9 @@ async function refreshTurnierauslosung() {
 }
 
 function getAktuelleMitspielerListe() {
+  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
+  if (vereinMode === '4buure')   return MITSPIELER_BUURE;
+  if (vereinMode === 'sinthern') return MITSPIELER_SINTHERN;
   if (isSpecialDay() && Array.isArray(firebaseMitspielerListe) && firebaseMitspielerListe.length > 0) {
     return firebaseMitspielerListe;
   }
@@ -2445,16 +2519,26 @@ function isSpecialDay() {
 }
 
 function applyDayConfig() {
+  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
   const special = isSpecialDay();
   const logo = document.getElementById('club-logo');
   const name = document.getElementById('club-name');
-  if (logo) logo.src = special ? 'de4Buure.png' : 'Skat.png';
-  if (name) name.textContent = special
-    ? '43. Pulheimer Stadtmeisterschaft 2026'
-    : '1. Sintherner Skatclub 1992 e.V.';
 
-  // Sondertag: Tisch-Auswahl auf 1-10 erweitern (Kopfzeile + Start-Dialog)
-  if (special) {
+  if (vereinMode === '4buure') {
+    if (logo) logo.src = 'de4Buure.png';
+    if (name) name.textContent = 'de 4 Buure';
+  } else if (vereinMode === 'sinthern') {
+    if (logo) logo.src = 'Skat.png';
+    if (name) name.textContent = '1. Sintherner Skatclub 1992 e.V.';
+  } else {
+    if (logo) logo.src = special ? 'de4Buure.png' : 'Skat.png';
+    if (name) name.textContent = special
+      ? '43. Pulheimer Stadtmeisterschaft 2026'
+      : '1. Sintherner Skatclub 1992 e.V.';
+  }
+
+  // Sondertag: Tisch-Auswahl auf 1-10 erweitern (nur bei echtem Sondertag, nicht bei Verein-Auswahl)
+  if (special && !vereinMode) {
     const sel = document.getElementById('tisch-auswahl');
     if (sel && !sel.querySelector('option[value="8"]')) {
       for (let i = 8; i <= 10; i++) {
@@ -2482,10 +2566,11 @@ function applyDayConfig() {
 function updateKartenAuswahl() {
   const container = document.getElementById("karten-auswahl");
   const ist3er = (spielerAnzahl === 3);
+  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
   const special = isSpecialDay();
 
-  if (special) {
-    // Sondertag: nur EIN Wert (40 bzw. 30), keine Auswahl
+  // Feste Spielanzahl 40 (4er) / 30 (3er) bei "4 Buure" oder Sondertag (ohne Verein-Override)
+  if (vereinMode === '4buure' || (special && !vereinMode)) {
     const wert = ist3er ? 30 : 40;
     container.innerHTML =
       `<label class="radio-label"><input type="radio" name="karten" value="${wert}" checked>${wert}</label>`;
@@ -2652,6 +2737,8 @@ function loadState() {
 function clearState() {
   if (_storageOK()) localStorage.removeItem(STORE_KEY);
   _idbDel(STORE_KEY).catch(() => {});
+  // Verein-Auswahl bei "Neue Liste" ebenfalls löschen → Dialog erscheint erneut
+  setVereinsMode(null);
 }
 
 // Serie/Tisch-Änderungen speichern + ggf. Turnierauslosung neu laden
@@ -2731,8 +2818,13 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
   refreshTurnierauslosung();
 });
 
-window.addEventListener("load", () => {
-  applyDayConfig();  // Logo + Vereinsname je nach Datum
+window.addEventListener("load", async () => {
+  // Bei URL-Parameter ?Verein=1 und noch keiner Auswahl: erst Verein-Dialog zeigen
+  if (isVereinParamActive() && !getVereinsMode()) {
+    await zeigeVereinDialog();
+  }
+
+  applyDayConfig();  // Logo + Vereinsname je nach Datum / Verein-Auswahl
 
   // An Sondertagen die Mitspieler-Liste aus Firebase nachladen (Preisskat = 'J')
   if (isSpecialDay()) {
