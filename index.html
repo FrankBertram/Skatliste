@@ -710,14 +710,20 @@ function getBonusGMultiplikator() {
   return spielerAnzahl === 3 ? 40 : 30;
 }
 
-// ── Verein-Auswahl (URL-Parameter ?Verein=1) ──────────────────────
+// ── Verein-Auswahl (URL-Parameter ?Verein=1 mit Dialog, ?Verein=2 fest "de 4 Buure") ──
+function getVereinParam() {
+  try { return new URLSearchParams(window.location.search).get('Verein'); }
+  catch { return null; }
+}
+
 function isVereinParamActive() {
-  try {
-    return new URLSearchParams(window.location.search).get('Verein') === '1';
-  } catch { return false; }
+  const v = getVereinParam();
+  return v === '1' || v === '2';
 }
 
 function getVereinsMode() {
+  // ?Verein=2 → immer "de 4 Buure", ohne Dialog
+  if (getVereinParam() === '2') return '4buure';
   try { return localStorage.getItem('VEREINS_MODE') || null; }
   catch { return null; }
 }
