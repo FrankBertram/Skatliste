@@ -830,7 +830,7 @@ function buildTableStructure() {
   }
   gesamtRow += `<td></td><td></td></tr>`;
 
-  let abreizRow = `<tr id="abreizgeld-row"><th colspan="12" style="text-align:left; padding: 0 15px;font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle;"><span style="display:inline-block; vertical-align:middle;">Abreizgeld: <b id="abreiz-summe">0,00 €</b></span> <span style="display:inline-block; vertical-align:middle; font-size:11px; font-weight:400; color:#555; line-height:1.15; margin-left:8px;">(Eingepasste: je 0,50 €<br>Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)</span></th>`;
+  let abreizRow = `<tr id="abreizgeld-row"><th colspan="12" style="text-align:left; padding: 0 15px;font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle;"><span style="display:inline-block; vertical-align:middle;">Abreizgeld: <b id="abreiz-summe">0,00 €</b></span> <span id="abreiz-regel" style="display:inline-block; vertical-align:middle; font-size:11px; font-weight:400; color:#555; line-height:1.15; margin-left:8px;">(Eingepasste: je 0,50 €<br>Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)</span></th>`;
   for (let i = 1; i <= n; i++) {
     abreizRow += `<td class="rechts" id="abreiz-p${i}" colspan="3">0,00 €</td>`;
   }
@@ -1136,27 +1136,36 @@ function fillTable() {
     cell.style.fontWeight = "bold";
   }
 
-  // Abreizgeld (nur Sintherner Skatclub): 0,50 € pro Eingepasstem Spiel
-  // + eigene verlorene Spiele 1–3 je 0,50 €, ab Spiel 4 je 1,00 €
+  // Abreizgeld: 0,50 € pro Eingepasstem Spiel + Staffelung eigene Verluste (je nach Verein)
+  //   Sinthern: 1–3 je 0,50 €, ab 4 je 1,00 €
+  //   4 Buure:  1–2 je 0,50 €, 3–4 je 1,00 €, ab 5 je 2,00 €
   const vereinModeAbreiz = isVereinParamActive() ? getVereinsMode() : null;
   const abreizRow = document.getElementById("abreizgeld-row");
+  const abreizRegelEl = document.getElementById("abreiz-regel");
+  const istBuure = vereinModeAbreiz === '4buure';
+  const berechneEigenVerlust = (verl) => istBuure
+    ? Math.min(verl, 2) * 0.5
+      + Math.min(Math.max(verl - 2, 0), 2) * 1
+      + Math.min(Math.max(verl - 4, 0), 2) * 1.5
+      + Math.max(verl - 6, 0) * 2
+    : Math.min(verl, 3) * 0.5 + Math.max(0, verl - 3) * 1;
+  if (abreizRegelEl) {
+    abreizRegelEl.innerHTML = istBuure
+      ? '(Eingepasste: je 0,50 €<br>Verlorene 1–2: je 0,50 €, 3–4: je 1,00 €, 5–6: je 1,50 €, ab 7: je 2,00 €)'
+      : '(Eingepasste: je 0,50 €<br>Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)';
+  }
   if (abreizRow) {
-    if (vereinModeAbreiz === '4buure') {
-      abreizRow.style.display = "none";
-    } else {
-      abreizRow.style.display = "";
-      let summe = 0;
-      for (let i = 0; i < n; i++) {
-        const verl = verlustZaehler[i] || 0;
-        const eigenVerl = Math.min(verl, 3) * 0.5 + Math.max(0, verl - 3) * 1;
-        const betrag = eingepasstZaehler * 0.5 + eigenVerl;
-        summe += betrag;
-        const cell = document.getElementById(`abreiz-p${i+1}`);
-        if (cell) cell.textContent = betrag.toFixed(2).replace('.', ',') + ' €';
-      }
-      const summeEl = document.getElementById("abreiz-summe");
-      if (summeEl) summeEl.textContent = summe.toFixed(2).replace('.', ',') + ' €';
+    abreizRow.style.display = "";
+    let summe = 0;
+    for (let i = 0; i < n; i++) {
+      const verl = verlustZaehler[i] || 0;
+      const betrag = eingepasstZaehler * 0.5 + berechneEigenVerlust(verl);
+      summe += betrag;
+      const cell = document.getElementById(`abreiz-p${i+1}`);
+      if (cell) cell.textContent = betrag.toFixed(2).replace('.', ',') + ' €';
     }
+    const summeEl = document.getElementById("abreiz-summe");
+    if (summeEl) summeEl.textContent = summe.toFixed(2).replace('.', ',') + ' €';
   }
 
   updatePlayerNamesInTable();
@@ -1389,12 +1398,15 @@ async function exportPDF() {
       return;
     }
   }
-  // Serie komplett?
+  // Serie komplett? → nur Hinweis, Export darf trotzdem laufen
   const gewaehlteSpielAnz = parseInt(document.querySelector('input[name="karten"]:checked')?.value) || 0;
   const eingetragen = spielDaten.slice(0, gewaehlteSpielAnz).filter(s => s.grundwert).length;
   if (gewaehlteSpielAnz > 0 && eingetragen < gewaehlteSpielAnz) {
-    alert(`⚠️ PDF-Export erst möglich, wenn alle ${gewaehlteSpielAnz} Spiele eingetragen sind (aktuell ${eingetragen}).`);
-    return;
+    const weiter = confirm(
+      `ℹ️ Hinweis: Die Liste ist noch nicht komplett (${eingetragen} von ${gewaehlteSpielAnz} Spielen eingetragen).\n\n` +
+      `Trotzdem als PDF exportieren?`
+    );
+    if (!weiter) return;
   }
   if (typeof html2canvas === 'undefined' || !window.jspdf) {
     alert('⚠️ PDF-Bibliotheken noch nicht geladen — bitte kurz warten und erneut versuchen.');
@@ -1416,11 +1428,61 @@ async function exportPDF() {
   htmlEl.style.transformOrigin = '';
 
   try {
+    // Maße der vertikalen Header vorab aus dem echten DOM lesen –
+    // im clonedDoc liefert getBoundingClientRect keine zuverlässigen Werte.
+    const verticalThs = Array.from(table.querySelectorAll('.vertical-left'));
+    const verticalInfo = verticalThs.map(th => {
+      const r = th.getBoundingClientRect();
+      const span = th.querySelector('span');
+      return {
+        w: r.width  || 18,
+        h: r.height || 60,
+        text: span ? span.textContent.trim() : ''
+      };
+    });
+
     const canvas = await html2canvas(table, {
       scale: 2,
       backgroundColor: '#ffffff',
       windowWidth: Math.max(table.scrollWidth, table.offsetWidth),
-      windowHeight: Math.max(table.scrollHeight, table.offsetHeight)
+      windowHeight: Math.max(table.scrollHeight, table.offsetHeight),
+      onclone: (clonedDoc, clonedEl) => {
+        // "Neuer Spieleintrag"-Button-Zeile im PDF nicht mit ausgeben
+        clonedEl.querySelectorAll('tr.button-row').forEach(r => r.remove());
+        // html2canvas rendert `writing-mode: vertical-*` unzuverlässig →
+        // vertikale Header per SVG mit rotiertem <text> ersetzen (pixelperfekt).
+        const clonedThs = clonedEl.querySelectorAll('.vertical-left');
+        clonedThs.forEach((th, idx) => {
+          const info = verticalInfo[idx];
+          if (!info || !info.text) return;
+          const thW = Math.max(info.w, 14);
+          const thH = Math.max(info.h, 40);
+          const svgNS = 'http://www.w3.org/2000/svg';
+          const svg = clonedDoc.createElementNS(svgNS, 'svg');
+          svg.setAttribute('width',  thW);
+          svg.setAttribute('height', thH);
+          svg.setAttribute('viewBox', `0 0 ${thW} ${thH}`);
+          svg.style.display = 'block';
+          const txt = clonedDoc.createElementNS(svgNS, 'text');
+          const cx = thW / 2;
+          const cy = thH - 4;
+          txt.setAttribute('x', cx);
+          txt.setAttribute('y', cy);
+          txt.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+          txt.setAttribute('text-anchor', 'start');
+          txt.setAttribute('dominant-baseline', 'middle');
+          txt.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+          txt.setAttribute('font-size', '12');
+          txt.setAttribute('fill', '#000');
+          txt.textContent = info.text;
+          svg.appendChild(txt);
+          th.innerHTML = '';
+          th.appendChild(svg);
+          th.style.verticalAlign = 'bottom';
+          th.style.textAlign = 'center';
+          th.style.padding = '0';
+        });
+      }
     });
 
     const imgData = canvas.toDataURL('image/png');
