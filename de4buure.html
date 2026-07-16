@@ -10,18 +10,62 @@
   <link rel="icon" type="image/png" href="de4Buure.png">
   <link rel="apple-touch-icon" href="de4Buure.png">
   <link rel="manifest" href="manifest.de4buure.webmanifest">
-  <script>
-    // Vor jedem Weiterleiten: Modus fest auf "de 4 Buure" setzen.
-    // So bleibt das Verhalten korrekt, auch wenn iOS beim Anlegen auf
-    // dem Homescreen Hash und Query aus der URL entfernt.
-    try { localStorage.setItem('CLUB_MODE', '4buure'); } catch (e) {}
-    location.replace('index.html');
-  </script>
+  <style>
+    html, body {
+      margin: 0; padding: 0; min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #f5f5f5; color: #222;
+    }
+    .wrap {
+      max-width: 480px; margin: 0 auto; padding: 32px 20px;
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      gap: 20px;
+    }
+    .logo { width: 140px; height: auto; }
+    h1 { font-size: 22px; margin: 0; }
+    p  { margin: 0; line-height: 1.4; }
+    .btn {
+      display: inline-block; padding: 14px 24px;
+      background: linear-gradient(135deg,#28a745,#1e7e34); color: white;
+      border: none; border-radius: 8px; font-size: 17px; font-weight: bold;
+      text-decoration: none; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(40,167,69,0.3);
+    }
+    .btn:active { transform: scale(0.98); }
+    .hint {
+      background: #fff; border-radius: 10px; padding: 14px 16px;
+      font-size: 14px; color: #444; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      text-align: left;
+    }
+    .hint b { color: #1e7e34; }
+  </style>
 </head>
 <body>
-  <noscript>
-    <p>Diese App benötigt JavaScript. Bitte öffnen Sie
-       <a href="index.html">index.html</a> direkt.</p>
-  </noscript>
+  <div class="wrap">
+    <img src="de4Buure.png" alt="de 4 Buure" class="logo">
+    <h1>de 4 Buure – Skatliste</h1>
+    <a class="btn" href="index.html" id="open-btn">Spielliste öffnen ▶</a>
+    <div class="hint">
+      <b>Auf dem iPad zum Home-Bildschirm hinzufügen:</b><br>
+      Diese Seite (<code>de4buure.html</code>) offen lassen &rarr;
+      unten „Teilen" antippen &rarr; „Zum Home-Bildschirm".
+      Das erzeugt eine „Buure"-Kachel, die die Liste immer im Buure-Modus öffnet.
+    </div>
+  </div>
+  <script>
+    // Modus fest auf "de 4 Buure" setzen, damit die App beim Öffnen sofort
+    // im richtigen Modus startet – auch wenn iOS Hash/Query aus der URL entfernt.
+    try { localStorage.setItem('CLUB_MODE', '4buure'); } catch (e) {}
+
+    // Wird bereits vom Homescreen als PWA gestartet? Dann direkt in die App.
+    // In Safari (Browser) bleiben wir auf dieser Landing, damit der Nutzer
+    // in Ruhe "Teilen → Zum Home-Bildschirm" ausführen kann.
+    var isStandalone =
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+    if (isStandalone) {
+      location.replace('index.html');
+    }
+  </script>
 </body>
 </html>
