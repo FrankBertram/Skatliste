@@ -505,7 +505,7 @@
   <!-- Zeile 1: Logo + Verein -->
   <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 0px;">
     <img id="club-logo" src="Skat.png" alt="Skat-Logo" style="height: 40px;">
-    <span id="club-name" style="font-size:20px; font-weight: bold;">1. Sintherner Skatclub 1992 e.V.</span>
+    <span id="club-name" style="font-size:20px; font-weight: bold;">1. Sintherner Skatclub</span>
   </div>
   <br>
 
@@ -685,7 +685,7 @@
     <button type="button" id="btn-verein-sinthern"
             style="padding:14px; font-size:16px; font-weight:bold; color:white; border:none; border-radius:6px;
                    background:linear-gradient(135deg,#1976d2,#0d47a1); box-shadow:0 4px 12px rgba(25,118,210,0.3); cursor:pointer;">
-      1. Sintherner Skatclub 1992 e.V.
+      1. Sintherner Skatclub
     </button>
     <button type="button" id="btn-verein-buure"
             style="padding:14px; font-size:16px; font-weight:bold; color:white; border:none; border-radius:6px;
@@ -830,7 +830,7 @@ function buildTableStructure() {
   }
   gesamtRow += `<td></td><td></td></tr>`;
 
-  let abreizRow = `<tr id="abreizgeld-row"><th colspan="12" style="text-align:left; padding: 0 15px;font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle;"><span style="display:inline-block; vertical-align:middle;">Abreizgeld: <b id="abreiz-summe">0,00 €</b></span> <span id="abreiz-regel" style="display:inline-block; vertical-align:middle; font-size:11px; font-weight:400; color:#555; line-height:1.15; margin-left:8px;">(Eingepasste: je 0,50 €<br>Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)</span></th>`;
+  let abreizRow = `<tr id="abreizgeld-row"><th colspan="12" style="text-align:left; padding: 4px 15px; font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle; line-height:1.25;"><div>Abreizgeld: <b id="abreiz-summe">0,00 €</b></div><div id="abreiz-regel" style="font-size:11px; font-weight:400; color:#555; line-height:1.2; margin-top:2px;">(Eingepasste: je 0,50 €<br>Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)</div></th>`;
   for (let i = 1; i <= n; i++) {
     abreizRow += `<td class="rechts" id="abreiz-p${i}" colspan="3">0,00 €</td>`;
   }
@@ -1909,7 +1909,8 @@ function getAktuelleMitspielerListe() {
   if (isSpecialDay() && Array.isArray(firebaseMitspielerListe) && firebaseMitspielerListe.length > 0) {
     return firebaseMitspielerListe;
   }
-  return MITSPIELER_STANDARD;
+  // Ohne ?Verein-Parameter und ohne Sondertag: Standard = Sintherner Skatclub
+  return MITSPIELER_SINTHERN;
 }
 
 function generatePlayerNameButtons() {
@@ -2779,12 +2780,12 @@ function applyDayConfig() {
     if (name) name.textContent = 'de 4 Buure';
   } else if (vereinMode === 'sinthern') {
     if (logo) logo.src = 'Skat.png';
-    if (name) name.textContent = '1. Sintherner Skatclub 1992 e.V.';
+    if (name) name.textContent = '1. Sintherner Skatclub';
   } else {
     if (logo) logo.src = special ? 'de4Buure.png' : 'Skat.png';
     if (name) name.textContent = special
       ? '43. Pulheimer Stadtmeisterschaft 2026'
-      : '1. Sintherner Skatclub 1992 e.V.';
+      : '1. Sintherner Skatclub';
   }
 
   // Sondertag: Tisch-Auswahl auf 1-10 erweitern (nur bei echtem Sondertag, nicht bei Verein-Auswahl)
@@ -2856,7 +2857,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.23) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.24) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -3119,7 +3120,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.23)
+    © 2026 by Frank Bertram (V1.24)
     </div>
 </body>
 </html>
