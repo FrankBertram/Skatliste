@@ -1427,6 +1427,22 @@ async function exportPDF() {
   htmlEl.style.transform = '';
   htmlEl.style.transformOrigin = '';
 
+  // Scrollposition des Tabellen-Wrappers zurücksetzen (Tablet: sonst
+  // wird nur der aktuell sichtbare Ausschnitt sauber gerendert)
+  const pdfWrapper = document.querySelector('.table-wrapper');
+  const savedScrollTop  = pdfWrapper ? pdfWrapper.scrollTop  : 0;
+  const savedScrollLeft = pdfWrapper ? pdfWrapper.scrollLeft : 0;
+  const savedMaxHeight  = pdfWrapper ? pdfWrapper.style.maxHeight : '';
+  const savedHeight     = pdfWrapper ? pdfWrapper.style.height    : '';
+  const savedOverflow   = pdfWrapper ? pdfWrapper.style.overflow  : '';
+  if (pdfWrapper) {
+    pdfWrapper.scrollTop = 0;
+    pdfWrapper.scrollLeft = 0;
+    pdfWrapper.style.maxHeight = 'none';
+    pdfWrapper.style.height    = 'auto';
+    pdfWrapper.style.overflow  = 'visible';
+  }
+
   try {
     // Maße der vertikalen Header vorab aus dem echten DOM lesen –
     // im clonedDoc liefert getBoundingClientRect keine zuverlässigen Werte.
@@ -1447,6 +1463,23 @@ async function exportPDF() {
       windowWidth: Math.max(table.scrollWidth, table.offsetWidth),
       windowHeight: Math.max(table.scrollHeight, table.offsetHeight),
       onclone: (clonedDoc, clonedEl) => {
+        // Wrapper "entfesseln": max-height + overflow aufheben, damit die
+        // komplette Liste gerendert wird (nicht nur der auf dem Tablet
+        // sichtbare Scroll-Ausschnitt). Scrollposition zurücksetzen.
+        const wrapper = clonedDoc.querySelector('.table-wrapper');
+        if (wrapper) {
+          wrapper.style.maxHeight = 'none';
+          wrapper.style.height    = 'auto';
+          wrapper.style.overflow  = 'visible';
+          wrapper.scrollTop = 0;
+          wrapper.scrollLeft = 0;
+        }
+        // thead: sticky aufheben, sonst rutscht der Kopf an die aktuelle
+        // Scrollposition statt an den Tabellenanfang.
+        clonedEl.querySelectorAll('thead th').forEach(th => {
+          th.style.position = 'static';
+          th.style.top = 'auto';
+        });
         // "Neuer Spieleintrag"-Button-Zeile im PDF nicht mit ausgeben
         clonedEl.querySelectorAll('tr.button-row').forEach(r => r.remove());
         // html2canvas rendert `writing-mode: vertical-*` unzuverlässig →
@@ -1526,6 +1559,13 @@ async function exportPDF() {
   } finally {
     htmlEl.style.transform = savedTransform;
     htmlEl.style.transformOrigin = savedOrigin;
+    if (pdfWrapper) {
+      pdfWrapper.style.maxHeight = savedMaxHeight;
+      pdfWrapper.style.height    = savedHeight;
+      pdfWrapper.style.overflow  = savedOverflow;
+      pdfWrapper.scrollTop  = savedScrollTop;
+      pdfWrapper.scrollLeft = savedScrollLeft;
+    }
     if (btn) { btn.innerHTML = alterText; btn.disabled = false; }
   }
 }
