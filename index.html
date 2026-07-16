@@ -1482,6 +1482,51 @@ async function exportPDF() {
         });
         // "Neuer Spieleintrag"-Button-Zeile im PDF nicht mit ausgeben
         clonedEl.querySelectorAll('tr.button-row').forEach(r => r.remove());
+        // Geber-Markierung im PDF: Schraffur (repeating-linear-gradient)
+        // durch einen einfachen hellgrauen Hintergrund ersetzen.
+        clonedEl.querySelectorAll('tbody td').forEach(td => {
+          const bg = td.style.background || '';
+          if (bg.indexOf('repeating-linear-gradient') !== -1) {
+            td.style.background      = '';
+            td.style.backgroundImage = 'none';
+            td.style.backgroundColor = '#e5e5e5';
+          }
+        });
+        // Eingepasst-Zeilen: grauen Hintergrund entfernen, stattdessen eine
+        // horizontale Linie mittig durch die Zeile ziehen – aber nur von
+        // Spalte 3 (mit Spitzen) bis zur letzten "verloren"-Spalte, also
+        // ohne Lfd. Nr., Grundwert, Eingepasst und Edit-Spalte.
+        // Geber-Zellen (bereits hellgrau) behalten ihre Färbung.
+        clonedEl.querySelectorAll('tbody tr').forEach(tr => {
+          const bg = (tr.style.backgroundColor || '').replace(/\s/g, '');
+          const isEingepasst = bg === 'rgb(221,221,221)' || bg === '#ddd';
+          if (!isEingepasst) return;
+          tr.style.backgroundColor = 'transparent';
+          tr.style.fontStyle = '';
+          const cells = tr.querySelectorAll('td');
+          const total = cells.length;
+          cells.forEach((td, idx) => {
+            const geberBg = (td.style.backgroundColor || '').replace(/\s/g, '');
+            const istGeber = geberBg === 'rgb(229,229,229)' || geberBg === '#e5e5e5';
+            td.style.backgroundColor = istGeber ? '#e5e5e5' : 'transparent';
+            // Strike nur zwischen Spalte 3 (idx 2) und letzter "verloren"
+            // (idx < total-2, weil Eingepasst + Edit ausgeschlossen bleiben)
+            if (idx >= 2 && idx < total - 2) {
+              td.style.backgroundImage    = 'linear-gradient(#000, #000)';
+              td.style.backgroundRepeat   = 'no-repeat';
+              td.style.backgroundPosition = '0 50%';
+              td.style.backgroundSize     = '100% 1.2px';
+            } else {
+              td.style.backgroundImage = 'none';
+            }
+          });
+        });
+        // Letzte Spalte (Edit-Button / Leer-Spalte) im PDF entfernen,
+        // damit "Eingepasst" die letzte Spalte ist.
+        clonedEl.querySelectorAll('thead tr, tbody tr, tfoot tr').forEach(tr => {
+          const cells = tr.children;
+          if (cells.length > 0) tr.removeChild(cells[cells.length - 1]);
+        });
         // html2canvas rendert `writing-mode: vertical-*` unzuverlässig →
         // vertikale Header per SVG mit rotiertem <text> ersetzen (pixelperfekt).
         const clonedThs = clonedEl.querySelectorAll('.vertical-left');
