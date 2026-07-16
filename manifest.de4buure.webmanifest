@@ -1,0 +1,26 @@
+{
+  "name": "de 4 Buure - Spielliste",
+  "short_name": "Buure",
+  "description": "Digitale Spielliste für 4er/3er Skatabende – de 4 Buure",
+  "start_url": "./de4buure.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#ffffff",
+  "theme_color": "#1e7e34",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "de4Buure.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "de4Buure.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -698,7 +698,10 @@ function getBonusGMultiplikator() {
 //    …/index.html           → Sintherner Skatclub (Default)
 // Alt-Kompatibilität für vorhandene Bookmarks:
 //    …/index.html?Verein=2  → "de 4 Buure"
-function getVereinsMode() {
+// iPad-Homescreen: das Manifest (display:standalone, start_url:./index.html)
+// entfernt beim Verknüpfen Hash & Query. Deshalb wird die letzte URL-Wahl
+// zusätzlich in localStorage persistiert und beim Start als Fallback gelesen.
+function _readVereinsModeFromUrl() {
   try {
     const hash = (window.location.hash || '').replace(/^[#\/]+/, '').toLowerCase();
     if (hash === 'de4buure' || hash === '4buure' || hash === 'buure') return '4buure';
@@ -706,8 +709,26 @@ function getVereinsMode() {
     const p = new URLSearchParams(window.location.search).get('Verein');
     if (p === '2') return '4buure';
   } catch {}
+  return null;
+}
+
+function getVereinsMode() {
+  const fromUrl = _readVereinsModeFromUrl();
+  if (fromUrl) return fromUrl;
+  try {
+    const stored = localStorage.getItem('CLUB_MODE');
+    if (stored === '4buure' || stored === 'sinthern') return stored;
+  } catch {}
   return null; // = Sinthern-Default
 }
+
+// Bei jedem Aufruf mit expliziter URL-Auswahl den Wert persistieren,
+// damit spätere Starts vom Homescreen-Icon (ohne Hash) sie kennen.
+(function _persistVereinsModeFromUrl() {
+  const m = _readVereinsModeFromUrl();
+  if (!m) return;
+  try { localStorage.setItem('CLUB_MODE', m); } catch {}
+})();
 
 // Wird als Filter-Gate an vielen Stellen aufgerufen – im neuen Modell
 // ist ein Verein-Kontext immer bekannt (Default = Sinthern), daher true.

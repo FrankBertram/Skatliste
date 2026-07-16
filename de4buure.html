@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Buure">
+  <title>de 4 Buure - Skatliste</title>
+  <link rel="icon" type="image/png" href="de4Buure.png">
+  <link rel="apple-touch-icon" href="de4Buure.png">
+  <link rel="manifest" href="manifest.de4buure.webmanifest">
+  <script>
+    // Vor jedem Weiterleiten: Modus fest auf "de 4 Buure" setzen.
+    // So bleibt das Verhalten korrekt, auch wenn iOS beim Anlegen auf
+    // dem Homescreen Hash und Query aus der URL entfernt.
+    try { localStorage.setItem('CLUB_MODE', '4buure'); } catch (e) {}
+    location.replace('index.html');
+  </script>
+</head>
+<body>
+  <noscript>
+    <p>Diese App benötigt JavaScript. Bitte öffnen Sie
+       <a href="index.html">index.html</a> direkt.</p>
+  </noscript>
+</body>
+</html>
