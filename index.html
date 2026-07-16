@@ -692,23 +692,27 @@ function getBonusGMultiplikator() {
   return spielerAnzahl === 3 ? 40 : 30;
 }
 
-// ── Verein-Auswahl über URL-Hash-Fragment ──────────────────────────
-//    …/index.html#de4buure  → "de 4 Buure"
-//    …/index.html#sinthern  → Sintherner Skatclub (explizit)
-//    …/index.html           → Sintherner Skatclub (Default)
-// Alt-Kompatibilität für vorhandene Bookmarks:
-//    …/index.html?Verein=2  → "de 4 Buure"
-// Für iPad-PWA: das Buure-Homescreen-Icon startet über `de4buure.html`,
-// welches per JS auf `index.html#de4buure` weiterleitet. Deshalb wird
-// hier KEIN localStorage-Fallback verwendet – die plain-URL ist immer
-// der Default (Sinthern), unabhängig vom letzten Öffnen.
+// ── Verein-Auswahl über URL ────────────────────────────────────────
+// Primär (Query-Parameter, robust bei Weiterleitung):
+//    …/index.html?club=boore     → "de vier Boore"
+//    …/index.html?club=sinthern  → Sintherner Skatclub (explizit)
+// Ebenfalls unterstützt (Hash):
+//    …/index.html#devierboore    → "de vier Boore"
+//    …/index.html#sinthern       → Sintherner Skatclub (explizit)
+// Default (nichts angegeben):
+//    …/index.html                → Sintherner Skatclub
+// Der Boore-Homescreen-Einstieg über `devierboore.html` reicht den Modus
+// per Query-Parameter weiter. Kein localStorage-Fallback: die plain-URL
+// ist immer der Default (Sinthern).
 function getVereinsMode() {
   try {
+    const params = new URLSearchParams(window.location.search);
+    const club = (params.get('club') || '').toLowerCase();
+    if (club === 'boore' || club === 'devierboore') return '4buure';
+    if (club === 'sinthern') return 'sinthern';
     const hash = (window.location.hash || '').replace(/^[#\/]+/, '').toLowerCase();
-    if (hash === 'de4buure' || hash === '4buure' || hash === 'buure') return '4buure';
+    if (hash === 'boore' || hash === 'devierboore') return '4buure';
     if (hash === 'sinthern') return 'sinthern';
-    const p = new URLSearchParams(window.location.search).get('Verein');
-    if (p === '2') return '4buure';
   } catch {}
   return null; // = Sinthern-Default
 }
@@ -2828,13 +2832,13 @@ function applyDayConfig() {
   const name = document.getElementById('club-name');
 
   if (vereinMode === '4buure') {
-    if (logo) logo.src = 'de4Buure.png';
-    if (name) name.textContent = 'de 4 Buure';
+    if (logo) logo.src = 'devierboore.png';
+    if (name) name.textContent = 'de vier Boore';
   } else if (vereinMode === 'sinthern') {
     if (logo) logo.src = 'Skat.png';
     if (name) name.textContent = '1. Sintherner Skatclub';
   } else {
-    if (logo) logo.src = special ? 'de4Buure.png' : 'Skat.png';
+    if (logo) logo.src = special ? 'devierboore.png' : 'Skat.png';
     if (name) name.textContent = special
       ? '43. Pulheimer Stadtmeisterschaft 2026'
       : '1. Sintherner Skatclub';

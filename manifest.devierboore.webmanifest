@@ -1,0 +1,26 @@
+{
+  "name": "de vier Boore - Spielliste",
+  "short_name": "Boore",
+  "description": "Digitale Spielliste für 4er/3er Skatabende – de vier Boore",
+  "start_url": "./devierboore.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#ffffff",
+  "theme_color": "#1e7e34",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "devierboore.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "devierboore.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
