@@ -678,24 +678,6 @@
 </dialog>
 
 
-<!-- Verein-Dialog (nur bei URL-Parameter ?Verein=1) -->
-<dialog id="verein-dialog" style="padding:20px 24px; border-radius:10px; width:90vw; max-width:420px; border:1px solid #888;">
-  <h3 style="margin:0 0 16px 0; text-align:center; font-size:18px;">Verein auswählen</h3>
-  <div style="display:flex; flex-direction:column; gap:10px;">
-    <button type="button" id="btn-verein-sinthern"
-            style="padding:14px; font-size:16px; font-weight:bold; color:white; border:none; border-radius:6px;
-                   background:linear-gradient(135deg,#1976d2,#0d47a1); box-shadow:0 4px 12px rgba(25,118,210,0.3); cursor:pointer;">
-      1. Sintherner Skatclub
-    </button>
-    <button type="button" id="btn-verein-buure"
-            style="padding:14px; font-size:16px; font-weight:bold; color:white; border:none; border-radius:6px;
-                   background:linear-gradient(135deg,#28a745,#1e7e34); box-shadow:0 4px 12px rgba(40,167,69,0.3); cursor:pointer;">
-      de 4 Buure
-    </button>
-  </div>
-</dialog>
-
-
 <script>
 let spielDaten = [];
 let scale = 1.0;
@@ -710,45 +692,26 @@ function getBonusGMultiplikator() {
   return spielerAnzahl === 3 ? 40 : 30;
 }
 
-// ── Verein-Auswahl (URL-Parameter ?Verein=1 mit Dialog, ?Verein=2 fest "de 4 Buure") ──
-function getVereinParam() {
-  try { return new URLSearchParams(window.location.search).get('Verein'); }
-  catch { return null; }
-}
-
-function isVereinParamActive() {
-  const v = getVereinParam();
-  return v === '1' || v === '2';
-}
-
+// ── Verein-Auswahl über URL-Hash-Fragment ──────────────────────────
+//    …/index.html#de4buure  → "de 4 Buure"
+//    …/index.html#sinthern  → Sintherner Skatclub (explizit)
+//    …/index.html           → Sintherner Skatclub (Default)
+// Alt-Kompatibilität für vorhandene Bookmarks:
+//    …/index.html?Verein=2  → "de 4 Buure"
 function getVereinsMode() {
-  // ?Verein=2 → immer "de 4 Buure", ohne Dialog
-  if (getVereinParam() === '2') return '4buure';
-  try { return localStorage.getItem('VEREINS_MODE') || null; }
-  catch { return null; }
-}
-
-function setVereinsMode(mode) {
   try {
-    if (mode) localStorage.setItem('VEREINS_MODE', mode);
-    else localStorage.removeItem('VEREINS_MODE');
+    const hash = (window.location.hash || '').replace(/^[#\/]+/, '').toLowerCase();
+    if (hash === 'de4buure' || hash === '4buure' || hash === 'buure') return '4buure';
+    if (hash === 'sinthern') return 'sinthern';
+    const p = new URLSearchParams(window.location.search).get('Verein');
+    if (p === '2') return '4buure';
   } catch {}
+  return null; // = Sinthern-Default
 }
 
-function zeigeVereinDialog() {
-  return new Promise(resolve => {
-    const dlg = document.getElementById('verein-dialog');
-    if (!dlg) { resolve(); return; }
-    const finish = (mode) => {
-      setVereinsMode(mode);
-      dlg.close();
-      resolve();
-    };
-    document.getElementById('btn-verein-sinthern').onclick = () => finish('sinthern');
-    document.getElementById('btn-verein-buure').onclick   = () => finish('4buure');
-    dlg.showModal();
-  });
-}
+// Wird als Filter-Gate an vielen Stellen aufgerufen – im neuen Modell
+// ist ein Verein-Kontext immer bekannt (Default = Sinthern), daher true.
+function isVereinParamActive() { return true; }
 
 const kartenDefault = 36;
 spielDaten = Array(kartenDefault).fill(null).map((_, i) => ({
@@ -3077,8 +3040,6 @@ function loadState() {
 function clearState() {
   if (_storageOK()) localStorage.removeItem(STORE_KEY);
   _idbDel(STORE_KEY).catch(() => {});
-  // Verein-Auswahl bei "Neue Liste" ebenfalls löschen → Dialog erscheint erneut
-  setVereinsMode(null);
 }
 
 // Serie/Tisch-Änderungen speichern + ggf. Turnierauslosung neu laden
@@ -3159,12 +3120,7 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
 });
 
 window.addEventListener("load", async () => {
-  // Bei URL-Parameter ?Verein=1 und noch keiner Auswahl: erst Verein-Dialog zeigen
-  if (isVereinParamActive() && !getVereinsMode()) {
-    await zeigeVereinDialog();
-  }
-
-  applyDayConfig();  // Logo + Vereinsname je nach Datum / Verein-Auswahl
+  applyDayConfig();  // Logo + Vereinsname je nach Datum / URL-Hash
 
   // An Sondertagen die Mitspieler-Liste aus Firebase nachladen (Preisskat = 'J')
   if (isSpecialDay()) {
