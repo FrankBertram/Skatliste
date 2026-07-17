@@ -96,6 +96,7 @@
   padding: 6px 16px;
   border-radius: 6px;
   font-size: 15px;
+  font-weight: bold;
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.2s;
@@ -379,10 +380,10 @@
       font-size: 12px !important;
       padding: 2px !important;
     }
-    /* Datenzellen enger, damit die Tabelle in die Handybreite passt */
+    /* Datenzellen: horizontal eng (Breite), vertikal etwas Luft (Lesbarkeit) */
     body.mobile-compact-header #skat-table th,
     body.mobile-compact-header #skat-table td {
-      padding: 1px 2px !important;
+      padding: 2px 2px !important;
     }
     /* Sticky-Header aktiv, aber Zeile-2-top wird per JS aus der tatsächlichen
        Zeile-1-Höhe berechnet — sonst entsteht bei anderem Scale eine Lücke. */
@@ -645,7 +646,7 @@
   <!-- Handy-Querformat: kompakte Ein-Zeilen-Ansicht (nur per Media Query sichtbar) -->
   <div class="header-mobile" style="display:none; align-items:center; gap:6px; flex-wrap:nowrap; flex:1 1 auto; min-width:0;">
     <!-- Spielernamen-, CSV-, PDF- und Neue-Liste-Container werden per JS beim Wechsel hierher verschoben -->
-    <div id="header-info" style="font-size:14px; color:#000; font-weight:bold; white-space:nowrap; margin-left:auto;">
+    <div id="header-info" style="font-size:14px; color:#000; font-weight:bold; white-space:nowrap;">
       S:1 / T:1
     </div>
   </div>
