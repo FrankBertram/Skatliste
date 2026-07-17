@@ -403,7 +403,7 @@
     /* Spielliste: schmalere Body-Margins im Handy-Querformat,
        damit die Tabelle die komplette Breite nutzen kann.
        Padding berücksichtigt Notch/Statusbar/Home-Indicator (iPhone). */
-    @media (max-height: 500px) and (orientation: landscape) {
+    @media (max-width: 1000px) and (orientation: landscape) {
       body {
         margin: 0 !important;
         padding-top:    max(env(safe-area-inset-top),    8px) !important;
@@ -465,7 +465,7 @@
     }
 
     /* Kompaktes Dialog-Layout für Handy-Querformat */
-    @media (max-height: 500px) and (orientation: landscape) {
+    @media (max-width: 1000px) and (orientation: landscape) {
       #spiel-dialog {
         width: 100vw !important;
         max-width: 100vw !important;
@@ -552,7 +552,7 @@
 
     /* Sehr kurzer Viewport (z.B. iPhone 8 Querformat ≤ 400px Höhe):
        Reihen und Abstände kompakter, damit alles ohne Scrollen passt */
-    @media (max-height: 400px) and (orientation: landscape) {
+    @media (max-height: 400px) and (max-width: 1000px) and (orientation: landscape) {
       #spiel-dialog {
         font-size: 11px !important;
         padding-top:    max(env(safe-area-inset-top),    3px) !important;
@@ -959,7 +959,7 @@ function setTableHeight() {
 
   let scale = 1.0;
   if (isLandscape) {
-    if (screenW < 900) {
+    if (screenW < 1000) {
       const tableEl = document.querySelector('#skat-table');
       const bs = getComputedStyle(document.body);
       const pl = parseFloat(bs.paddingLeft)  || 0;
@@ -982,7 +982,7 @@ function setTableHeight() {
   // Handy-Querformat: kompakter Header, mehr Platz für die Tabelle.
   // Safe-Area-Insets (Notch/Home-Indicator) mit einrechnen, damit die
   // Tabelle nicht in den nicht antippbaren Bereich rutscht.
-  const isPhoneLandscape = isLandscape && screenW < 900;
+  const isPhoneLandscape = isLandscape && screenW < 1000;
   if (isPhoneLandscape) {
     const safeTop    = _safeInset('top', 8);
     const safeBottom = _safeInset('bottom', 2);
@@ -1040,7 +1040,7 @@ function autoScalePage() {
 
   let scale = 1.0;
   if (isLandscape) {
-    if (width < 900) {
+    if (width < 1000) {
       // Handy-Querformat: Tabelle auf tatsächlich verfügbare Bildschirmbreite skalieren.
       // Body-Padding (Safe-Area/Notch) abziehen, sonst überläuft die Tabelle rechts.
       const tableEl = document.querySelector('#skat-table');
@@ -2452,7 +2452,7 @@ function openNewModal(spielIndex = null) {
   const spielNummerSpan = document.getElementById("spielnummer-display");
   const spieleAnz = document.querySelector('input[name="karten"]:checked')?.value || '0';
 
-  const isPhoneLandscape = window.innerWidth > window.innerHeight && window.innerHeight <= 500;
+  const isPhoneLandscape = window.innerWidth > window.innerHeight && window.innerWidth < 1000;
   if (isPhoneLandscape) {
     // Handy-Querformat: Dialog auf native Größe, CSS-Media-Query macht ihn kompakt
     dialog.style.transform = '';
@@ -3313,7 +3313,7 @@ function _setHeaderStructure(compact) {
 }
 
 function _updateHeaderLabels() {
-  const compact = window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+  const compact = window.matchMedia('(max-width: 1000px) and (orientation: landscape)').matches;
   _setHeaderStructure(compact);
   _setHeaderLabels(compact);
   requestAnimationFrame(_syncStickyRow2Top);
@@ -3335,7 +3335,7 @@ function _syncStickyRow2Top() {
 // Spielernamen-, CSV-, PDF- und Neue-Liste-Container zwischen Desktop-Zeile-2
 // und Handy-Header verschieben (bei Handy-Querformat).
 function applyMobileLayout() {
-  const isPhoneL = window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+  const isPhoneL = window.matchMedia('(max-width: 1000px) and (orientation: landscape)').matches;
   const mobileHdr = document.querySelector('.header-mobile');
   const zeile2    = document.getElementById('spieler-buttons-container');
   const info      = document.getElementById('header-info');
@@ -3381,7 +3381,7 @@ window.addEventListener('orientationchange', applyMobileLayout);
 
 // ── Start-Dialog (Handy-Querformat bei neuer Liste) ──────────────
 function isPhoneLandscape() {
-  return window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+  return window.matchMedia('(max-width: 1000px) and (orientation: landscape)').matches;
 }
 
 function _highlightStartBtn(btn, active) {
