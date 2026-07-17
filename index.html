@@ -382,7 +382,13 @@
     /* Datenzellen enger, damit die Tabelle in die Handybreite passt */
     body.mobile-compact-header #skat-table th,
     body.mobile-compact-header #skat-table td {
-      padding: 2px 3px !important;
+      padding: 1px 2px !important;
+    }
+    /* Header komplett fett im Kompaktmodus (Buben, Werte, Hd/Sn/-A/Sw/-A/Of, +/-, Namen, E.) */
+    body.mobile-compact-header #skat-table thead th {
+      font-weight: bold !important;
+      position: static !important;
+      top: auto !important;
     }
 
     /* Spielliste: schmalere Body-Margins im Handy-Querformat,
@@ -403,7 +409,7 @@
       }
       /* Tabellen-Natural-Width kleiner ansetzen, damit alles in die
          iPhone-Querformat-Breite passt (Skalierung greift trotzdem). */
-      #skat-table { min-width: 900px; }
+      #skat-table { min-width: 800px; }
       /* kein horizontales Scrollen erlauben */
       .table-wrapper { overflow-x: hidden !important; }
       /* Tabellen-Zellen: 1 px kleiner + fett (Kopf bleibt wie vorher) */
@@ -943,7 +949,7 @@ function setTableHeight() {
   if (isLandscape) {
     if (screenW < 900) {
       const tableEl = document.querySelector('#skat-table');
-      const naturalWidth = tableEl && tableEl.scrollWidth > 700 ? tableEl.scrollWidth : 900;
+      const naturalWidth = tableEl && tableEl.scrollWidth > 600 ? tableEl.scrollWidth : 800;
       scale = Math.min(1.0, screenW / naturalWidth);
     } else if (swidth >= 1200) {
       scale = 1.0;
@@ -1022,7 +1028,7 @@ function autoScalePage() {
       // Handy-Querformat: Tabelle auf volle Bildschirmbreite skalieren.
       // Nie über 1.0 hinaus, sonst wird die Tabelle größer als der Viewport.
       const tableEl = document.querySelector('#skat-table');
-      const naturalWidth = tableEl && tableEl.scrollWidth > 700 ? tableEl.scrollWidth : 900;
+      const naturalWidth = tableEl && tableEl.scrollWidth > 600 ? tableEl.scrollWidth : 800;
       scale = Math.min(1.0, width / naturalWidth);
     } else if (swidth >= 1200) {
       scale = 1.0;
