@@ -3069,7 +3069,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.24) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.25) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -3320,16 +3320,13 @@ function _updateHeaderLabels() {
 }
 
 // Sticky-Header ohne Lücke: Zeile 2 klebt exakt unter Zeile 1 (dynamische Höhe).
+// Läuft in allen Modi (Handy-Kompakt, Tablet-Zoom, Desktop) — die Row-1-Höhe
+// hängt vom Scale und den aktuellen Beschriftungen ab und ist nie fest 35 px.
 function _syncStickyRow2Top() {
-  const compact = document.body.classList.contains('mobile-compact-header');
   const thead = document.getElementById('skat-thead');
   if (!thead) return;
-  const row2Ths = thead.querySelectorAll('tr:nth-child(2) th');
-  if (!compact) {
-    row2Ths.forEach(th => { th.style.top = ''; });
-    return;
-  }
   const row1 = thead.querySelector('tr:first-child');
+  const row2Ths = thead.querySelectorAll('tr:nth-child(2) th');
   if (!row1) return;
   const h1 = row1.offsetHeight;
   row2Ths.forEach(th => { th.style.top = h1 + 'px'; });
@@ -3524,7 +3521,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.24)
+    © 2026 by Frank Bertram (V1.25)
     </div>
 </body>
 </html>
