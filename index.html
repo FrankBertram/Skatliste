@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#1976d2">
@@ -338,10 +338,21 @@
     }
 
     /* Spielliste: schmalere Body-Margins im Handy-Querformat,
-       damit die Tabelle die komplette Breite nutzen kann */
+       damit die Tabelle die komplette Breite nutzen kann.
+       Padding berücksichtigt Notch/Statusbar/Home-Indicator (iPhone). */
     @media (max-height: 500px) and (orientation: landscape) {
-      body { margin: 4px !important; }
-      #zoom-reset-btn { display: block !important; }
+      body {
+        margin: 0 !important;
+        padding-top:    max(env(safe-area-inset-top),    8px) !important;
+        padding-left:   max(env(safe-area-inset-left),   4px) !important;
+        padding-right:  max(env(safe-area-inset-right),  4px) !important;
+        padding-bottom: max(env(safe-area-inset-bottom), 2px) !important;
+      }
+      #zoom-reset-btn {
+        display: block !important;
+        top: max(env(safe-area-inset-top), 6px) !important;
+        right: max(env(safe-area-inset-right), 6px) !important;
+      }
       /* feste Tabellen-Natural-Width erzwingen, damit Skalierung greift */
       #skat-table { min-width: 1100px; }
       /* kein horizontales Scrollen erlauben */
@@ -890,16 +901,41 @@ function setTableHeight() {
 
   let maxH;
   let maxW;
-  // Handy-Querformat: kompakter Header, mehr Platz für die Tabelle
+  // Handy-Querformat: kompakter Header, mehr Platz für die Tabelle.
+  // Safe-Area-Insets (Notch/Home-Indicator) mit einrechnen, damit die
+  // Tabelle nicht in den nicht antippbaren Bereich rutscht.
   const isPhoneLandscape = isLandscape && screenW < 900;
-  if (isPhoneLandscape) { maxH = screenH - 120; }
+  if (isPhoneLandscape) {
+    const safeTop    = _safeInset('top', 8);
+    const safeBottom = _safeInset('bottom', 2);
+    maxH = screenH - 90 - safeTop - safeBottom;
+  }
   else if (isLandscape) { maxH = screenH - 210; }
   else { maxH = screenH - 175; }
   maxW = screenW + 100;
   maxH = maxH / scale;
 
   wrapper.style.maxHeight = maxH + 'px';
-  wrapper.style.height = maxH + 'px';
+  // Handy-Querformat: Wrapper an Inhalt anpassen, damit kein leerer Bereich
+  // unter der Tabelle entsteht wenn weniger Zeilen als maxHeight passen.
+  wrapper.style.height = isPhoneLandscape ? 'auto' : (maxH + 'px');
+}
+
+// Safe-Area-Inset via CSS-Trick auslesen (iOS Notch/Home-Indicator).
+// Legt kurzzeitig ein unsichtbares Element mit env()-Wert an und liest die Höhe/Breite ab.
+function _safeInset(side, fallback) {
+  try {
+    const probe = document.createElement('div');
+    probe.style.cssText =
+      'position:fixed; visibility:hidden; ' +
+      (side === 'top' || side === 'bottom'
+        ? `height: env(safe-area-inset-${side}, ${fallback}px);`
+        : `width: env(safe-area-inset-${side}, ${fallback}px);`);
+    document.body.appendChild(probe);
+    const px = (side === 'top' || side === 'bottom') ? probe.offsetHeight : probe.offsetWidth;
+    document.body.removeChild(probe);
+    return px || fallback;
+  } catch (e) { return fallback; }
 }
 
 function resetZoom() {
