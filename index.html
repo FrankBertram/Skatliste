@@ -359,6 +359,31 @@
       font-weight: bold !important;
       font-size: 12px !important;
     }
+    /* Spielernamen im Header fett */
+    body.mobile-compact-header #skat-table thead th.player-name {
+      font-weight: bold !important;
+      font-size: 12px !important;
+      padding: 3px 2px !important;
+    }
+    /* Buben-Verbindungszelle und "+/−" darunter */
+    body.mobile-compact-header #skat-table thead th.buben-header {
+      text-align: center !important;
+      vertical-align: middle !important;
+      font-weight: bold !important;
+      font-size: 12px !important;
+    }
+    body.mobile-compact-header #skat-table thead th.buben-sub {
+      text-align: center !important;
+      vertical-align: middle !important;
+      font-weight: bold !important;
+      font-size: 12px !important;
+      padding: 2px !important;
+    }
+    /* Datenzellen enger, damit die Tabelle in die Handybreite passt */
+    body.mobile-compact-header #skat-table th,
+    body.mobile-compact-header #skat-table td {
+      padding: 2px 3px !important;
+    }
 
     /* Spielliste: schmalere Body-Margins im Handy-Querformat,
        damit die Tabelle die komplette Breite nutzen kann.
@@ -376,8 +401,9 @@
         top: max(env(safe-area-inset-top), 6px) !important;
         right: max(env(safe-area-inset-right), 6px) !important;
       }
-      /* feste Tabellen-Natural-Width erzwingen, damit Skalierung greift */
-      #skat-table { min-width: 1100px; }
+      /* Tabellen-Natural-Width kleiner ansetzen, damit alles in die
+         iPhone-Querformat-Breite passt (Skalierung greift trotzdem). */
+      #skat-table { min-width: 900px; }
       /* kein horizontales Scrollen erlauben */
       .table-wrapper { overflow-x: hidden !important; }
       /* Tabellen-Zellen größer und fett (Kopf bleibt wie vorher) */
@@ -919,7 +945,7 @@ function setTableHeight() {
   if (isLandscape) {
     if (screenW < 900) {
       const tableEl = document.querySelector('#skat-table');
-      const naturalWidth = tableEl && tableEl.scrollWidth > 800 ? tableEl.scrollWidth : 1100;
+      const naturalWidth = tableEl && tableEl.scrollWidth > 700 ? tableEl.scrollWidth : 900;
       scale = screenW / naturalWidth;
     } else if (swidth >= 1200) {
       scale = 1.0;
@@ -997,7 +1023,7 @@ function autoScalePage() {
     if (width < 900) {
       // Handy-Querformat: Tabelle auf volle Bildschirmbreite skalieren
       const tableEl = document.querySelector('#skat-table');
-      const naturalWidth = tableEl && tableEl.scrollWidth > 800 ? tableEl.scrollWidth : 1100;
+      const naturalWidth = tableEl && tableEl.scrollWidth > 700 ? tableEl.scrollWidth : 900;
       scale = width / naturalWidth;
     } else if (swidth >= 1200) {
       scale = 1.0;
@@ -1251,9 +1277,10 @@ function closeSpielDialog() {
 
 function updatePlayerNamesInTable() {
   const n = spielerAnzahl;
+  const compact = document.body.classList.contains('mobile-compact-header');
   for (let i = 1; i <= n; i++) {
     const th = document.querySelector(`#skat-table thead tr:nth-child(1) th.player-name${i}`);
-    if (th) th.textContent = spielerNamen[i-1] + (i === 1 ? " (LF)" : "");
+    if (th) th.textContent = spielerNamen[i-1] + ((i === 1 && !compact) ? " (LF)" : "");
   }
   // Button "neuer Spieleintrag" aktualisieren
   const btn = document.querySelector(".neuer-eintrag-btn");
@@ -1515,7 +1542,7 @@ async function exportPDF() {
   // Handy-Kompakt-Header temporär auf Vollversion zurückschalten,
   // damit das PDF die vertikalen langen Beschriftungen zeigt.
   const wasCompactHeader = document.body.classList.contains('mobile-compact-header');
-  if (wasCompactHeader) _setHeaderLabels(false);
+  if (wasCompactHeader) { _setHeaderStructure(false); _setHeaderLabels(false); }
 
   try {
     // Maße der vertikalen Header vorab aus dem echten DOM lesen –
@@ -1685,7 +1712,7 @@ async function exportPDF() {
       pdfWrapper.scrollTop  = savedScrollTop;
       pdfWrapper.scrollLeft = savedScrollLeft;
     }
-    if (wasCompactHeader) _setHeaderLabels(true);
+    if (wasCompactHeader) { _setHeaderStructure(true); _setHeaderLabels(true); }
     if (btn) { btn.innerHTML = alterText; btn.disabled = false; }
   }
 }
@@ -3175,17 +3202,15 @@ function updateHeaderInfo() {
 // Kurzlabels für Tabellenkopf im Handy-Querformat (PDF nutzt die Vollversion).
 const _HEADER_LABEL_MAP = {
   'Lfd. Nr. Spiel': 'Nr',
-  'mit Spitzen':    'mit',
-  'ohne Spitzen':   'ohne',
   'Hand':           'Hd',
   'Schneider':      'Sn',
-  'Schn. ang.':     'SnA',
+  'Schn. ang.':     '-A',
   'Schwarz':        'Sw',
-  'Schw. ang.':     'SwA',
+  'Schw. ang.':     '-A',
   'Offen':          'Of',
-  'Eingepasst':     'Ein',
-  'gewonnen':       'g',
-  'verloren':       'v',
+  'Eingepasst':     'E.',
+  'gewonnen':       'G',
+  'verloren':       'V',
 };
 function _setHeaderLabels(compact) {
   // Vertikale Spans
@@ -3194,16 +3219,80 @@ function _setHeaderLabels(compact) {
     const full = span.dataset.full;
     span.textContent = compact ? (_HEADER_LABEL_MAP[full] || full) : full;
   });
-  // Grundwert-Zahlenspalte (9/10/11/12/23/24/E)
+  // Grundwert-Zahlenspalte (9/10/11/12/23/24/E) → "SW"
   const untenTh = document.querySelector('#skat-table thead tr:first-child th.unten');
   if (untenTh) {
     if (!untenTh.dataset.full) untenTh.dataset.full = untenTh.innerHTML;
     untenTh.innerHTML = compact ? 'SW' : untenTh.dataset.full;
   }
+  // "Spiel-werte" (colspan=2) → "Wert"
+  const werteTh = document.querySelector('#skat-table thead tr:first-child th[colspan="2"]');
+  if (werteTh) {
+    if (!werteTh.dataset.full) werteTh.dataset.full = werteTh.innerHTML;
+    werteTh.innerHTML = compact ? 'Wert' : werteTh.dataset.full;
+  }
   document.body.classList.toggle('mobile-compact-header', compact);
+  // Spielernamen ohne (LF) im Kompaktmodus
+  if (typeof updatePlayerNamesInTable === 'function') updatePlayerNamesInTable();
 }
+
+// Strukturelle Änderung: "mit Spitzen"/"ohne Spitzen" (2 Zellen mit rowspan=2)
+// zu einer "Buben"-Zelle (colspan=2) und darunter "+"/"-" in row2 verwandeln.
+function _setHeaderStructure(compact) {
+  const thead = document.getElementById('skat-thead');
+  if (!thead) return;
+  const isCompactNow = thead.classList.contains('is-compact-structure');
+  if (compact && !isCompactNow) {
+    const row1 = thead.querySelector('tr:first-child');
+    const row2 = thead.querySelector('tr:nth-child(2)');
+    if (!row1 || !row2) return;
+    // Index 2 = "mit Spitzen", Index 3 = "ohne Spitzen" (nach "Nr" und "SW")
+    const mitCell  = row1.children[2];
+    const ohneCell = row1.children[3];
+    if (mitCell && ohneCell) {
+      mitCell.rowSpan = 1;
+      mitCell.colSpan = 2;
+      mitCell.classList.remove('vertical-left');
+      mitCell.classList.add('buben-header');
+      mitCell.innerHTML = 'Buben';
+      ohneCell.remove();
+      // In row2 am Anfang "+" und "-" einfügen
+      const plusTh  = document.createElement('th');
+      plusTh.className  = 'buben-sub';
+      plusTh.textContent = '+';
+      const minusTh = document.createElement('th');
+      minusTh.className = 'buben-sub';
+      minusTh.textContent = '−';
+      row2.insertBefore(minusTh, row2.firstChild);
+      row2.insertBefore(plusTh,  row2.firstChild);
+    }
+    thead.classList.add('is-compact-structure');
+  } else if (!compact && isCompactNow) {
+    // Rückumbau: Buben-Zelle in "mit Spitzen"/"ohne Spitzen" zurückverwandeln
+    const row1 = thead.querySelector('tr:first-child');
+    const row2 = thead.querySelector('tr:nth-child(2)');
+    if (!row1 || !row2) return;
+    const bubenCell = row1.querySelector('th.buben-header');
+    if (bubenCell) {
+      bubenCell.rowSpan = 2;
+      bubenCell.colSpan = 1;
+      bubenCell.classList.add('vertical-left');
+      bubenCell.classList.remove('buben-header');
+      bubenCell.innerHTML = '<span>mit Spitzen</span>';
+      const ohneCell = document.createElement('th');
+      ohneCell.rowSpan = 2;
+      ohneCell.className = 'vertical-left';
+      ohneCell.innerHTML = '<span>ohne Spitzen</span>';
+      bubenCell.parentNode.insertBefore(ohneCell, bubenCell.nextSibling);
+    }
+    row2.querySelectorAll('th.buben-sub').forEach(th => th.remove());
+    thead.classList.remove('is-compact-structure');
+  }
+}
+
 function _updateHeaderLabels() {
   const compact = window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+  _setHeaderStructure(compact);
   _setHeaderLabels(compact);
 }
 
