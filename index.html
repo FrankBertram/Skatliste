@@ -406,11 +406,11 @@
       #skat-table { min-width: 900px; }
       /* kein horizontales Scrollen erlauben */
       .table-wrapper { overflow-x: hidden !important; }
-      /* Tabellen-Zellen größer und fett (Kopf bleibt wie vorher) */
+      /* Tabellen-Zellen: 1 px kleiner + fett (Kopf bleibt wie vorher) */
       #skat-table tbody td,
       #skat-table tfoot td,
       #skat-table tfoot th {
-        font-size: 16px !important;
+        font-size: 15px !important;
         font-weight: bold !important;
       }
       /* Desktop-Header ausblenden, Mobile-Header einblenden */
@@ -421,16 +421,14 @@
       #header-info { font-size: 12px !important; }
       /* Zweite Zeile komplett ausblenden — Inhalte wurden per JS in den Header verschoben */
       #spieler-buttons-container { display: none !important; }
-      /* Spielernamen-Buttons: hell mit schwarzer, fetter Schrift */
+      /* Spielernamen-Buttons: kompakter, aber Schriftart wie im Standard-Layout */
       .header-mobile #player-btn-container-1 button,
       .header-mobile #player-btn-container-2 button,
       .header-mobile #player-btn-container-3 button,
       .header-mobile #player-btn-container-4 button {
         min-width: 0 !important;
-        padding: 8px 4px !important;
-        font-size: 15px !important;
-        font-weight: bold !important;
-        color: #000 !important;
+        padding: 6px 6px !important;
+        font-size: 14px !important;
       }
       /* PDF-, Neue-Liste-, Speichern-Buttons: farbig mit weißer, fetter Schrift */
       .header-mobile #pdf-export-container button,
@@ -847,7 +845,7 @@ function buildTableStructure() {
       <th rowspan="2" class="vertical-left"><span>mit Spitzen</span></th>
       <th rowspan="2" class="vertical-left"><span>ohne Spitzen</span></th>
       <th colspan="6">Gewinnstufen</th>
-      <th colspan="2">Spiel-<br>werte</th>`;
+      <th colspan="2">Werte</th>`;
   for (let i = 1; i <= n; i++) {
     headerRow1 += `<th colspan="3" class="player-name${i} player-name">Name${i === 1 ? ' (LF)' : ''}</th>`;
   }
@@ -946,7 +944,7 @@ function setTableHeight() {
     if (screenW < 900) {
       const tableEl = document.querySelector('#skat-table');
       const naturalWidth = tableEl && tableEl.scrollWidth > 700 ? tableEl.scrollWidth : 900;
-      scale = screenW / naturalWidth;
+      scale = Math.min(1.0, screenW / naturalWidth);
     } else if (swidth >= 1200) {
       scale = 1.0;
     } else {
@@ -1021,10 +1019,11 @@ function autoScalePage() {
   let scale = 1.0;
   if (isLandscape) {
     if (width < 900) {
-      // Handy-Querformat: Tabelle auf volle Bildschirmbreite skalieren
+      // Handy-Querformat: Tabelle auf volle Bildschirmbreite skalieren.
+      // Nie über 1.0 hinaus, sonst wird die Tabelle größer als der Viewport.
       const tableEl = document.querySelector('#skat-table');
       const naturalWidth = tableEl && tableEl.scrollWidth > 700 ? tableEl.scrollWidth : 900;
-      scale = width / naturalWidth;
+      scale = Math.min(1.0, width / naturalWidth);
     } else if (swidth >= 1200) {
       scale = 1.0;
     } else {
@@ -3225,12 +3224,8 @@ function _setHeaderLabels(compact) {
     if (!untenTh.dataset.full) untenTh.dataset.full = untenTh.innerHTML;
     untenTh.innerHTML = compact ? 'SW' : untenTh.dataset.full;
   }
-  // "Spiel-werte" (colspan=2) → "Wert"
-  const werteTh = document.querySelector('#skat-table thead tr:first-child th[colspan="2"]');
-  if (werteTh) {
-    if (!werteTh.dataset.full) werteTh.dataset.full = werteTh.innerHTML;
-    werteTh.innerHTML = compact ? 'Wert' : werteTh.dataset.full;
-  }
+  // "Werte"-Zelle (colspan=2) bleibt auf Handy und Desktop gleich benannt
+  // (Original wird bereits in buildTableStructure als "Werte" ausgegeben).
   document.body.classList.toggle('mobile-compact-header', compact);
   // Spielernamen ohne (LF) im Kompaktmodus
   if (typeof updatePlayerNamesInTable === 'function') updatePlayerNamesInTable();
@@ -3335,7 +3330,10 @@ function applyMobileLayout() {
   if (pdfBtn && !pdfBtn.disabled) pdfBtn.innerHTML = isPhoneL ? 'PDF'           : '📄 PDF';
   if (neuBtn && !neuBtn.disabled) neuBtn.innerHTML = isPhoneL ? 'Neu'           : '🗑 Neue Liste';
 
-  _setHeaderLabels(isPhoneL);
+  _updateHeaderLabels();
+  // Nach dem Struktur-Umbau die Skalierung neu berechnen — die tatsächliche
+  // Tabellenbreite hat sich geändert.
+  if (typeof autoScalePage === 'function') requestAnimationFrame(autoScalePage);
 }
 window.addEventListener('resize', applyMobileLayout);
 window.addEventListener('orientationchange', applyMobileLayout);
