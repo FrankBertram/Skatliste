@@ -54,31 +54,6 @@
     }
     .header span { font-weight: bold; }
 
-    /* Spieler-Anzahl-Toggle 3/4 im Header */
-    .sp-toggle-group {
-      display: inline-flex;
-      border: 1px solid #888;
-      border-radius: 6px;
-      overflow: hidden;
-      background: #f5f5f5;
-    }
-    .sp-toggle-btn {
-      padding: 6px 14px;
-      border: none;
-      background: #f5f5f5;
-      color: #333;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      min-width: 34px;
-    }
-    .sp-toggle-btn + .sp-toggle-btn {
-      border-left: 1px solid #888;
-    }
-    .sp-toggle-btn.active {
-      background: linear-gradient(135deg,#1976d2,#0d47a1);
-      color: white;
-    }
     table {
       border-collapse: collapse;
       width: 780px;
@@ -381,12 +356,26 @@
       /* Desktop-Header ausblenden, Mobile-Header einblenden */
       .header .header-desktop { display: none !important; }
       .header .header-mobile  { display: flex !important; }
-      .header { gap: 8px !important; margin-bottom: 6px !important; align-items: center; }
-      #club-logo { height: 32px !important; }
-      .sp-toggle-btn { padding: 4px 10px !important; font-size: 14px !important; }
-      #header-info { font-size: 13px !important; }
-      /* Spielernamen-Zeile kompakter, PDF/Neu sind ins Header verschoben */
-      #spieler-buttons-container { margin-bottom: 4px !important; gap: 6px !important; }
+      .header { gap: 6px !important; margin-bottom: 4px !important; align-items: center; flex-wrap: nowrap; }
+      #club-logo { height: 30px !important; }
+      #header-info { font-size: 12px !important; }
+      /* Zweite Zeile komplett ausblenden — Inhalte wurden per JS in den Header verschoben */
+      #spieler-buttons-container { display: none !important; }
+      /* Spielernamen-Buttons kompakter im Handy-Header */
+      .header-mobile #player-btn-container-1 button,
+      .header-mobile #player-btn-container-2 button,
+      .header-mobile #player-btn-container-3 button,
+      .header-mobile #player-btn-container-4 button {
+        min-width: 60px !important;
+        padding: 4px 6px !important;
+        font-size: 13px !important;
+      }
+      .header-mobile #pdf-export-container button,
+      .header-mobile #neu-start-container button,
+      .header-mobile #csv-export-container button {
+        padding: 4px 8px !important;
+        font-size: 12px !important;
+      }
     }
 
     /* Handy-Hochformat: Liste ausblenden, Hinweis anzeigen */
@@ -575,13 +564,9 @@
   </div>
 
   <!-- Handy-Querformat: kompakte Ein-Zeilen-Ansicht (nur per Media Query sichtbar) -->
-  <div class="header-mobile" style="display:none; align-items:center; gap:8px; flex-wrap:nowrap;">
-    <div id="spieler-anzahl-toggle" class="sp-toggle-group">
-      <button type="button" data-val="3" class="sp-toggle-btn">3</button>
-      <button type="button" data-val="4" class="sp-toggle-btn">4</button>
-    </div>
-    <!-- PDF- und Neue-Liste-Container werden per JS beim Wechsel hierher verschoben -->
-    <div id="header-info" style="font-size:14px; color:#333; font-weight:500; white-space:nowrap;">
+  <div class="header-mobile" style="display:none; align-items:center; gap:6px; flex-wrap:nowrap; flex:1 1 auto; min-width:0;">
+    <!-- Spielernamen-, CSV-, PDF- und Neue-Liste-Container werden per JS beim Wechsel hierher verschoben -->
+    <div id="header-info" style="font-size:13px; color:#333; font-weight:500; white-space:nowrap; margin-left:auto;">
       Sp: 4 &nbsp;Serie: 1 &nbsp;Tisch: 1
     </div>
   </div>
@@ -3104,7 +3089,7 @@ document.getElementById('tisch-auswahl').addEventListener('change', saveState);
 document.getElementById('tisch-auswahl').addEventListener('change', refreshTurnierauslosung);
 document.getElementById('tisch-auswahl').addEventListener('change', updateHeaderInfo);
 
-// ── Header-Info + Spieler-Anzahl-Toggle ─────────────────────────
+// ── Header-Info ──────────────────────────────────────────────────
 function updateHeaderInfo() {
   const info = document.getElementById('header-info');
   if (!info) return;
@@ -3112,46 +3097,37 @@ function updateHeaderInfo() {
   const sr = document.querySelector('input[name="serie"]:checked')?.value || '1';
   const ti = document.getElementById('tisch-auswahl')?.value || '1';
   info.innerHTML = `Sp: ${sp} &nbsp;Serie: ${sr} &nbsp;Tisch: ${ti}`;
-  // Toggle-Highlight synchron mit spielerAnzahl halten
-  document.querySelectorAll('.sp-toggle-btn').forEach(b => {
-    if (parseInt(b.dataset.val) === sp) b.classList.add('active');
-    else b.classList.remove('active');
-  });
 }
 
-document.querySelectorAll('.sp-toggle-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const v = parseInt(btn.dataset.val);
-    if (v === spielerAnzahl) return;
-    const radio = document.querySelector(`input[name="spieleranzahl"][value="${v}"]`);
-    if (!radio) return;
-    radio.checked = true;
-    // löst den bestehenden change-Handler aus (prüft auf Einträge etc.)
-    radio.dispatchEvent(new Event('change'));
-    updateHeaderInfo();
-  });
-});
-
-// PDF- und Neue-Liste-Container zwischen Desktop-Zeile-2 und Handy-Header verschieben
+// Spielernamen-, CSV-, PDF- und Neue-Liste-Container zwischen Desktop-Zeile-2
+// und Handy-Header verschieben (bei Handy-Querformat).
 function applyMobileLayout() {
   const isPhoneL = window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
   const mobileHdr = document.querySelector('.header-mobile');
   const zeile2    = document.getElementById('spieler-buttons-container');
-  const pdfCont   = document.getElementById('pdf-export-container');
-  const neuCont   = document.getElementById('neu-start-container');
   const info      = document.getElementById('header-info');
-  const csv       = document.getElementById('csv-export-container');
-  if (!mobileHdr || !zeile2 || !pdfCont || !neuCont || !info) return;
+  if (!mobileHdr || !zeile2 || !info) return;
+
+  const ids = [
+    'player-btn-container-1',
+    'player-btn-container-2',
+    'player-btn-container-3',
+    'player-btn-container-4',
+    'csv-export-container',
+    'pdf-export-container',
+    'neu-start-container',
+  ];
 
   if (isPhoneL) {
-    if (pdfCont.parentNode !== mobileHdr) mobileHdr.insertBefore(pdfCont, info);
-    if (neuCont.parentNode !== mobileHdr) mobileHdr.insertBefore(neuCont, info);
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.parentNode !== mobileHdr) mobileHdr.insertBefore(el, info);
+    });
   } else {
-    if (pdfCont.parentNode !== zeile2) {
-      if (csv && csv.parentNode === zeile2) zeile2.insertBefore(pdfCont, csv.nextSibling);
-      else zeile2.appendChild(pdfCont);
-    }
-    if (neuCont.parentNode !== zeile2) zeile2.insertBefore(neuCont, pdfCont.nextSibling);
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.parentNode !== zeile2) zeile2.appendChild(el);
+    });
   }
 }
 window.addEventListener('resize', applyMobileLayout);
