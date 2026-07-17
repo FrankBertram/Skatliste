@@ -353,6 +353,10 @@
       font-size: 12px !important;
       white-space: nowrap !important;
     }
+    /* Gewinnstufen-Kurzlabels (Hd, Sn, -A, Sw, -A, Of) — Position 3-8 in Zeile 2 */
+    body.mobile-compact-header #skat-table thead tr:nth-child(2) th:nth-child(n+3):nth-child(-n+8) > span {
+      font-size: 11px !important;
+    }
     body.mobile-compact-header #skat-table thead th.unten {
       vertical-align: middle !important;
       font-size: 12px !important;
@@ -416,11 +420,11 @@
       #skat-table { min-width: 800px; }
       /* kein horizontales Scrollen erlauben */
       .table-wrapper { overflow-x: hidden !important; }
-      /* Tabellen-Zellen: 1 px kleiner + fett (Kopf bleibt wie vorher) */
+      /* Tabellen-Zellen: 13 px + fett (Kopf bleibt wie vorher) */
       #skat-table tbody td,
       #skat-table tfoot td,
       #skat-table tfoot th {
-        font-size: 15px !important;
+        font-size: 13px !important;
         font-weight: bold !important;
       }
       /* Desktop-Header ausblenden, Mobile-Header einblenden */
