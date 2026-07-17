@@ -48,11 +48,37 @@
     .header {
       display: flex;
       flex-wrap: wrap;
-      gap: 15px;
+      gap: 12px;
       align-items: center;
       margin-bottom: 12px;
     }
     .header span { font-weight: bold; }
+
+    /* Spieler-Anzahl-Toggle 3/4 im Header */
+    .sp-toggle-group {
+      display: inline-flex;
+      border: 1px solid #888;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #f5f5f5;
+    }
+    .sp-toggle-btn {
+      padding: 6px 14px;
+      border: none;
+      background: #f5f5f5;
+      color: #333;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      min-width: 34px;
+    }
+    .sp-toggle-btn + .sp-toggle-btn {
+      border-left: 1px solid #888;
+    }
+    .sp-toggle-btn.active {
+      background: linear-gradient(135deg,#1976d2,#0d47a1);
+      color: white;
+    }
     table {
       border-collapse: collapse;
       width: 780px;
@@ -352,6 +378,15 @@
         font-size: 16px !important;
         font-weight: bold !important;
       }
+      /* Desktop-Header ausblenden, Mobile-Header einblenden */
+      .header .header-desktop { display: none !important; }
+      .header .header-mobile  { display: flex !important; }
+      .header { gap: 8px !important; margin-bottom: 6px !important; align-items: center; }
+      #club-logo { height: 32px !important; }
+      .sp-toggle-btn { padding: 4px 10px !important; font-size: 14px !important; }
+      #header-info { font-size: 13px !important; }
+      /* Spielernamen-Zeile kompakter, PDF/Neu sind ins Header verschoben */
+      #spieler-buttons-container { margin-bottom: 4px !important; gap: 6px !important; }
     }
 
     /* Handy-Hochformat: Liste ausblenden, Hinweis anzeigen */
@@ -502,42 +537,52 @@
                box-shadow:0 2px 5px rgba(0,0,0,0.2);">↻</button>
 
 <div class="header">
-  <!-- Zeile 1: Logo + Verein -->
-  <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 0px;">
-    <img id="club-logo" src="Skat.png" alt="Skat-Logo" style="height: 40px;">
-    <span id="club-name" style="font-size:20px; font-weight: bold;">1. Sintherner Skatclub</span>
+  <img id="club-logo" src="Skat.png" alt="Skat-Logo" style="height: 40px; flex-shrink:0;">
+
+  <!-- Desktop/Tablet: Verein + Radios in zwei Zeilen -->
+  <div class="header-desktop" style="display:flex; flex-direction:column; gap:8px; flex:1 1 auto; min-width:0;">
+    <span id="club-name" style="font-size:20px; font-weight:bold;">1. Sintherner Skatclub</span>
+    <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+      <span>Spieler:</span>
+      <div class="radio-group radio-group-compact">
+        <label class="radio-label"><input type="radio" name="spieleranzahl" value="4" checked>4</label>
+        <label class="radio-label"><input type="radio" name="spieleranzahl" value="3">3</label>
+      </div>
+
+      <span>Serie:</span>
+      <div class="radio-group radio-group-compact">
+        <label class="radio-label"><input type="radio" name="serie" value="1" checked>1.</label>
+        <label class="radio-label"><input type="radio" name="serie" value="2">2.</label>
+      </div>
+
+      <span>Tisch:</span>
+      <select id="tisch-auswahl" style="font-size:16px; padding:4px 8px; border-radius:4px; border:1px solid #888; height:34px;">
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+      </select>
+
+      <span>Spiele:</span>
+      <div id="karten-auswahl" class="radio-group radio-group-compact">
+        <label class="radio-label"><input type="radio" name="karten" value="36" checked>36</label>
+        <label class="radio-label"><input type="radio" name="karten" value="48">48</label>
+      </div>
+    </div>
   </div>
-  <br>
 
-  <!-- Zeile 2: Auswahlbuttons -->
-  <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-    <span>Spieler:</span>
-    <div class="radio-group radio-group-compact">
-      <label class="radio-label"><input type="radio" name="spieleranzahl" value="4" checked>4</label>
-      <label class="radio-label"><input type="radio" name="spieleranzahl" value="3">3</label>
+  <!-- Handy-Querformat: kompakte Ein-Zeilen-Ansicht (nur per Media Query sichtbar) -->
+  <div class="header-mobile" style="display:none; align-items:center; gap:8px; flex-wrap:nowrap;">
+    <div id="spieler-anzahl-toggle" class="sp-toggle-group">
+      <button type="button" data-val="3" class="sp-toggle-btn">3</button>
+      <button type="button" data-val="4" class="sp-toggle-btn">4</button>
     </div>
-
-    <span>Serie:</span>
-    <div class="radio-group radio-group-compact">
-      <label class="radio-label"><input type="radio" name="serie" value="1" checked>1.</label>
-      <label class="radio-label"><input type="radio" name="serie" value="2">2.</label>
-    </div>
-
-    <span>Tisch:</span>
-    <select id="tisch-auswahl" style="font-size:16px; padding:4px 8px; border-radius:4px; border:1px solid #888; height:34px;">
-      <option value="1" selected>1</option>
-      <option value="2">2</option>
-      <option value="3">3</option>
-      <option value="4">4</option>
-      <option value="5">5</option>
-      <option value="6">6</option>
-      <option value="7">7</option>
-    </select>
-
-    <span>Spiele:</span>
-    <div id="karten-auswahl" class="radio-group radio-group-compact">
-      <label class="radio-label"><input type="radio" name="karten" value="36" checked>36</label>
-      <label class="radio-label"><input type="radio" name="karten" value="48">48</label>
+    <!-- PDF- und Neue-Liste-Container werden per JS beim Wechsel hierher verschoben -->
+    <div id="header-info" style="font-size:14px; color:#333; font-weight:500; white-space:nowrap;">
+      Sp: 4 &nbsp;Serie: 1 &nbsp;Tisch: 1
     </div>
   </div>
 </div>
@@ -1603,8 +1648,7 @@ function createNeuStartButton() {
   btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
   btn.addEventListener("click", () => {
     if (!confirm("Alle Einträge löschen und neue Liste starten?")) return;
-    clearState();
-    location.reload();
+    openStartDialog('reset');
   });
   container.appendChild(btn);
 }
@@ -3054,9 +3098,64 @@ function clearState() {
 document.querySelectorAll('input[name="serie"]').forEach(radio => {
   radio.addEventListener('change', saveState);
   radio.addEventListener('change', refreshTurnierauslosung);
+  radio.addEventListener('change', updateHeaderInfo);
 });
 document.getElementById('tisch-auswahl').addEventListener('change', saveState);
 document.getElementById('tisch-auswahl').addEventListener('change', refreshTurnierauslosung);
+document.getElementById('tisch-auswahl').addEventListener('change', updateHeaderInfo);
+
+// ── Header-Info + Spieler-Anzahl-Toggle ─────────────────────────
+function updateHeaderInfo() {
+  const info = document.getElementById('header-info');
+  if (!info) return;
+  const sp = spielerAnzahl;
+  const sr = document.querySelector('input[name="serie"]:checked')?.value || '1';
+  const ti = document.getElementById('tisch-auswahl')?.value || '1';
+  info.innerHTML = `Sp: ${sp} &nbsp;Serie: ${sr} &nbsp;Tisch: ${ti}`;
+  // Toggle-Highlight synchron mit spielerAnzahl halten
+  document.querySelectorAll('.sp-toggle-btn').forEach(b => {
+    if (parseInt(b.dataset.val) === sp) b.classList.add('active');
+    else b.classList.remove('active');
+  });
+}
+
+document.querySelectorAll('.sp-toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = parseInt(btn.dataset.val);
+    if (v === spielerAnzahl) return;
+    const radio = document.querySelector(`input[name="spieleranzahl"][value="${v}"]`);
+    if (!radio) return;
+    radio.checked = true;
+    // löst den bestehenden change-Handler aus (prüft auf Einträge etc.)
+    radio.dispatchEvent(new Event('change'));
+    updateHeaderInfo();
+  });
+});
+
+// PDF- und Neue-Liste-Container zwischen Desktop-Zeile-2 und Handy-Header verschieben
+function applyMobileLayout() {
+  const isPhoneL = window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+  const mobileHdr = document.querySelector('.header-mobile');
+  const zeile2    = document.getElementById('spieler-buttons-container');
+  const pdfCont   = document.getElementById('pdf-export-container');
+  const neuCont   = document.getElementById('neu-start-container');
+  const info      = document.getElementById('header-info');
+  const csv       = document.getElementById('csv-export-container');
+  if (!mobileHdr || !zeile2 || !pdfCont || !neuCont || !info) return;
+
+  if (isPhoneL) {
+    if (pdfCont.parentNode !== mobileHdr) mobileHdr.insertBefore(pdfCont, info);
+    if (neuCont.parentNode !== mobileHdr) mobileHdr.insertBefore(neuCont, info);
+  } else {
+    if (pdfCont.parentNode !== zeile2) {
+      if (csv && csv.parentNode === zeile2) zeile2.insertBefore(pdfCont, csv.nextSibling);
+      else zeile2.appendChild(pdfCont);
+    }
+    if (neuCont.parentNode !== zeile2) zeile2.insertBefore(neuCont, pdfCont.nextSibling);
+  }
+}
+window.addEventListener('resize', applyMobileLayout);
+window.addEventListener('orientationchange', applyMobileLayout);
 
 // ── Start-Dialog (Handy-Querformat bei neuer Liste) ──────────────
 function isPhoneLandscape() {
@@ -3088,7 +3187,9 @@ function _setupStartGroup(groupId, currentVal) {
   });
 }
 
-function openStartDialog() {
+let _startDialogMode = 'config'; // 'config' = nur setzen; 'reset' = clearState + reload danach
+function openStartDialog(mode) {
+  _startDialogMode = (mode === 'reset') ? 'reset' : 'config';
   const dlg = document.getElementById('start-dialog');
   if (!dlg) return;
   const curSp = spielerAnzahl;
@@ -3097,6 +3198,9 @@ function openStartDialog() {
   _setupStartGroup('start-spieler-buttons', curSp);
   _setupStartGroup('start-serie-buttons',   curSr);
   _setupStartGroup('start-tisch-buttons',   curTi);
+  // Dialogtitel je nach Modus
+  const h3 = dlg.querySelector('h3');
+  if (h3) h3.textContent = (_startDialogMode === 'reset') ? 'Neue Liste' : 'Auswahl';
   if (!dlg.open) dlg.showModal();
 }
 
@@ -3104,6 +3208,29 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
   const sp = document.getElementById('start-spieler-buttons').dataset.selected || '4';
   const sr = document.getElementById('start-serie-buttons').dataset.selected   || '1';
   const ti = document.getElementById('start-tisch-buttons').dataset.selected   || '1';
+
+  // Modus 'reset': gesamte Liste leeren, dann mit gewählten Werten neu starten
+  if (_startDialogMode === 'reset') {
+    spielerAnzahl = parseInt(sp);
+    const spRadio = document.querySelector(`input[name="spieleranzahl"][value="${sp}"]`);
+    if (spRadio) spRadio.checked = true;
+    const srRadio = document.querySelector(`input[name="serie"][value="${sr}"]`);
+    if (srRadio) srRadio.checked = true;
+    const tiSelect = document.getElementById('tisch-auswahl');
+    if (tiSelect) tiSelect.value = ti;
+    spielDaten = [];
+    buildTableStructure();
+    updateKartenAuswahl();
+    fillTable();
+    generatePlayerNameButtons();
+    updateCopyright();
+    updateHeaderInfo();
+    saveState();
+    document.getElementById('start-dialog').close();
+    autoScalePage();
+    refreshTurnierauslosung();
+    return;
+  }
 
   const newSp = parseInt(sp);
   if (newSp !== spielerAnzahl) {
@@ -3125,6 +3252,7 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
   document.getElementById('start-dialog').close();
   autoScalePage();
   refreshTurnierauslosung();
+  updateHeaderInfo();
 });
 
 window.addEventListener("load", async () => {
@@ -3154,6 +3282,8 @@ window.addEventListener("load", async () => {
     createPDFButton();
     createNeuStartButton();
     updateCopyright();
+    updateHeaderInfo();
+    applyMobileLayout();
     console.log(screen.width + 'x' + screen.height);
 
     // An Sondertagen: Turnierauslosung für aktuelle Serie/Tisch laden und Namen setzen
