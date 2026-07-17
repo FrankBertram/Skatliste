@@ -337,6 +337,29 @@
       text-align: center;
     }
 
+    /* Handy-Header-Kompaktmodus: vertikale Beschriftungen horizontal darstellen.
+       Wird per body-Klasse "mobile-compact-header" geschaltet, damit der PDF-Export
+       diese Regeln durch Entfernen der Klasse temporär umgehen kann. */
+    body.mobile-compact-header #skat-table thead th.vertical-left {
+      text-align: center !important;
+      vertical-align: middle !important;
+      padding: 3px 2px !important;
+    }
+    body.mobile-compact-header #skat-table thead th.vertical-left > span {
+      writing-mode: horizontal-tb !important;
+      -webkit-writing-mode: horizontal-tb !important;
+      text-orientation: mixed !important;
+      display: inline !important;
+      font-size: 12px !important;
+      font-weight: bold !important;
+      white-space: nowrap !important;
+    }
+    body.mobile-compact-header #skat-table thead th.unten {
+      vertical-align: middle !important;
+      font-weight: bold !important;
+      font-size: 12px !important;
+    }
+
     /* Spielliste: schmalere Body-Margins im Handy-Querformat,
        damit die Tabelle die komplette Breite nutzen kann.
        Padding berücksichtigt Notch/Statusbar/Home-Indicator (iPhone). */
@@ -583,8 +606,8 @@
   <!-- Handy-Querformat: kompakte Ein-Zeilen-Ansicht (nur per Media Query sichtbar) -->
   <div class="header-mobile" style="display:none; align-items:center; gap:6px; flex-wrap:nowrap; flex:1 1 auto; min-width:0;">
     <!-- Spielernamen-, CSV-, PDF- und Neue-Liste-Container werden per JS beim Wechsel hierher verschoben -->
-    <div id="header-info" style="font-size:13px; color:#333; font-weight:500; white-space:nowrap; margin-left:auto;">
-      Sp: 4 &nbsp;Serie: 1 &nbsp;Tisch: 1
+    <div id="header-info" style="font-size:14px; color:#000; font-weight:bold; white-space:nowrap; margin-left:auto;">
+      S:1 / T:1
     </div>
   </div>
 </div>
@@ -855,6 +878,9 @@ function buildTableStructure() {
   abreizRow += `<td></td><td></td></tr>`;
 
   tfoot.innerHTML = spielpunkteRow + bonusPRow + bonusGRow + gesamtRow + abreizRow;
+
+  // Header-Beschriftungen (Handy-Kurzlabels) nach Neu-Aufbau wieder anwenden
+  if (typeof _updateHeaderLabels === 'function') _updateHeaderLabels();
 }
 
 function isOldIOS() {
@@ -1486,6 +1512,11 @@ async function exportPDF() {
     pdfWrapper.style.overflow  = 'visible';
   }
 
+  // Handy-Kompakt-Header temporär auf Vollversion zurückschalten,
+  // damit das PDF die vertikalen langen Beschriftungen zeigt.
+  const wasCompactHeader = document.body.classList.contains('mobile-compact-header');
+  if (wasCompactHeader) _setHeaderLabels(false);
+
   try {
     // Maße der vertikalen Header vorab aus dem echten DOM lesen –
     // im clonedDoc liefert getBoundingClientRect keine zuverlässigen Werte.
@@ -1654,6 +1685,7 @@ async function exportPDF() {
       pdfWrapper.scrollTop  = savedScrollTop;
       pdfWrapper.scrollLeft = savedScrollLeft;
     }
+    if (wasCompactHeader) _setHeaderLabels(true);
     if (btn) { btn.innerHTML = alterText; btn.disabled = false; }
   }
 }
@@ -3135,10 +3167,44 @@ document.getElementById('tisch-auswahl').addEventListener('change', updateHeader
 function updateHeaderInfo() {
   const info = document.getElementById('header-info');
   if (!info) return;
-  const sp = spielerAnzahl;
   const sr = document.querySelector('input[name="serie"]:checked')?.value || '1';
   const ti = document.getElementById('tisch-auswahl')?.value || '1';
-  info.innerHTML = `Sp: ${sp} &nbsp;Serie: ${sr} &nbsp;Tisch: ${ti}`;
+  info.textContent = `S:${sr} / T:${ti}`;
+}
+
+// Kurzlabels für Tabellenkopf im Handy-Querformat (PDF nutzt die Vollversion).
+const _HEADER_LABEL_MAP = {
+  'Lfd. Nr. Spiel': 'Nr',
+  'mit Spitzen':    'mit',
+  'ohne Spitzen':   'ohne',
+  'Hand':           'Hd',
+  'Schneider':      'Sn',
+  'Schn. ang.':     'SnA',
+  'Schwarz':        'Sw',
+  'Schw. ang.':     'SwA',
+  'Offen':          'Of',
+  'Eingepasst':     'Ein',
+  'gewonnen':       'g',
+  'verloren':       'v',
+};
+function _setHeaderLabels(compact) {
+  // Vertikale Spans
+  document.querySelectorAll('#skat-table thead th.vertical-left > span').forEach(span => {
+    if (!span.dataset.full) span.dataset.full = span.textContent.trim();
+    const full = span.dataset.full;
+    span.textContent = compact ? (_HEADER_LABEL_MAP[full] || full) : full;
+  });
+  // Grundwert-Zahlenspalte (9/10/11/12/23/24/E)
+  const untenTh = document.querySelector('#skat-table thead tr:first-child th.unten');
+  if (untenTh) {
+    if (!untenTh.dataset.full) untenTh.dataset.full = untenTh.innerHTML;
+    untenTh.innerHTML = compact ? 'SW' : untenTh.dataset.full;
+  }
+  document.body.classList.toggle('mobile-compact-header', compact);
+}
+function _updateHeaderLabels() {
+  const compact = window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+  _setHeaderLabels(compact);
 }
 
 // Spielernamen-, CSV-, PDF- und Neue-Liste-Container zwischen Desktop-Zeile-2
@@ -3179,6 +3245,8 @@ function applyMobileLayout() {
   if (csvBtn && !csvBtn.disabled) csvBtn.innerHTML = isPhoneL ? 'Save'          : '☁️ Speichern';
   if (pdfBtn && !pdfBtn.disabled) pdfBtn.innerHTML = isPhoneL ? 'PDF'           : '📄 PDF';
   if (neuBtn && !neuBtn.disabled) neuBtn.innerHTML = isPhoneL ? 'Neu'           : '🗑 Neue Liste';
+
+  _setHeaderLabels(isPhoneL);
 }
 window.addEventListener('resize', applyMobileLayout);
 window.addEventListener('orientationchange', applyMobileLayout);
