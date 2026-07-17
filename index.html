@@ -415,11 +415,12 @@
         top: max(env(safe-area-inset-top), 6px) !important;
         right: max(env(safe-area-inset-right), 6px) !important;
       }
-      /* Tabellen-Natural-Width kleiner ansetzen, damit alles in die
+      /* Tabellen-Natural-Width so klein wie möglich, damit alles in die
          iPhone-Querformat-Breite passt (Skalierung greift trotzdem). */
-      #skat-table { min-width: 800px; }
-      /* kein horizontales Scrollen erlauben */
-      .table-wrapper { overflow-x: hidden !important; }
+      #skat-table { min-width: 720px; }
+      /* Horizontales Scrollen erlauben als Notausgang, falls Inhalt doch
+         breiter wird (z. B. bei sehr langen Spielernamen). */
+      .table-wrapper { overflow-x: auto !important; }
       /* Tabellen-Zellen: 13 px + fett (Kopf bleibt wie vorher) */
       #skat-table tbody td,
       #skat-table tfoot td,
@@ -957,8 +958,12 @@ function setTableHeight() {
   if (isLandscape) {
     if (screenW < 900) {
       const tableEl = document.querySelector('#skat-table');
-      const naturalWidth = tableEl && tableEl.scrollWidth > 600 ? tableEl.scrollWidth : 800;
-      scale = Math.min(1.0, screenW / naturalWidth);
+      const bs = getComputedStyle(document.body);
+      const pl = parseFloat(bs.paddingLeft)  || 0;
+      const pr = parseFloat(bs.paddingRight) || 0;
+      const availW = Math.max(0, screenW - pl - pr);
+      const naturalWidth = tableEl && tableEl.scrollWidth > 500 ? tableEl.scrollWidth : 780;
+      scale = Math.min(1.0, availW / naturalWidth);
     } else if (swidth >= 1200) {
       scale = 1.0;
     } else {
@@ -1033,11 +1038,15 @@ function autoScalePage() {
   let scale = 1.0;
   if (isLandscape) {
     if (width < 900) {
-      // Handy-Querformat: Tabelle auf volle Bildschirmbreite skalieren.
-      // Nie über 1.0 hinaus, sonst wird die Tabelle größer als der Viewport.
+      // Handy-Querformat: Tabelle auf tatsächlich verfügbare Bildschirmbreite skalieren.
+      // Body-Padding (Safe-Area/Notch) abziehen, sonst überläuft die Tabelle rechts.
       const tableEl = document.querySelector('#skat-table');
-      const naturalWidth = tableEl && tableEl.scrollWidth > 600 ? tableEl.scrollWidth : 800;
-      scale = Math.min(1.0, width / naturalWidth);
+      const bs = getComputedStyle(document.body);
+      const pl = parseFloat(bs.paddingLeft)  || 0;
+      const pr = parseFloat(bs.paddingRight) || 0;
+      const availWidth = Math.max(0, width - pl - pr);
+      const naturalWidth = tableEl && tableEl.scrollWidth > 500 ? tableEl.scrollWidth : 780;
+      scale = Math.min(1.0, availWidth / naturalWidth);
     } else if (swidth >= 1200) {
       scale = 1.0;
     } else {
