@@ -377,8 +377,8 @@
       .header-mobile #player-btn-container-2 button,
       .header-mobile #player-btn-container-3 button,
       .header-mobile #player-btn-container-4 button {
-        min-width: 78px !important;
-        padding: 8px 10px !important;
+        min-width: 0 !important;
+        padding: 8px 4px !important;
         font-size: 15px !important;
         font-weight: bold !important;
         color: #000 !important;
@@ -387,7 +387,8 @@
       .header-mobile #pdf-export-container button,
       .header-mobile #neu-start-container button,
       .header-mobile #csv-export-container button {
-        padding: 8px 14px !important;
+        min-width: 0 !important;
+        padding: 8px 6px !important;
         font-size: 14px !important;
         font-weight: bold !important;
         color: #fff !important;
@@ -3170,6 +3171,14 @@ function applyMobileLayout() {
       if (el && el.parentNode !== zeile2) zeile2.appendChild(el);
     });
   }
+
+  // Button-Beschriftungen: auf Handy kurz (Save/PDF/Neu), sonst lang
+  const csvBtn = document.querySelector('#csv-export-container button');
+  const pdfBtn = document.querySelector('#pdf-export-container button');
+  const neuBtn = document.querySelector('#neu-start-container button');
+  if (csvBtn && !csvBtn.disabled) csvBtn.innerHTML = isPhoneL ? 'Save'          : '☁️ Speichern';
+  if (pdfBtn && !pdfBtn.disabled) pdfBtn.innerHTML = isPhoneL ? 'PDF'           : '📄 PDF';
+  if (neuBtn && !neuBtn.disabled) neuBtn.innerHTML = isPhoneL ? 'Neu'           : '🗑 Neue Liste';
 }
 window.addEventListener('resize', applyMobileLayout);
 window.addEventListener('orientationchange', applyMobileLayout);
