@@ -351,31 +351,27 @@
       text-orientation: mixed !important;
       display: inline !important;
       font-size: 12px !important;
-      font-weight: bold !important;
       white-space: nowrap !important;
     }
     body.mobile-compact-header #skat-table thead th.unten {
       vertical-align: middle !important;
-      font-weight: bold !important;
       font-size: 12px !important;
     }
-    /* Spielernamen im Header fett */
+    /* Nur Spielernamen im Header fett */
     body.mobile-compact-header #skat-table thead th.player-name {
       font-weight: bold !important;
       font-size: 12px !important;
       padding: 3px 2px !important;
     }
-    /* Buben-Verbindungszelle und "+/−" darunter */
+    /* Buben-Verbindungszelle und "+/−" darunter (nicht fett) */
     body.mobile-compact-header #skat-table thead th.buben-header {
       text-align: center !important;
       vertical-align: middle !important;
-      font-weight: bold !important;
       font-size: 12px !important;
     }
     body.mobile-compact-header #skat-table thead th.buben-sub {
       text-align: center !important;
       vertical-align: middle !important;
-      font-weight: bold !important;
       font-size: 12px !important;
       padding: 2px !important;
     }
@@ -384,11 +380,19 @@
     body.mobile-compact-header #skat-table td {
       padding: 1px 2px !important;
     }
-    /* Header komplett fett im Kompaktmodus (Buben, Werte, Hd/Sn/-A/Sw/-A/Of, +/-, Namen, E.) */
+    /* Sticky-Header aktiv, aber Zeile-2-top wird per JS aus der tatsächlichen
+       Zeile-1-Höhe berechnet — sonst entsteht bei anderem Scale eine Lücke. */
     body.mobile-compact-header #skat-table thead th {
-      font-weight: bold !important;
-      position: static !important;
-      top: auto !important;
+      position: -webkit-sticky !important;
+      position: sticky !important;
+    }
+    body.mobile-compact-header #skat-table thead tr:first-child th {
+      top: 0 !important;
+      z-index: 3 !important;
+    }
+    body.mobile-compact-header #skat-table thead tr:nth-child(2) th {
+      /* top wird per JS gesetzt (Höhe von Zeile 1) */
+      z-index: 2 !important;
     }
 
     /* Spielliste: schmalere Body-Margins im Handy-Querformat,
@@ -1051,6 +1055,7 @@ function autoScalePage() {
   setStickyByScale(scale);
   setTableHeight();
   updateCopyright();
+  if (typeof _syncStickyRow2Top === 'function') requestAnimationFrame(_syncStickyRow2Top);
 
   console.log(`Landscape: ${isLandscape}, Width: ${width}x${height}, Scale: ${scale.toFixed(2)}`);
 }
@@ -3295,6 +3300,23 @@ function _updateHeaderLabels() {
   const compact = window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
   _setHeaderStructure(compact);
   _setHeaderLabels(compact);
+  requestAnimationFrame(_syncStickyRow2Top);
+}
+
+// Sticky-Header ohne Lücke: Zeile 2 klebt exakt unter Zeile 1 (dynamische Höhe).
+function _syncStickyRow2Top() {
+  const compact = document.body.classList.contains('mobile-compact-header');
+  const thead = document.getElementById('skat-thead');
+  if (!thead) return;
+  const row2Ths = thead.querySelectorAll('tr:nth-child(2) th');
+  if (!compact) {
+    row2Ths.forEach(th => { th.style.top = ''; });
+    return;
+  }
+  const row1 = thead.querySelector('tr:first-child');
+  if (!row1) return;
+  const h1 = row1.offsetHeight;
+  row2Ths.forEach(th => { th.style.top = h1 + 'px'; });
 }
 
 // Spielernamen-, CSV-, PDF- und Neue-Liste-Container zwischen Desktop-Zeile-2
