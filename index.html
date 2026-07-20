@@ -102,6 +102,52 @@
   transition: all 0.2s;
 }
 
+/* Toggle switch für "gefehlt" in der Rangzeile */
+.fehlt-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #333;
+  vertical-align: middle;
+  margin-right: 6px;
+  cursor: pointer;
+}
+.fehlt-switch {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.fehlt-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.fehlt-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #bbb;
+  border-radius: 16px;
+  transition: background-color 0.2s;
+}
+.fehlt-slider::before {
+  content: "";
+  position: absolute;
+  height: 12px;
+  width: 12px;
+  left: 2px;
+  top: 2px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.fehlt-switch input:checked + .fehlt-slider { background-color: #d32f2f; }
+.fehlt-switch input:checked + .fehlt-slider::before { transform: translateX(12px); }
+
 .neuer-eintrag-btn:hover {
   background: #FFF176 !important;
   transform: scale(1.05);
@@ -801,6 +847,8 @@
 let spielDaten = [];
 let scale = 1.0;
 let spielerAnzahl = 4;  // 3 oder 4 — zentrale Steuerung
+let spielerFehlt = [false, false, false, false];   // Buure: 4 € Aufschlag beim letzten Spieltag gefehlt
+let fehltPromptShown = false;                       // Prompt nur einmal pro Liste
 
 function getSpielerAnzahl() {
   return parseInt(document.querySelector('input[name="spieleranzahl"]:checked')?.value || '4');
@@ -926,7 +974,28 @@ function buildTableStructure() {
   }
   abreizRow += `<td></td><td></td></tr>`;
 
-  tfoot.innerHTML = spielpunkteRow + bonusPRow + bonusGRow + gesamtRow + abreizRow;
+  const rangRegel = '(nach Spielpunkten: wenigste 0,00 €, dann ' +
+    Array.from({length: n - 1}, (_, k) => (k + 1).toFixed(2).replace('.', ',') + ' €').join(', ') +
+    ' — bei Gleichstand geteilt)';
+  let rangzahlungRow = `<tr id="rangzahlung-row" style="display:none;"><th colspan="12" style="text-align:left; padding: 4px 15px; font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle; line-height:1.25;"><div>Rangzahlung: <b id="rang-summe">0,00 €</b></div><div id="rang-regel" style="font-size:11px; font-weight:400; color:#555; line-height:1.2; margin-top:2px;">${rangRegel}</div><div style="font-size:11px; font-weight:400; color:#555; line-height:1.2;">Beim letzten Spieltag gefehlt: +4,00 € (Schalter in der Zeile)</div></th>`;
+  for (let i = 1; i <= n; i++) {
+    rangzahlungRow += `<td class="rechts" id="rang-p${i}" colspan="3" style="padding: 4px 6px;">` +
+      `<label class="fehlt-wrap" title="Beim letzten Spieltag gefehlt (+4 €)">` +
+        `<span class="fehlt-switch"><input type="checkbox" data-fehlt-idx="${i-1}"><span class="fehlt-slider"></span></span>` +
+        `<span>gefehlt</span>` +
+      `</label>` +
+      `<div id="rang-betrag-p${i}" style="margin-top:2px;">0,00 €</div>` +
+      `</td>`;
+  }
+  rangzahlungRow += `<td></td><td></td></tr>`;
+
+  let summeRow = `<tr id="summe-row" style="display:none;"><th colspan="12" style="text-align:left; padding: 4px 15px; font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle; line-height:1.25;">Summe (Abreizgeld + Rangzahlung): <b id="tisch-summe">0,00 €</b></th>`;
+  for (let i = 1; i <= n; i++) {
+    summeRow += `<td class="rechts" id="summe-p${i}" colspan="3" style="font-weight:bold;">0,00 €</td>`;
+  }
+  summeRow += `<td></td><td></td></tr>`;
+
+  tfoot.innerHTML = spielpunkteRow + bonusPRow + bonusGRow + gesamtRow + abreizRow + rangzahlungRow + summeRow;
 
   // Header-Beschriftungen (Handy-Kurzlabels) nach Neu-Aufbau wieder anwenden
   if (typeof _updateHeaderLabels === 'function') _updateHeaderLabels();
@@ -1275,18 +1344,104 @@ function fillTable() {
       ? '(Eingepasst: je 0,50 €, Verlorene 1–2: je 0,50 €, 3–4: je 1,00 €, 5–6: je 1,50 €, ab 7: je 2,00 €)'
       : '(Eingepasst: je 0,50 €, Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)';
   }
+  const abreizBetraege = new Array(n).fill(0);
+  let abreizSumme = 0;
   if (abreizRow) {
     abreizRow.style.display = "";
-    let summe = 0;
     for (let i = 0; i < n; i++) {
       const verl = verlustZaehler[i] || 0;
       const betrag = eingepasstZaehler * 0.5 + berechneEigenVerlust(verl);
-      summe += betrag;
+      abreizBetraege[i] = betrag;
+      abreizSumme += betrag;
       const cell = document.getElementById(`abreiz-p${i+1}`);
       if (cell) cell.textContent = betrag.toFixed(2).replace('.', ',') + ' €';
     }
     const summeEl = document.getElementById("abreiz-summe");
-    if (summeEl) summeEl.textContent = summe.toFixed(2).replace('.', ',') + ' €';
+    if (summeEl) {
+      summeEl.style.display = '';
+      summeEl.textContent = abreizSumme.toFixed(2).replace('.', ',') + ' €';
+    }
+  }
+
+  // Rangzahlung (nur Buure): nach Spielpunkten (ohne Bonus) — 0/1/2/3 €, bei Gleichstand geteilt
+  const rangRow = document.getElementById("rangzahlung-row");
+  const summeRowEl = document.getElementById("summe-row");
+  const rangBetrag = new Array(n).fill(0);
+  if (rangRow) {
+    if (istBuure) {
+      rangRow.style.display = "";
+      const spielpunkteArr = [];
+      for (let i = 0; i < n; i++) spielpunkteArr.push({ idx: i, pkt: punkteSummen[i] || 0 });
+      const sorted = [...spielpunkteArr].sort((a, b) => a.pkt - b.pkt);
+      let pos = 0;
+      while (pos < n) {
+        let end = pos + 1;
+        while (end < n && sorted[end].pkt === sorted[pos].pkt) end++;
+        let summeRang = 0;
+        for (let k = pos; k < end; k++) summeRang += k;
+        const perPlayer = summeRang / (end - pos);
+        for (let k = pos; k < end; k++) rangBetrag[sorted[k].idx] = perPlayer;
+        pos = end;
+      }
+      // Aufschlag +4 € pro Spieler, der beim letzten Spieltag gefehlt hat
+      for (let i = 0; i < n; i++) {
+        if (spielerFehlt[i]) rangBetrag[i] += 4;
+      }
+      let rangSumme = 0;
+      for (let i = 0; i < n; i++) {
+        rangSumme += rangBetrag[i];
+        const betragEl = document.getElementById(`rang-betrag-p${i+1}`);
+        if (betragEl) betragEl.textContent = rangBetrag[i].toFixed(2).replace('.', ',') + ' €';
+        // Toggle-State synchronisieren + Handler einmalig binden
+        const cb = document.querySelector(`#rang-p${i+1} input[data-fehlt-idx="${i}"]`);
+        if (cb) {
+          cb.checked = !!spielerFehlt[i];
+          if (!cb._boundFehlt) {
+            cb.addEventListener('change', function () {
+              const idx = parseInt(this.dataset.fehltIdx, 10);
+              spielerFehlt[idx] = this.checked;
+              fillTable();
+              saveState();
+            });
+            cb._boundFehlt = true;
+          }
+        }
+      }
+      const rangSummeEl = document.getElementById("rang-summe");
+      if (rangSummeEl) rangSummeEl.textContent = rangSumme.toFixed(2).replace('.', ',') + ' €';
+    } else {
+      rangRow.style.display = "none";
+    }
+  }
+
+  // Prompt nach dem ersten Spieleintrag (nur Buure, nur einmal pro Liste)
+  const filledCount = spielDaten.filter(d =>
+    d && (d.grundwert || d.hand || d.schneider || d.schneiderang || d.schwarz || d.schwarzang || d.offen)
+  ).length;
+  if (istBuure && filledCount >= 1 && !fehltPromptShown) {
+    fehltPromptShown = true;
+    saveState();
+    setTimeout(() => {
+      alert('Sonderregel „de vier Boore":\nBitte in der Rangzahlung-Zeile für jeden Spieler, der beim letzten Spieltag gefehlt hat, den Schalter „gefehlt" aktivieren (+4,00 € Aufschlag).');
+    }, 50);
+  }
+
+  // Summenzeile (nur Buure): Abreizgeld + Rangzahlung pro Spieler + Tischsumme
+  if (summeRowEl) {
+    if (istBuure) {
+      summeRowEl.style.display = "";
+      let tischSumme = 0;
+      for (let i = 0; i < n; i++) {
+        const summe = (abreizBetraege[i] || 0) + (rangBetrag[i] || 0);
+        tischSumme += summe;
+        const cell = document.getElementById(`summe-p${i+1}`);
+        if (cell) cell.textContent = summe.toFixed(2).replace('.', ',') + ' €';
+      }
+      const tischSummeEl = document.getElementById("tisch-summe");
+      if (tischSummeEl) tischSummeEl.textContent = tischSumme.toFixed(2).replace('.', ',') + ' €';
+    } else {
+      summeRowEl.style.display = "none";
+    }
   }
 
   updatePlayerNamesInTable();
@@ -3132,7 +3287,9 @@ function _buildState() {
     spielerNamen: spielerNamen,
     serie: document.querySelector('input[name="serie"]:checked')?.value || '1',
     tisch: document.getElementById('tisch-auswahl')?.value || '1',
-    karten: document.querySelector('input[name="karten"]:checked')?.value
+    karten: document.querySelector('input[name="karten"]:checked')?.value,
+    spielerFehlt: spielerFehlt,
+    fehltPromptShown: fehltPromptShown
   };
 }
 
@@ -3161,6 +3318,11 @@ function _applyState(state) {
   if (state.spielDaten && state.spielDaten.length > 0) {
     spielDaten = state.spielDaten;
   }
+
+  if (Array.isArray(state.spielerFehlt)) {
+    for (let i = 0; i < 4; i++) spielerFehlt[i] = !!state.spielerFehlt[i];
+  }
+  fehltPromptShown = !!state.fehltPromptShown;
 
   const serieRadio = document.querySelector(`input[name="serie"][value="${state.serie}"]`);
   if (serieRadio) serieRadio.checked = true;
@@ -3441,6 +3603,8 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
     const tiSelect = document.getElementById('tisch-auswahl');
     if (tiSelect) tiSelect.value = ti;
     spielDaten = [];
+    spielerFehlt = [false, false, false, false];
+    fehltPromptShown = false;
     buildTableStructure();
     updateKartenAuswahl();
     fillTable();
