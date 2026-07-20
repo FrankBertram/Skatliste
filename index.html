@@ -974,7 +974,7 @@ function buildTableStructure() {
   }
   abreizRow += `<td></td><td></td></tr>`;
 
-  const rangRegel = '(nach Spielpunkten: wenigste 0,00 €, dann ' +
+  const rangRegel = '(nach Spielpunkten: höchste 0,00 €, dann ' +
     Array.from({length: n - 1}, (_, k) => (k + 1).toFixed(2).replace('.', ',') + ' €').join(', ') +
     ' — bei Gleichstand geteilt)';
   let rangzahlungRow = `<tr id="rangzahlung-row" style="display:none;"><th colspan="12" style="text-align:left; padding: 4px 15px; font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle; line-height:1.25;"><div>Rangzahlung: <b id="rang-summe">0,00 €</b></div><div id="rang-regel" style="font-size:11px; font-weight:400; color:#555; line-height:1.2; margin-top:2px;">${rangRegel}</div><div style="font-size:11px; font-weight:400; color:#555; line-height:1.2;">Beim letzten Spieltag gefehlt: +4,00 € (Schalter in der Zeile)</div></th>`;
@@ -1372,7 +1372,7 @@ function fillTable() {
       rangRow.style.display = "";
       const spielpunkteArr = [];
       for (let i = 0; i < n; i++) spielpunkteArr.push({ idx: i, pkt: punkteSummen[i] || 0 });
-      const sorted = [...spielpunkteArr].sort((a, b) => a.pkt - b.pkt);
+      const sorted = [...spielpunkteArr].sort((a, b) => b.pkt - a.pkt);
       let pos = 0;
       while (pos < n) {
         let end = pos + 1;
