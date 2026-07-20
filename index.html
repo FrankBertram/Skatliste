@@ -102,8 +102,8 @@
   transition: all 0.2s;
 }
 
-/* Toggle switch für "gefehlt" in der Rangzeile */
-.fehlt-wrap {
+/* Zähler für "gefehlt" in der Rangzeile: [−] N [+] */
+.fehlt-counter {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -111,42 +111,31 @@
   font-weight: 400;
   color: #333;
   vertical-align: middle;
-  margin-right: 6px;
-  cursor: pointer;
+  user-select: none;
 }
-.fehlt-switch {
-  position: relative;
+.fehlt-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid #888;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: bold;
+  cursor: pointer;
+  color: #333;
+}
+.fehlt-btn:active { background: #ddd; }
+.fehlt-btn:disabled { color: #bbb; cursor: default; background: #fafafa; }
+.fehlt-count {
   display: inline-block;
-  width: 28px;
-  height: 16px;
-  flex-shrink: 0;
+  min-width: 14px;
+  text-align: center;
+  font-weight: bold;
+  color: #d32f2f;
 }
-.fehlt-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-.fehlt-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: #bbb;
-  border-radius: 16px;
-  transition: background-color 0.2s;
-}
-.fehlt-slider::before {
-  content: "";
-  position: absolute;
-  height: 12px;
-  width: 12px;
-  left: 2px;
-  top: 2px;
-  background-color: #fff;
-  border-radius: 50%;
-  transition: transform 0.2s;
-}
-.fehlt-switch input:checked + .fehlt-slider { background-color: #d32f2f; }
-.fehlt-switch input:checked + .fehlt-slider::before { transform: translateX(12px); }
+.fehlt-count.zero { color: #666; font-weight: 400; }
 
 .neuer-eintrag-btn:hover {
   background: #FFF176 !important;
@@ -847,8 +836,8 @@
 let spielDaten = [];
 let scale = 1.0;
 let spielerAnzahl = 4;  // 3 oder 4 — zentrale Steuerung
-let spielerFehlt = [false, false, false, false];   // Buure: 4 € Aufschlag beim letzten Spieltag gefehlt
-let fehltPromptShown = false;                       // Prompt nur einmal pro Liste
+let spielerFehlt = [0, 0, 0, 0];   // Buure: Anzahl gefehlter Spielabende, je +4 €
+let fehltPromptShown = false;       // Prompt nur einmal pro Liste
 
 function getSpielerAnzahl() {
   return parseInt(document.querySelector('input[name="spieleranzahl"]:checked')?.value || '4');
@@ -977,13 +966,15 @@ function buildTableStructure() {
   const rangRegel = '(nach Spielpunkten: höchste 0,00 €, dann ' +
     Array.from({length: n - 1}, (_, k) => (k + 1).toFixed(2).replace('.', ',') + ' €').join(', ') +
     ' — bei Gleichstand geteilt)';
-  let rangzahlungRow = `<tr id="rangzahlung-row" style="display:none;"><th colspan="12" style="text-align:left; padding: 4px 15px; font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle; line-height:1.25;"><div>Rangzahlung: <b id="rang-summe">0,00 €</b></div><div id="rang-regel" style="font-size:11px; font-weight:400; color:#555; line-height:1.2; margin-top:2px;">${rangRegel}</div><div style="font-size:11px; font-weight:400; color:#555; line-height:1.2;">Beim letzten Spieltag gefehlt: +4,00 € (Schalter in der Zeile)</div></th>`;
+  let rangzahlungRow = `<tr id="rangzahlung-row" style="display:none;"><th colspan="12" style="text-align:left; padding: 4px 15px; font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle; line-height:1.25;"><div>Rangzahlung: <b id="rang-summe">0,00 €</b></div><div id="rang-regel" style="font-size:11px; font-weight:400; color:#555; line-height:1.2; margin-top:2px;">${rangRegel}</div><div style="font-size:11px; font-weight:400; color:#555; line-height:1.2;">Gefehlte Spielabende: je +4,00 € (Zähler in der Zeile)</div></th>`;
   for (let i = 1; i <= n; i++) {
     rangzahlungRow += `<td class="rechts" id="rang-p${i}" colspan="3" style="padding: 4px 6px;">` +
-      `<label class="fehlt-wrap" title="Beim letzten Spieltag gefehlt (+4 €)">` +
-        `<span class="fehlt-switch"><input type="checkbox" data-fehlt-idx="${i-1}"><span class="fehlt-slider"></span></span>` +
+      `<div class="fehlt-counter" data-fehlt-idx="${i-1}" title="Anzahl gefehlter Spielabende (je +4 €)">` +
+        `<button type="button" class="fehlt-btn" data-op="dec">−</button>` +
+        `<span class="fehlt-count zero" id="fehlt-count-p${i}">0</span>` +
+        `<button type="button" class="fehlt-btn" data-op="inc">+</button>` +
         `<span>gefehlt</span>` +
-      `</label>` +
+      `</div>` +
       `<div id="rang-betrag-p${i}" style="margin-top:2px;">0,00 €</div>` +
       `</td>`;
   }
@@ -1383,29 +1374,41 @@ function fillTable() {
         for (let k = pos; k < end; k++) rangBetrag[sorted[k].idx] = perPlayer;
         pos = end;
       }
-      // Aufschlag +4 € pro Spieler, der beim letzten Spieltag gefehlt hat
+      // Aufschlag +4 € pro gefehltem Spielabend
       for (let i = 0; i < n; i++) {
-        if (spielerFehlt[i]) rangBetrag[i] += 4;
+        const anz = parseInt(spielerFehlt[i]) || 0;
+        if (anz > 0) rangBetrag[i] += anz * 4;
       }
       let rangSumme = 0;
       for (let i = 0; i < n; i++) {
         rangSumme += rangBetrag[i];
         const betragEl = document.getElementById(`rang-betrag-p${i+1}`);
         if (betragEl) betragEl.textContent = rangBetrag[i].toFixed(2).replace('.', ',') + ' €';
-        // Toggle-State synchronisieren + Handler einmalig binden
-        const cb = document.querySelector(`#rang-p${i+1} input[data-fehlt-idx="${i}"]`);
-        if (cb) {
-          cb.checked = !!spielerFehlt[i];
-          if (!cb._boundFehlt) {
-            cb.addEventListener('change', function () {
-              const idx = parseInt(this.dataset.fehltIdx, 10);
-              spielerFehlt[idx] = this.checked;
-              fillTable();
-              saveState();
-            });
-            cb._boundFehlt = true;
-          }
+        // Counter-Anzeige synchronisieren
+        const anz = parseInt(spielerFehlt[i]) || 0;
+        const countEl = document.getElementById(`fehlt-count-p${i+1}`);
+        if (countEl) {
+          countEl.textContent = anz;
+          countEl.classList.toggle('zero', anz === 0);
         }
+        // Handler einmalig pro Counter binden
+        const counter = document.querySelector(`#rang-p${i+1} .fehlt-counter`);
+        if (counter && !counter._boundFehlt) {
+          counter.addEventListener('click', function (ev) {
+            const btn = ev.target.closest('.fehlt-btn');
+            if (!btn) return;
+            const idx = parseInt(this.dataset.fehltIdx, 10);
+            const cur = parseInt(spielerFehlt[idx]) || 0;
+            if (btn.dataset.op === 'inc') spielerFehlt[idx] = cur + 1;
+            else if (btn.dataset.op === 'dec') spielerFehlt[idx] = Math.max(0, cur - 1);
+            fillTable();
+            saveState();
+          });
+          counter._boundFehlt = true;
+        }
+        // − deaktivieren wenn 0
+        const decBtn = counter?.querySelector('.fehlt-btn[data-op="dec"]');
+        if (decBtn) decBtn.disabled = (anz === 0);
       }
       const rangSummeEl = document.getElementById("rang-summe");
       if (rangSummeEl) rangSummeEl.textContent = rangSumme.toFixed(2).replace('.', ',') + ' €';
@@ -1422,7 +1425,7 @@ function fillTable() {
     fehltPromptShown = true;
     saveState();
     setTimeout(() => {
-      alert('Sonderregel „de vier Boore":\nBitte in der Rangzahlung-Zeile für jeden Spieler, der beim letzten Spieltag gefehlt hat, den Schalter „gefehlt" aktivieren (+4,00 € Aufschlag).');
+      alert('Sonderregel „de vier Boore":\nBitte in der Rangzahlung-Zeile für jeden Spieler die Anzahl gefehlter Spielabende mit den Buttons − / + einstellen (je +4,00 € Aufschlag).');
     }, 50);
   }
 
@@ -3320,7 +3323,10 @@ function _applyState(state) {
   }
 
   if (Array.isArray(state.spielerFehlt)) {
-    for (let i = 0; i < 4; i++) spielerFehlt[i] = !!state.spielerFehlt[i];
+    for (let i = 0; i < 4; i++) {
+      const v = state.spielerFehlt[i];
+      spielerFehlt[i] = (v === true) ? 1 : (v === false ? 0 : (parseInt(v) || 0));
+    }
   }
   fehltPromptShown = !!state.fehltPromptShown;
 
@@ -3603,7 +3609,7 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
     const tiSelect = document.getElementById('tisch-auswahl');
     if (tiSelect) tiSelect.value = ti;
     spielDaten = [];
-    spielerFehlt = [false, false, false, false];
+    spielerFehlt = [0, 0, 0, 0];
     fehltPromptShown = false;
     buildTableStructure();
     updateKartenAuswahl();
