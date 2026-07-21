@@ -3162,8 +3162,11 @@ async function saveGameLive(index) {
   }
 }
 
-// Beim Reset / "Neue Liste": Live-Doc mit den bisherigen Koordinaten löschen,
-// damit alte Spiele aus der Live-Rangliste verschwinden.
+// Beim Reset / "Neue Liste": Live-Doc mit den AKTUELL im DOM gewählten
+// Koordinaten (Serie/Tisch/spielerAnzahl) löschen. Der Aufrufer muss
+// vorher sicherstellen, dass ein Löschen wirklich gewollt ist
+// (z. B. dieser Tab hatte selbst Einträge), sonst könnte ein frisch
+// geöffneter zweiter Tab die Daten des ersten Tabs wegräumen.
 async function clearLiveDoc() {
   if (!window.__firestore) return;
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
@@ -3903,8 +3906,11 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
 
   // Modus 'reset': gesamte Liste leeren, dann mit gewählten Werten neu starten
   if (_startDialogMode === 'reset') {
-    // Alten Live-Doc (mit den bisherigen Koordinaten) entfernen, bevor Serie/Tisch/n umgeschaltet werden
-    clearLiveDoc();
+    // Merken, ob dieser Tab bereits Einträge hatte — nur dann darf am Ende
+    // ein Live-Doc gelöscht werden (verhindert, dass ein frisch geöffneter
+    // zweiter Tab mit Neue Liste die Daten des ersten Tabs wegräumt).
+    const hatteEintraege = Array.isArray(spielDaten) &&
+      spielDaten.some(s => s && s.grundwert);
     spielerAnzahl = parseInt(sp);
     const spRadio = document.querySelector(`input[name="spieleranzahl"][value="${sp}"]`);
     if (spRadio) spRadio.checked = true;
@@ -3915,6 +3921,10 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
     spielDaten = [];
     spielerFehlt = [0, 0, 0, 0];
     fehltPromptShown = false;
+    for (let i = 0; i < 4; i++) spielerNamen[i] = `Spieler ${i + 1}`;
+    // Live-Doc mit den NEU gewählten Koordinaten löschen — aber nur wenn
+    // dieser Tab vorher tatsächlich eigene Einträge hatte.
+    if (hatteEintraege) clearLiveDoc();
     buildTableStructure();
     updateKartenAuswahl();
     fillTable();
