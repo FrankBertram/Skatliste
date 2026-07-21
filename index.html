@@ -22,7 +22,7 @@
   </script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
     const firebaseConfig = {
       apiKey: "AIzaSyDmiQvDu0pxQYoidaZfRVY0BXZjLOHhw7w",
       authDomain: "skatverein-b77ef.firebaseapp.com",
@@ -33,7 +33,7 @@
     };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    window.__firestore = { db, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs };
+    window.__firestore = { db, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs };
   </script>
   <!-- PDF-Export: html2canvas + jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -704,6 +704,7 @@
   <div id="player-btn-container-4"></div>
   <div id="csv-export-container"></div>
   <div id="pdf-export-container"></div>
+  <div id="live-view-container"></div>
   <div id="neu-start-container"></div>
 </div>
 
@@ -1901,6 +1902,31 @@ async function exportPDF() {
   }
 }
 
+function createLiveViewButton() {
+  const container = document.getElementById("live-view-container");
+  if (!container || container.children.length > 0) return;
+
+  // Nur beim Sintherner Skatclub (nicht bei "de 4 Buure")
+  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
+  if (vereinMode === '4buure') return;
+
+  const btn = document.createElement("button");
+  btn.innerHTML = "📺 Live";
+  btn.style.cssText = `
+    padding: 6px 16px;
+    background: linear-gradient(135deg, #6a1b9a, #4a148c);
+    color: white; border: none; border-radius: 6px;
+    font-size: 15px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(106,27,154,0.3); transition: transform 0.2s;
+  `;
+  btn.addEventListener("mouseenter", () => btn.style.transform = "scale(1.05)");
+  btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
+  btn.addEventListener("click", () => {
+    window.open('live.html', '_blank');
+  });
+  container.appendChild(btn);
+}
+
 function createNeuStartButton() {
   const container = document.getElementById("neu-start-container");
   if (!container || container.children.length > 0) return;
@@ -2754,6 +2780,7 @@ document.getElementById("btn-loeschen").addEventListener("click", () => {
   s.eingepasst = ""; s.spieler = ""; s.gewonnen = null;
   fillTable();
   closeSpielDialog();
+  saveGameLive(index);
 });
 
 document.getElementById("btn-eingepasst").addEventListener("click", () => {
@@ -2779,6 +2806,7 @@ document.getElementById("btn-eingepasst").addEventListener("click", () => {
   spiel.ohneSpitzen = 0;
   fillTable();
   closeSpielDialog();
+  saveGameLive(index);
 });
 
 async function saveSerieToFirestore() {
@@ -2877,6 +2905,64 @@ async function saveSerieToFirestore() {
   }
 }
 
+// ── Live-Sync: pro Spieleintrag ein Delta-Write nach Firestore ──
+// Struktur: spieltage_live/{datum}_S{serie}_T{tisch}_{n}er
+//   { datum, serie, tisch, spielerAnzahl, spieler:[...], spiele:{ "0": {...}, ... }, zuletzt }
+// Payload pro Aufruf: nur ein Map-Key in `spiele` (setDoc merge:true).
+function _liveDocId() {
+  const datum = new Date().toISOString().split('T')[0];
+  const serie = document.querySelector('input[name="serie"]:checked')?.value || '1';
+  const tisch = document.getElementById('tisch-auswahl')?.value || '1';
+  return { datum, serie, tisch, id: `${datum}_S${serie}_T${tisch}_${spielerAnzahl}er` };
+}
+
+async function saveGameLive(index) {
+  if (!window.__firestore) return;
+  // Nur für Sinthern (nicht "de 4 Buure")
+  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
+  if (vereinMode === '4buure') return;
+  // Spielernamen komplett? Sonst noch nicht sinnvoll live zeigen
+  for (let i = 0; i < spielerAnzahl; i++) {
+    if (!spielerNamen[i] || spielerNamen[i] === `Spieler ${i+1}`) return;
+  }
+  const s = spielDaten[index];
+  if (!s) return;
+
+  const { db, doc, setDoc, serverTimestamp } = window.__firestore;
+  const { datum, serie, tisch, id } = _liveDocId();
+  const eintrag = {
+    nr: s.nr,
+    grundwert: s.grundwert || "",
+    spieler: (s.spieler == null ? null : parseInt(s.spieler)),
+    gewonnen: (s.gewonnen === true ? true : (s.gewonnen === false ? false : null)),
+    pluswert: (s.pluswert === "" || s.pluswert == null) ? 0 : Number(s.pluswert),
+    minuswert: (s.minuswert === "" || s.minuswert == null) ? 0 : Number(s.minuswert)
+  };
+  try {
+    await setDoc(doc(db, "spieltage_live", id), {
+      datum, serie: parseInt(serie), tisch: parseInt(tisch),
+      spielerAnzahl,
+      spieler: spielerNamen.slice(0, spielerAnzahl),
+      spiele: { [String(index)]: eintrag },
+      zuletzt: serverTimestamp()
+    }, { merge: true });
+  } catch (e) {
+    console.warn("Live-Save fehlgeschlagen:", e?.code || e?.message);
+  }
+}
+
+// Beim Reset / "Neue Liste": Live-Doc mit den bisherigen Koordinaten löschen,
+// damit alte Spiele aus der Live-Rangliste verschwinden.
+async function clearLiveDoc() {
+  if (!window.__firestore) return;
+  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
+  if (vereinMode === '4buure') return;
+  const { db, doc, deleteDoc } = window.__firestore;
+  const { id } = _liveDocId();
+  try { await deleteDoc(doc(db, "spieltage_live", id)); }
+  catch (e) { /* silent — evtl. gab es noch kein Doc */ }
+}
+
 function saveGame(gewonnen) {
     const form = document.getElementById("spiel-form");
     const index = parseInt(form.dataset.spielIndex, 10);
@@ -2972,6 +3058,7 @@ function saveGame(gewonnen) {
         spiel.mitSpitzen = 0;
         fillTable();
         closeSpielDialog();
+        saveGameLive(index);
         return;
     }
 
@@ -3014,6 +3101,7 @@ function saveGame(gewonnen) {
 
     const spielerName = spielerNamen[neuerSpieler - 1] || `Spieler ${neuerSpieler}`;
     showSpielStatus(spielerName, deltaNeu, index + 1);
+    saveGameLive(index);
 }
 
 function showSpielStatus(name, delta, spielNr) {
@@ -3516,6 +3604,7 @@ function applyMobileLayout() {
     'player-btn-container-4',
     'csv-export-container',
     'pdf-export-container',
+    'live-view-container',
     'neu-start-container',
   ];
 
@@ -3534,9 +3623,11 @@ function applyMobileLayout() {
   // Button-Beschriftungen: auf Handy kurz (Save/PDF/Neu), sonst lang
   const csvBtn = document.querySelector('#csv-export-container button');
   const pdfBtn = document.querySelector('#pdf-export-container button');
+  const liveBtn = document.querySelector('#live-view-container button');
   const neuBtn = document.querySelector('#neu-start-container button');
   if (csvBtn && !csvBtn.disabled) csvBtn.innerHTML = isPhoneL ? 'Save'          : '☁️ Speichern';
   if (pdfBtn && !pdfBtn.disabled) pdfBtn.innerHTML = isPhoneL ? 'PDF'           : '📄 PDF';
+  if (liveBtn && !liveBtn.disabled) liveBtn.innerHTML = isPhoneL ? 'Live'       : '📺 Live';
   if (neuBtn && !neuBtn.disabled) neuBtn.innerHTML = isPhoneL ? 'Neu'           : '🗑 Neue Liste';
 
   _updateHeaderLabels();
@@ -3601,6 +3692,8 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
 
   // Modus 'reset': gesamte Liste leeren, dann mit gewählten Werten neu starten
   if (_startDialogMode === 'reset') {
+    // Alten Live-Doc (mit den bisherigen Koordinaten) entfernen, bevor Serie/Tisch/n umgeschaltet werden
+    clearLiveDoc();
     spielerAnzahl = parseInt(sp);
     const spRadio = document.querySelector(`input[name="spieleranzahl"][value="${sp}"]`);
     if (spRadio) spRadio.checked = true;
@@ -3672,6 +3765,7 @@ window.addEventListener("load", async () => {
     generatePlayerNameButtons();
     createCSVButton();
     createPDFButton();
+    createLiveViewButton();
     createNeuStartButton();
     updateCopyright();
     updateHeaderInfo();
