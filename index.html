@@ -1958,6 +1958,11 @@ function createLiveViewButton() {
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
   if (vereinMode === '4buure') return;
 
+  // Nur wenn per URL freigeschaltet: ?live oder ?live=1 (auch #live)
+  const params = new URLSearchParams(location.search);
+  const hasLive = params.has('live') || location.hash.replace('#', '') === 'live';
+  if (!hasLive) return;
+
   const btn = document.createElement("button");
   btn.innerHTML = "📺 Live";
   btn.style.cssText = `
@@ -2143,7 +2148,7 @@ function createNeuStartButton() {
   if (!container || container.children.length > 0) return;
 
   const btn = document.createElement("button");
-  btn.innerHTML = "🗑 Neue Liste";
+  btn.innerHTML = "🗑 Neu";
   btn.style.cssText = `
     padding: 6px 16px;
     background: linear-gradient(135deg, #e53935, #c62828);
@@ -3372,7 +3377,7 @@ function showSpielStatus(name, delta, spielNr) {
     });
 
     clearTimeout(el._hideTimer);
-    el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 5000);
+    el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 3500);
     const closeBtn = document.getElementById('spiel-status-close');
     if (closeBtn) closeBtn.addEventListener('click', () => {
         clearTimeout(el._hideTimer);
@@ -3842,7 +3847,7 @@ function applyMobileLayout() {
   if (csvBtn && !csvBtn.disabled) csvBtn.innerHTML = isPhoneL ? 'Save'          : '☁️ Speichern';
   if (pdfBtn && !pdfBtn.disabled) pdfBtn.innerHTML = isPhoneL ? 'PDF'           : '📄 PDF';
   if (liveBtn && !liveBtn.disabled) liveBtn.innerHTML = isPhoneL ? 'Live'       : '📺 Live';
-  if (neuBtn && !neuBtn.disabled) neuBtn.innerHTML = isPhoneL ? 'Neu'           : '🗑 Neue Liste';
+  if (neuBtn && !neuBtn.disabled) neuBtn.innerHTML = isPhoneL ? 'Neu'           : '🗑 Neu';
 
   _updateHeaderLabels();
   // Nach dem Struktur-Umbau die Skalierung neu berechnen — die tatsächliche
