@@ -22,7 +22,7 @@
   </script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
     const firebaseConfig = {
       apiKey: "AIzaSyDmiQvDu0pxQYoidaZfRVY0BXZjLOHhw7w",
       authDomain: "skatverein-b77ef.firebaseapp.com",
@@ -33,7 +33,7 @@
     };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    window.__firestore = { db, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs };
+    window.__firestore = { db, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs, onSnapshot };
   </script>
   <!-- PDF-Export: html2canvas + jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -831,6 +831,54 @@
     </button>
   </form>
 </dialog>
+
+<!-- Live-Rangliste (modaler Dialog) -->
+<dialog id="live-dialog" style="padding:0; border:none; border-radius:12px; width:min(96vw, 900px); max-width:96vw; background:transparent; overflow:hidden;">
+  <div style="background:linear-gradient(135deg,#1a237e 0%,#283593 100%); color:#fff; padding:16px 20px 8px; border-radius:12px 12px 0 0; position:relative;">
+    <button type="button" id="live-close-btn" aria-label="Schließen"
+      style="position:absolute; top:8px; right:10px; width:36px; height:36px; border:none; background:transparent; color:#fff; font-size:26px; font-weight:bold; cursor:pointer; line-height:1;">×</button>
+    <h3 style="margin:0; text-align:center; font-size:22px;">Tagesrangliste</h3>
+    <div id="live-datum" style="text-align:center; opacity:0.9; font-size:14px; margin-top:4px;">…</div>
+  </div>
+  <div style="background:#fff; color:#222; padding:0;">
+    <div style="max-height:70vh; overflow:auto;">
+      <table id="live-tabelle" style="border-collapse:collapse; width:100%; font-size:15px;">
+        <thead>
+          <tr>
+            <th rowspan="2" style="padding:8px 8px; background:#303f9f; color:#fff; border-bottom:2px solid #1a237e;">Platz</th>
+            <th rowspan="2" style="padding:8px 8px; background:#303f9f; color:#fff; text-align:left; border-bottom:2px solid #1a237e;">Name</th>
+            <th colspan="2" style="padding:8px 8px; background:#303f9f; color:#fff; border-bottom:2px solid #1a237e;">Serie 1</th>
+            <th colspan="2" style="padding:8px 8px; background:#303f9f; color:#fff; border-bottom:2px solid #1a237e;">Serie 2</th>
+            <th rowspan="2" style="padding:8px 8px; background:#303f9f; color:#fff; border-bottom:2px solid #1a237e;">Tages­summe</th>
+          </tr>
+          <tr>
+            <th style="padding:4px 6px; background:#5c6bc0; color:#fff; font-size:12px;">Punkte</th>
+            <th style="padding:4px 6px; background:#5c6bc0; color:#fff; font-size:12px;">Spiele</th>
+            <th style="padding:4px 6px; background:#5c6bc0; color:#fff; font-size:12px;">Punkte</th>
+            <th style="padding:4px 6px; background:#5c6bc0; color:#fff; font-size:12px;">Spiele</th>
+          </tr>
+        </thead>
+        <tbody id="live-tabelle-body">
+          <tr><td colspan="7" style="text-align:center; padding:30px; color:#666; font-style:italic;">Verbinde…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="live-status" style="text-align:center; padding:8px; background:#f5f5f5; color:#555; font-size:12px; border-radius:0 0 12px 12px;"></div>
+    <div id="live-fehler" style="text-align:center; padding:8px; background:#fff3cd; color:#856404; font-size:13px; display:none;"></div>
+  </div>
+</dialog>
+<style>
+  #live-tabelle td { padding:8px 8px; border-bottom:1px solid #e0e0e0; text-align:right; }
+  #live-tabelle td.name { text-align:left; font-weight:bold; }
+  #live-tabelle td.platz { text-align:center; font-weight:bold; font-size:18px; }
+  #live-tabelle td.tag { font-weight:bold; background:#f5f7ff; }
+  #live-tabelle tbody tr:nth-child(even) td { background:#fafafa; }
+  #live-tabelle tbody tr:nth-child(even) td.tag { background:#eef1ff; }
+  #live-tabelle tbody tr.p1 td.platz { color:#d4af37; }
+  #live-tabelle tbody tr.p2 td.platz { color:#9e9e9e; }
+  #live-tabelle tbody tr.p3 td.platz { color:#b06835; }
+  #live-dialog::backdrop { background:rgba(0,0,0,0.55); }
+</style>
 
 
 <script>
@@ -1921,11 +1969,174 @@ function createLiveViewButton() {
   `;
   btn.addEventListener("mouseenter", () => btn.style.transform = "scale(1.05)");
   btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
-  btn.addEventListener("click", () => {
-    window.open('live.html', '_blank');
-  });
+  btn.addEventListener("click", openLiveDialog);
   container.appendChild(btn);
 }
+
+// ── Live-Rangliste-Dialog: Firestore-Snapshot pro Öffnung ──
+let _liveUnsub = null;
+let _liveTische = null;
+
+function openLiveDialog() {
+  const dlg = document.getElementById('live-dialog');
+  if (!dlg) return;
+  if (!window.__firestore) {
+    alert("Firestore ist noch nicht bereit.");
+    return;
+  }
+
+  // Datum-Anzeige
+  const dEl = document.getElementById('live-datum');
+  if (dEl) dEl.textContent = new Date().toLocaleDateString('de-DE',
+    { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  // Body-Init
+  document.getElementById('live-tabelle-body').innerHTML =
+    '<tr><td colspan="7" style="text-align:center; padding:30px; color:#666; font-style:italic;">Lade…</td></tr>';
+  document.getElementById('live-status').textContent = '';
+  const fehlerEl = document.getElementById('live-fehler');
+  if (fehlerEl) { fehlerEl.style.display = 'none'; fehlerEl.textContent = ''; }
+
+  dlg.showModal();
+
+  // Snapshot-Listener starten
+  const { db, collection, query, where, onSnapshot } = window.__firestore;
+  const heute = new Date().toISOString().split('T')[0];
+  _liveTische = new Map();
+  const q = query(collection(db, "spieltage_live"), where("datum", "==", heute));
+  _liveUnsub = onSnapshot(q, snapshot => {
+    snapshot.docChanges().forEach(ch => {
+      if (ch.type === 'removed') _liveTische.delete(ch.doc.id);
+      else _liveTische.set(ch.doc.id, ch.doc.data());
+    });
+    renderLiveTabelle();
+  }, err => {
+    if (fehlerEl) {
+      fehlerEl.style.display = '';
+      fehlerEl.textContent = 'Fehler beim Live-Sync: ' + (err.message || err.code || err);
+    }
+  });
+}
+
+function closeLiveDialog() {
+  const dlg = document.getElementById('live-dialog');
+  if (dlg && dlg.open) dlg.close();
+  if (_liveUnsub) { try { _liveUnsub(); } catch (e) {} _liveUnsub = null; }
+  _liveTische = null;
+}
+
+function renderLiveTabelle() {
+  if (!_liveTische) return;
+  const spielerMap = new Map();  // name -> { s1: {...}, s2: {...} }
+  let tischeCount = 0;
+
+  _liveTische.forEach(docData => {
+    tischeCount++;
+    const n = docData.spielerAnzahl || 4;
+    const serieKey = (docData.serie === 2) ? 's2' : 's1';
+    const gMulti = (n === 3) ? 40 : 30;
+    const spielerArr = docData.spieler || [];
+    const spiele = docData.spiele || {};
+
+    const spielpunkte = new Array(n).fill(0);
+    const gew  = new Array(n).fill(0);
+    const verl = new Array(n).fill(0);
+    const spieleAnz = new Array(n).fill(0);
+
+    Object.keys(spiele).forEach(k => {
+      const idx = parseInt(k, 10);
+      const s = spiele[k];
+      if (!s || !s.grundwert) return;
+      // Anzahl Spiele: am 4er ohne Geber-Spiele
+      for (let p = 0; p < n; p++) {
+        const istGeber = (n === 4) && ((idx % 4) === p);
+        if (!istGeber) spieleAnz[p]++;
+      }
+      if (s.spieler != null && s.spieler >= 1 && s.spieler <= n) {
+        const sIdx = s.spieler - 1;
+        spielpunkte[sIdx] += Number(s.pluswert || 0) + Number(s.minuswert || 0);
+        if (s.gewonnen === true)  gew[sIdx]++;
+        if (s.gewonnen === false) verl[sIdx]++;
+      }
+    });
+
+    const totalVerl = verl.reduce((a, b) => a + b, 0);
+    for (let p = 0; p < n; p++) {
+      const bonusP = (gew[p] - verl[p]) * 50;
+      const bonusG = (totalVerl - verl[p]) * gMulti;
+      const gesamt = spielpunkte[p] + bonusP + bonusG;
+      const name = spielerArr[p];
+      if (!name) continue;
+      if (!spielerMap.has(name)) spielerMap.set(name, { s1: null, s2: null });
+      spielerMap.get(name)[serieKey] = { punkte: gesamt, spiele: spieleAnz[p] };
+    }
+  });
+
+  const rows = [];
+  spielerMap.forEach((v, name) => {
+    const s1p = v.s1 ? v.s1.punkte : 0;
+    const s2p = v.s2 ? v.s2.punkte : 0;
+    rows.push({
+      name,
+      s1p, s2p,
+      s1s: v.s1 ? v.s1.spiele : 0,
+      s2s: v.s2 ? v.s2.spiele : 0,
+      tag: s1p + s2p,
+      hasS1: !!v.s1, hasS2: !!v.s2
+    });
+  });
+  rows.sort((a, b) => b.tag - a.tag);
+
+  const tbody = document.getElementById('live-tabelle-body');
+  const escapeHtml = s => String(s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = n => (n > 0 ? '+' : '') + n;
+
+  if (rows.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="7" style="text-align:center; padding:30px; color:#666; font-style:italic;">' +
+      'Noch keine Live-Daten für heute.</td></tr>';
+  } else {
+    tbody.innerHTML = '';
+    let platz = 0, lastTag = null;
+    rows.forEach((r, i) => {
+      if (r.tag !== lastTag) { platz = i + 1; lastTag = r.tag; }
+      const tr = document.createElement('tr');
+      if (platz <= 3) tr.classList.add('p' + platz);
+      tr.innerHTML =
+        `<td class="platz">${platz}</td>` +
+        `<td class="name">${escapeHtml(r.name)}</td>` +
+        `<td>${r.hasS1 ? fmt(r.s1p) : '–'}</td>` +
+        `<td>${r.hasS1 ? r.s1s   : '–'}</td>` +
+        `<td>${r.hasS2 ? fmt(r.s2p) : '–'}</td>` +
+        `<td>${r.hasS2 ? r.s2s   : '–'}</td>` +
+        `<td class="tag">${fmt(r.tag)}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  const zeit = new Date().toLocaleTimeString('de-DE',
+    { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  document.getElementById('live-status').textContent =
+    `${tischeCount} Tisch${tischeCount === 1 ? '' : 'e'} live · Stand ${zeit}`;
+}
+
+// Schließen: Close-Button, Backdrop-Klick, Escape
+document.addEventListener('DOMContentLoaded', () => {
+  const dlg = document.getElementById('live-dialog');
+  const closeBtn = document.getElementById('live-close-btn');
+  if (closeBtn) closeBtn.addEventListener('click', closeLiveDialog);
+  if (dlg) {
+    dlg.addEventListener('close', () => {
+      if (_liveUnsub) { try { _liveUnsub(); } catch (e) {} _liveUnsub = null; }
+      _liveTische = null;
+    });
+    // Klick auf Backdrop schließt
+    dlg.addEventListener('click', ev => {
+      if (ev.target === dlg) closeLiveDialog();
+    });
+  }
+});
 
 function createNeuStartButton() {
   const container = document.getElementById("neu-start-container");
