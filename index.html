@@ -1792,7 +1792,7 @@ async function exportPDF() {
     });
 
     const canvas = await html2canvas(table, {
-      scale: 2,
+      scale: 1.5,
       backgroundColor: '#ffffff',
       windowWidth: Math.max(table.scrollWidth, table.offsetWidth),
       windowHeight: Math.max(table.scrollHeight, table.offsetHeight),
@@ -1897,7 +1897,7 @@ async function exportPDF() {
       }
     });
 
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/jpeg', 0.82);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -1928,7 +1928,7 @@ async function exportPDF() {
     let imgH = imgW / imgRatio;
     if (imgH > availH) { imgH = availH; imgW = imgH * imgRatio; }
     const imgX = marginX + (availW - imgW) / 2;
-    pdf.addImage(imgData, 'PNG', imgX, imgTopY, imgW, imgH);
+    pdf.addImage(imgData, 'JPEG', imgX, imgTopY, imgW, imgH);
 
     const isoDatum = new Date().toISOString().split('T')[0];
     pdf.save(`Skatliste_${isoDatum}_S${serie}_T${tisch}.pdf`);
