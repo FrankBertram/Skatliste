@@ -950,6 +950,33 @@ function getVereinsMode() {
 // ist ein Verein-Kontext immer bekannt (Default = Sinthern), daher true.
 function isVereinParamActive() { return true; }
 
+// Spieltag-Konfiguration aus Firestore (spieltag_config/{YYYY-MM-DD}):
+// Wird 1× pro Sitzung geladen. Doc-ID ist das genaue Datum, weil die
+// Preisskat-Termine sich jedes Jahr auf den passenden Dienstag verschieben.
+let _spieltagConfigCache = null; // {loaded:true, data:{name, startgeld_serie1, startgeld_serie2}|null}
+async function loadSpieltagConfig() {
+  if (_spieltagConfigCache) return _spieltagConfigCache.data;
+  if (!window.__firestore) { _spieltagConfigCache = { loaded:true, data:null }; return null; }
+  const { db, doc, getDoc } = window.__firestore;
+  // Test-/Debug-Override: ?configdate=YYYY-MM-DD lädt das Config-Doc dieses Datums
+  const params = new URLSearchParams(location.search);
+  const override = params.get('configdate');
+  const key = (override && /^\d{4}-\d{2}-\d{2}$/.test(override))
+    ? override
+    : new Date().toISOString().split('T')[0];  // YYYY-MM-DD
+  try {
+    const snap = await getDoc(doc(db, 'spieltag_config', key));
+    const data = snap.exists() ? snap.data() : null;
+    _spieltagConfigCache = { loaded: true, data };
+    if (data) console.log(`[Spieltag-Config] geladen für ${key}:`, data);
+    return data;
+  } catch (e) {
+    console.warn("[Spieltag-Config] konnte nicht geladen werden:", e);
+    _spieltagConfigCache = { loaded: true, data: null };
+    return null;
+  }
+}
+
 // Test-Modus: URL enthält ?test oder #test. In diesem Modus schreibt/liest die App
 // in separate Firestore-Collections (spieltage_test, spieltage_live_test), damit
 // Produktionsdaten nicht vermischt werden. Zusätzlich entfällt die Vollständigkeits-
@@ -1041,6 +1068,12 @@ function buildTableStructure() {
   }
   gesamtRow += `<td></td><td></td></tr>`;
 
+  let startgeldRow = `<tr id="startgeld-row" style="display:none;"><th colspan="12" style="text-align:left; padding: 4px 15px; font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle; line-height:1.25;"><div>Startgeld: <b id="startgeld-summe">0,00 €</b></div><div id="startgeld-regel" style="font-size:11px; font-weight:400; color:#555; line-height:1.2; margin-top:2px;">(Serie 1: 3,00 €, Serie 2: 0,00 €)</div></th>`;
+  for (let i = 1; i <= n; i++) {
+    startgeldRow += `<td class="rechts" id="startgeld-p${i}" colspan="3">0,00 €</td>`;
+  }
+  startgeldRow += `<td></td><td></td></tr>`;
+
   let abreizRow = `<tr id="abreizgeld-row"><th colspan="12" style="text-align:left; padding: 4px 15px; font-size: 14px; background:#f0f0f0; font-weight:400; vertical-align:middle; line-height:1.25;"><div>Abreizgeld: <b id="abreiz-summe">0,00 €</b></div><div id="abreiz-regel" style="font-size:11px; font-weight:400; color:#555; line-height:1.2; margin-top:2px;">(Eingepasst: je 0,50 €, Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)</div></th>`;
   for (let i = 1; i <= n; i++) {
     abreizRow += `<td class="rechts" id="abreiz-p${i}" colspan="3">0,00 €</td>`;
@@ -1070,7 +1103,7 @@ function buildTableStructure() {
   }
   summeRow += `<td></td><td></td></tr>`;
 
-  tfoot.innerHTML = spielpunkteRow + bonusPRow + bonusGRow + gesamtRow + abreizRow + rangzahlungRow + summeRow;
+  tfoot.innerHTML = spielpunkteRow + bonusPRow + bonusGRow + gesamtRow + startgeldRow + abreizRow + rangzahlungRow + summeRow;
 
   // Header-Beschriftungen (Handy-Kurzlabels) nach Neu-Aufbau wieder anwenden
   if (typeof _updateHeaderLabels === 'function') _updateHeaderLabels();
@@ -1438,6 +1471,46 @@ function fillTable() {
     }
   }
 
+  // Startgeld (nur Sinthern / Default):
+  //   Default: Serie 1 = 3 €, Serie 2 = 0 €
+  //   Sondertag (spieltag_config/{MM-DD} in Firestore): abweichende Beträge
+  const startgeldRow = document.getElementById("startgeld-row");
+  const startgeldBetraege = new Array(n).fill(0);
+  if (startgeldRow) {
+    if (!istBuure) {
+      const serieAktiv = document.querySelector('input[name="serie"]:checked')?.value || '1';
+      const cfg = _spieltagConfigCache?.data || null;
+      // Falls Config-Doc vorhanden: dessen Beträge nehmen, sonst Default 3/0.
+      const proSpielerS1 = (cfg && cfg.startgeld_serie1 != null) ? Number(cfg.startgeld_serie1) : 3;
+      const proSpielerS2 = (cfg && cfg.startgeld_serie2 != null) ? Number(cfg.startgeld_serie2) : 0;
+      const proSpieler = (serieAktiv === '1') ? proSpielerS1 : proSpielerS2;
+      startgeldRow.style.display = "";
+      let startgeldSumme = 0;
+      for (let i = 0; i < n; i++) {
+        startgeldBetraege[i] = proSpieler;
+        startgeldSumme += proSpieler;
+        const cell = document.getElementById(`startgeld-p${i+1}`);
+        if (cell) cell.textContent = proSpieler.toFixed(2).replace('.', ',') + ' €';
+      }
+      const summeEl = document.getElementById("startgeld-summe");
+      if (summeEl) summeEl.textContent = startgeldSumme.toFixed(2).replace('.', ',') + ' €';
+      // Regel-Text: bei Sondertag den Namen + tatsächliche Beträge anzeigen
+      const regelEl = document.getElementById("startgeld-regel");
+      if (regelEl) {
+        if (cfg) {
+          const s1txt = proSpielerS1.toFixed(2).replace('.', ',');
+          const s2txt = proSpielerS2.toFixed(2).replace('.', ',');
+          const name  = cfg.name ? `${cfg.name} — ` : '';
+          regelEl.textContent = `(${name}Serie 1: ${s1txt} €, Serie 2: ${s2txt} €)`;
+        } else {
+          regelEl.textContent = '(Serie 1: 3,00 €, Serie 2: 0,00 €)';
+        }
+      }
+    } else {
+      startgeldRow.style.display = "none";
+    }
+  }
+
   // Rangzahlung (nur Buure): nach Spielpunkten (ohne Bonus) — 0/1/2/3 €, bei Gleichstand geteilt
   const rangRow = document.getElementById("rangzahlung-row");
   const summeRowEl = document.getElementById("summe-row");
@@ -1513,21 +1586,25 @@ function fillTable() {
     }, 50);
   }
 
-  // Summenzeile (nur Buure): Abreizgeld + Rangzahlung pro Spieler + Tischsumme
+  // Summenzeile:
+  //   Buure    → Abreizgeld + Rangzahlung
+  //   Sinthern → Startgeld  + Abreizgeld
   if (summeRowEl) {
-    if (istBuure) {
-      summeRowEl.style.display = "";
-      let tischSumme = 0;
-      for (let i = 0; i < n; i++) {
-        const summe = (abreizBetraege[i] || 0) + (rangBetrag[i] || 0);
-        tischSumme += summe;
-        const cell = document.getElementById(`summe-p${i+1}`);
-        if (cell) cell.textContent = summe.toFixed(2).replace('.', ',') + ' €';
-      }
-      const tischSummeEl = document.getElementById("tisch-summe");
-      if (tischSummeEl) tischSummeEl.textContent = tischSumme.toFixed(2).replace('.', ',') + ' €';
-    } else {
-      summeRowEl.style.display = "none";
+    summeRowEl.style.display = "";
+    const summeLabelEl = summeRowEl.querySelector('th');
+    let tischSumme = 0;
+    for (let i = 0; i < n; i++) {
+      const zusatz = istBuure ? (rangBetrag[i] || 0) : (startgeldBetraege[i] || 0);
+      const summe = (abreizBetraege[i] || 0) + zusatz;
+      tischSumme += summe;
+      const cell = document.getElementById(`summe-p${i+1}`);
+      if (cell) cell.textContent = summe.toFixed(2).replace('.', ',') + ' €';
+    }
+    if (summeLabelEl) {
+      const labelText = istBuure
+        ? 'Summe (Abreizgeld + Rangzahlung): '
+        : 'Summe (Startgeld + Abreizgeld): ';
+      summeLabelEl.innerHTML = labelText + `<b id="tisch-summe">${tischSumme.toFixed(2).replace('.', ',')} €</b>`;
     }
   }
 
@@ -3808,6 +3885,7 @@ document.querySelectorAll('input[name="serie"]').forEach(radio => {
   radio.addEventListener('change', saveState);
   radio.addEventListener('change', refreshTurnierauslosung);
   radio.addEventListener('change', updateHeaderInfo);
+  radio.addEventListener('change', fillTable);
 });
 document.getElementById('tisch-auswahl').addEventListener('change', saveState);
 document.getElementById('tisch-auswahl').addEventListener('change', refreshTurnierauslosung);
@@ -4247,6 +4325,10 @@ window.addEventListener("load", async () => {
 
     // An Sondertagen: Turnierauslosung für aktuelle Serie/Tisch laden und Namen setzen
     refreshTurnierauslosung();
+
+    // Sondertag-Konfiguration aus Firestore holen (spieltag_config/{MM-DD}) —
+    // sobald geladen, Tabelle neu rendern, damit ggf. abweichendes Startgeld greift.
+    loadSpieltagConfig().then(cfg => { if (cfg) fillTable(); });
 
     // Bei neuer Liste im Handy-Querformat: Start-Dialog zeigen
     if (!loaded && isPhoneLandscape()) {
