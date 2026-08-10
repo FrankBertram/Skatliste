@@ -655,6 +655,7 @@
   <!-- Desktop/Tablet: Verein + Radios in zwei Zeilen -->
   <div class="header-desktop" style="display:flex; flex-direction:column; gap:8px; flex:1 1 auto; min-width:0;">
     <span id="club-name" style="font-size:20px; font-weight:bold;">1. Sintherner Skatclub</span>
+    <span id="test-mode-badge" style="display:none; align-self:flex-start; padding:3px 10px; background:#ff9800; color:#fff; font-size:12px; font-weight:bold; border-radius:12px; letter-spacing:1px;">TEST-MODUS</span>
     <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
       <span>Spieler:</span>
       <div class="radio-group radio-group-compact">
@@ -796,14 +797,6 @@
     <h3 style="margin:0 0 2px 0; text-align:center; font-size:18px;">Neue Liste</h3>
 
     <div style="display:flex; align-items:center; gap:10px;">
-      <div style="font-weight:bold; font-size:15px; width:62px; flex-shrink:0;">Spieler:</div>
-      <div id="start-spieler-buttons" data-group="spieler" style="display:flex; gap:6px; flex:1;">
-        <button type="button" data-val="3" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">3</button>
-        <button type="button" data-val="4" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">4</button>
-      </div>
-    </div>
-
-    <div style="display:flex; align-items:center; gap:10px;">
       <div style="font-weight:bold; font-size:15px; width:62px; flex-shrink:0;">Serie:</div>
       <div id="start-serie-buttons" data-group="serie" style="display:flex; gap:6px; flex:1;">
         <button type="button" data-val="1" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">1</button>
@@ -821,6 +814,20 @@
         <button type="button" data-val="5" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">5</button>
         <button type="button" data-val="6" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">6</button>
         <button type="button" data-val="7" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">7</button>
+      </div>
+    </div>
+
+    <!-- Spieler-Vorschau: sichtbar, wenn Turnierauslosung für Serie/Tisch geladen ist -->
+    <div id="start-spieler-preview" style="display:none; border:1px solid #bbb; border-radius:8px; padding:8px 10px; background:#fafafa;">
+      <div id="start-spieler-label" style="font-size:12px; font-weight:bold; color:#555; margin-bottom:6px;">Spieler laut Auslosung:</div>
+      <div id="start-spieler-grid" style="display:grid; gap:6px;"></div>
+    </div>
+
+    <div id="start-spieler-anzahl-row" style="display:flex; align-items:center; gap:10px;">
+      <div style="font-weight:bold; font-size:15px; width:62px; flex-shrink:0;">Anzahl:</div>
+      <div id="start-spieler-buttons" data-group="spieler" style="display:flex; gap:6px; flex:1;">
+        <button type="button" data-val="3" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">3</button>
+        <button type="button" data-val="4" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">4</button>
       </div>
     </div>
 
@@ -925,6 +932,17 @@ function getVereinsMode() {
 // Wird als Filter-Gate an vielen Stellen aufgerufen – im neuen Modell
 // ist ein Verein-Kontext immer bekannt (Default = Sinthern), daher true.
 function isVereinParamActive() { return true; }
+
+// Test-Modus: URL enthält ?test oder #test. In diesem Modus schreibt/liest die App
+// in separate Firestore-Collections (spieltage_test, spieltage_live_test), damit
+// Produktionsdaten nicht vermischt werden. Zusätzlich entfällt die Vollständigkeits-
+// prüfung beim Speichern.
+function isTestMode() {
+  const p = new URLSearchParams(location.search);
+  return p.has('test') || location.hash.replace('#', '') === 'test';
+}
+function _spieltageCollection()    { return isTestMode() ? 'spieltage_test'      : 'spieltage'; }
+function _spieltageLiveCollection() { return isTestMode() ? 'spieltage_live_test' : 'spieltage_live'; }
 
 const kartenDefault = 36;
 spielDaten = Array(kartenDefault).fill(null).map((_, i) => ({
@@ -1792,7 +1810,7 @@ async function exportPDF() {
     });
 
     const canvas = await html2canvas(table, {
-      scale: 1.5,
+      scale: 2,
       backgroundColor: '#ffffff',
       windowWidth: Math.max(table.scrollWidth, table.offsetWidth),
       windowHeight: Math.max(table.scrollHeight, table.offsetHeight),
@@ -1897,7 +1915,7 @@ async function exportPDF() {
       }
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.82);
+    const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -1928,7 +1946,7 @@ async function exportPDF() {
     let imgH = imgW / imgRatio;
     if (imgH > availH) { imgH = availH; imgW = imgH * imgRatio; }
     const imgX = marginX + (availW - imgW) / 2;
-    pdf.addImage(imgData, 'JPEG', imgX, imgTopY, imgW, imgH);
+    pdf.addImage(imgData, 'PNG', imgX, imgTopY, imgW, imgH);
 
     const isoDatum = new Date().toISOString().split('T')[0];
     pdf.save(`Skatliste_${isoDatum}_S${serie}_T${tisch}.pdf`);
@@ -2008,7 +2026,7 @@ function openLiveDialog() {
   const { db, collection, query, where, onSnapshot } = window.__firestore;
   const heute = new Date().toISOString().split('T')[0];
   _liveTische = new Map();
-  const q = query(collection(db, "spieltage_live"), where("datum", "==", heute));
+  const q = query(collection(db, _spieltageLiveCollection()), where("datum", "==", heute));
   _liveUnsub = onSnapshot(q, snapshot => {
     snapshot.docChanges().forEach(ch => {
       if (ch.type === 'removed') _liveTische.delete(ch.doc.id);
@@ -2571,11 +2589,19 @@ function generatePlayerNameButtons() {
 
       const aktuell = spielerNamen[pos - 1];
       const listeAktuell = getAktuelleMitspielerListe();
+      const belegteNamen = new Set(
+        spielerNamen.slice(0, spielerAnzahl)
+          .filter((n, idx) => idx !== (pos - 1) && n && !/^Spieler [1-4]$/.test(n))
+      );
       listeAktuell.forEach(name => {
         const opt = document.createElement("option");
         opt.value = name;
         opt.text = name === "Gast" ? "Gast (Name eingeben)" : name;
         if (name === aktuell) opt.selected = true;
+        if (name !== "Gast" && belegteNamen.has(name)) {
+          opt.style.color = "#c62828";
+          opt.style.fontWeight = "bold";
+        }
         select.appendChild(opt);
       });
 
@@ -2594,6 +2620,37 @@ function generatePlayerNameButtons() {
         if (!container.contains(btn)) container.appendChild(btn);
       };
 
+      // Bei Namens-Konflikt: Tausch anbieten. Rückgabe true = übernommen (Aufrufer
+      // darf schließen), false = abbrechen (Feld wieder öffnen zum Neuwählen).
+      const setzeNamenOderTausch = (neuerName) => {
+        const andererIndex = spielerNamen.findIndex((n, idx) => idx !== (pos - 1) && n === neuerName);
+        if (andererIndex >= 0) {
+          const nameHier = spielerNamen[pos - 1] || `Spieler ${pos}`;
+          const zeigeHier = (nameHier === `Spieler ${pos}`) ? `(noch leer, Platz ${pos})` : `"${nameHier}"`;
+          const ok = confirm(
+            `"${neuerName}" sitzt bereits an Platz ${andererIndex + 1}.\n\n` +
+            `Mit ${zeigeHier} tauschen?\n` +
+            `→ Platz ${andererIndex + 1}: ${nameHier}\n` +
+            `→ Platz ${pos}: ${neuerName}`
+          );
+          if (!ok) return false;
+          spielerNamen[andererIndex] = nameHier;
+          spielerNamen[pos - 1]      = neuerName;
+          btn.textContent = neuerName;
+          const otherContainer = document.getElementById(`player-btn-container-${andererIndex + 1}`);
+          const otherBtn = otherContainer ? otherContainer.querySelector('button') : null;
+          if (otherBtn) otherBtn.textContent = nameHier;
+          updatePlayerNamesInTable();
+          saveState();
+          return true;
+        }
+        spielerNamen[pos - 1] = neuerName;
+        btn.textContent = neuerName;
+        updatePlayerNamesInTable();
+        saveState();
+        return true;
+      };
+
       select.addEventListener("change", () => {
         const wert = select.value;
         if (wert === "Gast") {
@@ -2605,17 +2662,10 @@ function generatePlayerNameButtons() {
         }
 
         if (wert && wert !== "Gast") {
-          // Duplikat-Prüfung
-          const andererIndex = spielerNamen.findIndex((n, idx) => idx !== (pos - 1) && n === wert);
-          if (andererIndex >= 0) {
-            alert(`⚠️ "${wert}" ist bereits als Spieler ${andererIndex + 1} eingetragen!`);
+          if (!setzeNamenOderTausch(wert)) {
             select.value = "";
             return;
           }
-          spielerNamen[pos - 1] = wert;
-          btn.textContent = wert;
-          updatePlayerNamesInTable();
-          saveState();
         }
         restoreButton();
       });
@@ -2623,18 +2673,11 @@ function generatePlayerNameButtons() {
       gastInput.addEventListener("change", () => {
         const gastName = gastInput.value.trim();
         if (gastName) {
-          // Duplikat-Prüfung auch für Gast-Namen
-          const andererIndex = spielerNamen.findIndex((n, idx) => idx !== (pos - 1) && n === gastName);
-          if (andererIndex >= 0) {
-            alert(`⚠️ "${gastName}" ist bereits als Spieler ${andererIndex + 1} eingetragen!`);
+          if (!setzeNamenOderTausch(gastName)) {
             gastInput.value = "";
             gastInput.focus();
             return;
           }
-          spielerNamen[pos - 1] = gastName;
-          btn.textContent = gastName;
-          updatePlayerNamesInTable();
-          saveState();
         }
         restoreButton();
       });
@@ -3025,6 +3068,16 @@ document.getElementById("btn-eingepasst").addEventListener("click", () => {
   saveGameLive(index);
 });
 
+// Initialen aus einem Namen bilden: pro Wort der Erst-Buchstabe, in Großbuchstaben.
+// "Franz Bauer" → "FB", "Peter" → "P", "Klaus Werner Fischer" → "KWF", "" → "?".
+function _initialsForName(name) {
+  const s = String(name || '').trim();
+  if (!s) return '?';
+  const words = s.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '?';
+  return words.map(w => w.charAt(0).toUpperCase()).join('');
+}
+
 async function saveSerieToFirestore() {
   if (!window.__firestore) {
     console.warn("Firestore noch nicht initialisiert");
@@ -3039,10 +3092,10 @@ async function saveSerieToFirestore() {
     }
   }
 
-  // Prüfen, ob die ausgewählte Spielanzahl erreicht ist
+  // Prüfen, ob die ausgewählte Spielanzahl erreicht ist (im Testmodus übersprungen)
   const gewaehlteSpielAnz = parseInt(document.querySelector('input[name="karten"]:checked')?.value) || 0;
   const eingetragen = spielDaten.slice(0, gewaehlteSpielAnz).filter(s => s.grundwert).length;
-  if (gewaehlteSpielAnz > 0 && eingetragen < gewaehlteSpielAnz) {
+  if (!isTestMode() && gewaehlteSpielAnz > 0 && eingetragen < gewaehlteSpielAnz) {
     alert(`⚠️ Speichern erst möglich, wenn alle ${gewaehlteSpielAnz} Spiele eingetragen sind (aktuell ${eingetragen}).`);
     return;
   }
@@ -3051,7 +3104,13 @@ async function saveSerieToFirestore() {
   const serie = document.querySelector('input[name="serie"]:checked')?.value || '1';
   const tisch = document.getElementById('tisch-auswahl')?.value || '1';
 
-  const docId = `${datum}_S${serie}_T${tisch}_${spielerAnzahl}er`;
+  // Doc-ID enthält Initialen aller Spieler in Reihenfolge, damit bei anderen
+  // Spielern derselben Tisch/Serie ein neuer Eintrag entsteht (kein Überschreiben).
+  const initials = spielerNamen
+    .slice(0, spielerAnzahl)
+    .map(_initialsForName)
+    .join('-');
+  const docId = `${datum}_S${serie}_T${tisch}_${initials}`;
 
   const spieler = [];
   for (let i = 0; i < spielerAnzahl; i++) {
@@ -3064,7 +3123,7 @@ async function saveSerieToFirestore() {
 
   try {
     const { db, doc, setDoc, getDoc } = window.__firestore;
-    const docRef = doc(db, "spieltage", docId);
+    const docRef = doc(db, _spieltageCollection(), docId);
 
     // Kollisionsprüfung: existiert bereits ein Eintrag?
     const vorhanden = await getDoc(docRef);
@@ -3108,9 +3167,12 @@ async function saveSerieToFirestore() {
 
     await setDoc(docRef, {
       datum, serie, tisch, spielerAnzahl, spieler,
-      gespeichertAm: new Date().toISOString()
+      gespeichertAm: new Date().toISOString(),
+      ...(isTestMode() ? { test: true } : {})
     });
-    alert("✅ Serie in Firebase gespeichert!");
+    alert(isTestMode()
+      ? "✅ Serie in Firebase (TEST-Collection) gespeichert!"
+      : "✅ Serie in Firebase gespeichert!");
   } catch (e) {
     console.error("Firestore-Fehler:", e);
     if (e.code === "permission-denied" || /permission/i.test(e.message)) {
@@ -3155,7 +3217,7 @@ async function saveGameLive(index) {
     minuswert: (s.minuswert === "" || s.minuswert == null) ? 0 : Number(s.minuswert)
   };
   try {
-    await setDoc(doc(db, "spieltage_live", id), {
+    await setDoc(doc(db, _spieltageLiveCollection(), id), {
       datum, serie: parseInt(serie), tisch: parseInt(tisch),
       spielerAnzahl,
       spieler: spielerNamen.slice(0, spielerAnzahl),
@@ -3178,7 +3240,7 @@ async function clearLiveDoc() {
   if (vereinMode === '4buure') return;
   const { db, doc, deleteDoc } = window.__firestore;
   const { id } = _liveDocId();
-  try { await deleteDoc(doc(db, "spieltage_live", id)); }
+  try { await deleteDoc(doc(db, _spieltageLiveCollection(), id)); }
   catch (e) { /* silent — evtl. gab es noch kein Doc */ }
 }
 
@@ -3874,7 +3936,7 @@ function _highlightStartBtn(btn, active) {
   }
 }
 
-function _setupStartGroup(groupId, currentVal) {
+function _setupStartGroup(groupId, currentVal, onChange) {
   const container = document.getElementById(groupId);
   container.dataset.selected = String(currentVal);
   container.querySelectorAll('button').forEach(btn => {
@@ -3883,25 +3945,107 @@ function _setupStartGroup(groupId, currentVal) {
       container.querySelectorAll('button').forEach(b => _highlightStartBtn(b, false));
       _highlightStartBtn(btn, true);
       container.dataset.selected = btn.dataset.val;
+      if (typeof onChange === 'function') onChange(btn.dataset.val);
     };
   });
 }
 
 let _startDialogMode = 'config'; // 'config' = nur setzen; 'reset' = clearState + reload danach
+let _startDialogAuslosung = null; // {groesse, spieler:[...]} — falls Preview geladen
+let _startDialogPreviewReqId = 0; // Debounce für parallele Requests
+
 function openStartDialog(mode) {
   _startDialogMode = (mode === 'reset') ? 'reset' : 'config';
+  _startDialogAuslosung = null;
   const dlg = document.getElementById('start-dialog');
   if (!dlg) return;
   const curSp = spielerAnzahl;
   const curSr = document.querySelector('input[name="serie"]:checked')?.value || '1';
   const curTi = document.getElementById('tisch-auswahl')?.value || '1';
-  _setupStartGroup('start-spieler-buttons', curSp);
-  _setupStartGroup('start-serie-buttons',   curSr);
-  _setupStartGroup('start-tisch-buttons',   curTi);
+  _setupStartGroup('start-serie-buttons',   curSr, refreshStartSpielerPreview);
+  _setupStartGroup('start-tisch-buttons',   curTi, refreshStartSpielerPreview);
+  _setupStartGroup('start-spieler-buttons', curSp, () => {
+    // Manuelle Änderung: geladene Auslosung als "nicht mehr verbindlich" markieren
+    _startDialogAuslosung = null;
+    _renderStartSpielerPreview(null);
+  });
   // Dialogtitel je nach Modus
   const h3 = dlg.querySelector('h3');
   if (h3) h3.textContent = (_startDialogMode === 'reset') ? 'Neue Liste' : 'Auswahl';
+  // Vorschau initial ausblenden, dann versuchen zu laden
+  _renderStartSpielerPreview(null);
+  if (_startDialogMode === 'reset') refreshStartSpielerPreview();
   if (!dlg.open) dlg.showModal();
+}
+
+// Läuft nach jeder Serie/Tisch-Änderung im Reset-Dialog: aktuelle Auslosung holen,
+// bei Erfolg Vorschau anzeigen + Spieleranzahl-Buttons entsprechend setzen.
+async function refreshStartSpielerPreview() {
+  if (_startDialogMode !== 'reset') return;
+  if (!window.__firestore) return;
+  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
+  if (vereinMode === '4buure') { _renderStartSpielerPreview(null); return; }
+  const serie = document.getElementById('start-serie-buttons')?.dataset.selected || '1';
+  const tisch = document.getElementById('start-tisch-buttons')?.dataset.selected || '1';
+  const reqId = ++_startDialogPreviewReqId;
+  try {
+    const auslosung = await loadNeuesteTurnierauslosung(serie);
+    if (reqId !== _startDialogPreviewReqId) return; // veraltet
+    if (!auslosung) { _startDialogAuslosung = null; _renderStartSpielerPreview(null); return; }
+    const eintrag = findeAuslosungTischEintrag(auslosung, tisch);
+    if (!eintrag) { _startDialogAuslosung = null; _renderStartSpielerPreview(null); return; }
+    _startDialogAuslosung = eintrag;
+    _renderStartSpielerPreview(eintrag);
+    // Spieleranzahl-Buttons automatisch auf die Vorgabe setzen
+    const spGroup = document.getElementById('start-spieler-buttons');
+    if (spGroup) {
+      spGroup.dataset.selected = String(eintrag.groesse);
+      spGroup.querySelectorAll('button').forEach(b => _highlightStartBtn(b, b.dataset.val == String(eintrag.groesse)));
+    }
+  } catch (e) {
+    console.warn("[StartDialog] Preview-Load fehlgeschlagen:", e);
+    _startDialogAuslosung = null;
+    _renderStartSpielerPreview(null);
+  }
+}
+
+// Rendert die Spieler-Kacheln (2x2 bei 4, 2+1 bei 3) oder blendet den Rahmen aus.
+function _renderStartSpielerPreview(eintrag) {
+  const box   = document.getElementById('start-spieler-preview');
+  const grid  = document.getElementById('start-spieler-grid');
+  const label = document.getElementById('start-spieler-label');
+  if (!box || !grid) return;
+  if (!eintrag || !Array.isArray(eintrag.spieler) || !eintrag.spieler.length) {
+    box.style.display = 'none';
+    grid.innerHTML = '';
+    return;
+  }
+  // Label je nach Serie: Serie 1 = "Auslosung", Serie 2 = "Auslosung/Setzliste"
+  if (label) {
+    const serie = document.getElementById('start-serie-buttons')?.dataset.selected || '1';
+    label.textContent = (serie === '2')
+      ? 'Spieler laut Auslosung/Setzliste:'
+      : 'Spieler laut Auslosung:';
+  }
+  const n = eintrag.groesse;
+  grid.style.gridTemplateColumns = '1fr 1fr';
+  grid.innerHTML = '';
+  const escapeHtml = s => String(s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  for (let i = 0; i < n; i++) {
+    const cell = document.createElement('div');
+    cell.style.cssText =
+      'padding:6px 8px; font-size:15px; background:#fff; border:1px solid #ccc; ' +
+      'border-radius:6px; text-align:center; font-weight:bold; color:#0d47a1;';
+    cell.textContent = eintrag.spieler[i] || `Spieler ${i + 1}`;
+    if (n === 3 && i === 2) {
+      cell.style.gridColumn = '1 / span 2';
+      cell.style.justifySelf = 'center';
+      cell.style.minWidth = '50%';
+    }
+    grid.appendChild(cell);
+  }
+  box.style.display = '';
 }
 
 document.getElementById('start-confirm-btn').addEventListener('click', () => {
@@ -3927,6 +4071,14 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
     spielerFehlt = [0, 0, 0, 0];
     fehltPromptShown = false;
     for (let i = 0; i < 4; i++) spielerNamen[i] = `Spieler ${i + 1}`;
+    // Wenn im Dialog eine Turnierauslosung geladen wurde, deren Namen übernehmen
+    if (_startDialogAuslosung && Array.isArray(_startDialogAuslosung.spieler)) {
+      const anz = spielerAnzahl;
+      for (let i = 0; i < anz; i++) {
+        const name = _startDialogAuslosung.spieler[i];
+        if (name) spielerNamen[i] = name;
+      }
+    }
     // Live-Doc mit den NEU gewählten Koordinaten löschen — aber nur wenn
     // dieser Tab vorher tatsächlich eigene Einträge hatte.
     if (hatteEintraege) clearLiveDoc();
@@ -3993,6 +4145,12 @@ window.addEventListener("load", async () => {
     createPDFButton();
     createLiveViewButton();
     createNeuStartButton();
+    // Test-Modus-Badge einblenden, falls ?test in der URL steht
+    if (isTestMode()) {
+      const badge = document.getElementById('test-mode-badge');
+      if (badge) badge.style.display = '';
+      document.title = '[TEST] ' + document.title;
+    }
     updateCopyright();
     updateHeaderInfo();
     applyMobileLayout();
