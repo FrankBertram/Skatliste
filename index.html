@@ -837,11 +837,22 @@
       Für andere Spieleranzahl bitte „🗑 Neu" starten.
     </div>
 
-    <button type="button" id="start-confirm-btn"
-            style="margin-top:4px; padding:10px; font-size:16px; font-weight:bold; color:white; border:none; border-radius:6px;
-                   background:linear-gradient(135deg,#28a745,#1e7e34); box-shadow:0 4px 12px rgba(40,167,69,0.3); cursor:pointer;">
-      Start
-    </button>
+    <div style="display:flex; gap:6px; margin-top:4px;">
+      <button type="button" id="start-confirm-btn"
+              style="flex:5; padding:10px; font-size:16px; font-weight:bold; color:white; border:none; border-radius:6px;
+                     background:linear-gradient(135deg,#28a745,#1e7e34); box-shadow:0 4px 12px rgba(40,167,69,0.3); cursor:pointer;">
+        Start
+      </button>
+      <button type="button" id="start-cancel-btn" title="Abbrechen"
+              style="flex:1; padding:10px 0; font-weight:bold; color:white; border:none; border-radius:6px;
+                     background:linear-gradient(135deg,#e53935,#c62828); box-shadow:0 4px 12px rgba(229,57,53,0.3); cursor:pointer;
+                     display:flex; align-items:center; justify-content:center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <line x1="5.5" y1="18.5" x2="18.5" y2="5.5"/>
+        </svg>
+      </button>
+    </div>
   </form>
 </dialog>
 
@@ -2407,13 +2418,21 @@ async function loadNeuesteTurnierauslosung(serie) {
     }
     // Neuesten Eintrag über createdAt (Firestore-Timestamp) bestimmen
     const docs = snap.docs.map(d => d.data());
-    docs.sort((a, b) => {
-      const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds || 0) * 1000;
-      const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds || 0) * 1000;
-      return tb - ta;
-    });
+    const millis = d => d?.createdAt?.toMillis ? d.createdAt.toMillis() : (d?.createdAt?.seconds || 0) * 1000;
+    docs.sort((a, b) => millis(b) - millis(a));
+    const neuester = docs[0];
+    // Im Live-Betrieb nur akzeptieren, wenn die Auslosung heute erstellt wurde.
+    // Im Test-Modus (?test) wird die neueste unabhängig vom Datum genommen.
+    if (!isTestMode()) {
+      const heute = new Date().toISOString().split('T')[0];
+      const createdIso = new Date(millis(neuester)).toISOString().split('T')[0];
+      if (createdIso !== heute) {
+        console.log(`[Auslosung] Neueste Serie-${serie}-Auslosung ist vom ${createdIso} (nicht heute) — im Live-Betrieb ignoriert`);
+        return null;
+      }
+    }
     console.log(`[Auslosung] ${docs.length} Eintrag/Einträge für Serie ${serie} geladen, neuester genommen`);
-    return docs[0];
+    return neuester;
   } catch (e) {
     console.warn("[Auslosung] Konnte nicht geladen werden:", e);
     return null;
@@ -2549,6 +2568,25 @@ function getAktuelleMitspielerListe() {
   return MITSPIELER_SINTHERN;
 }
 
+// Tauscht in allen bereits eingetragenen Spielen die Punkte/Zähler zwischen
+// zwei Positionen (1-basiert). Auch die "spieler"-Zuweisung wird umgeschrieben.
+function _tauschePunkteZwischenPositionen(pos1, pos2) {
+  if (pos1 === pos2) return;
+  const suffixes = ['_delta', '_gew', '_verl', '_punkte'];
+  const k1 = suf => `p${pos1}${suf}`;
+  const k2 = suf => `p${pos2}${suf}`;
+  spielDaten.forEach(s => {
+    if (!s) return;
+    suffixes.forEach(suf => {
+      const tmp = s[k1(suf)];
+      s[k1(suf)] = s[k2(suf)];
+      s[k2(suf)] = tmp;
+    });
+    if (s.spieler === pos1)      s.spieler = pos2;
+    else if (s.spieler === pos2) s.spieler = pos1;
+  });
+}
+
 function generatePlayerNameButtons() {
 
   const n = spielerAnzahl;
@@ -2640,12 +2678,28 @@ function generatePlayerNameButtons() {
             `→ Platz ${pos}: ${neuerName}`
           );
           if (!ok) return false;
+          // Namen tauschen
           spielerNamen[andererIndex] = nameHier;
           spielerNamen[pos - 1]      = neuerName;
           btn.textContent = neuerName;
           const otherContainer = document.getElementById(`player-btn-container-${andererIndex + 1}`);
           const otherBtn = otherContainer ? otherContainer.querySelector('button') : null;
           if (otherBtn) otherBtn.textContent = nameHier;
+          // Wenn schon Spiele eingetragen sind: fragen, ob auch die Punkte
+          // zwischen den Plätzen getauscht werden sollen.
+          const anzahlSpiele = spielDaten.filter(s => s && s.grundwert).length;
+          if (anzahlSpiele > 0) {
+            const punkteTauschen = confirm(
+              `Es sind bereits ${anzahlSpiele} Spiel${anzahlSpiele === 1 ? '' : 'e'} eingetragen.\n\n` +
+              `Sollen auch die Punkte zwischen Platz ${pos} und Platz ${andererIndex + 1} getauscht werden?\n\n` +
+              `OK  = Punkte mittauschen (Historie wird umgeschrieben)\n` +
+              `Abbrechen = nur Namen tauschen (Punkte bleiben an den Plätzen)`
+            );
+            if (punkteTauschen) {
+              _tauschePunkteZwischenPositionen(pos, andererIndex + 1);
+              fillTable();
+            }
+          }
           updatePlayerNamesInTable();
           saveState();
           return true;
@@ -4033,16 +4087,23 @@ async function refreshStartSpielerPreview() {
 }
 
 // Rendert die Spieler-Kacheln (2x2 bei 4, 2+1 bei 3) oder blendet den Rahmen aus.
+// Zusätzlich: Wenn im Neustart-Dialog eine Vorwahl geladen wurde, wird die
+// Anzahl-Auswahl (3/4) ausgeblendet — die Vorgabe kommt aus der Auslosung.
 function _renderStartSpielerPreview(eintrag) {
-  const box   = document.getElementById('start-spieler-preview');
-  const grid  = document.getElementById('start-spieler-grid');
-  const label = document.getElementById('start-spieler-label');
+  const box       = document.getElementById('start-spieler-preview');
+  const grid      = document.getElementById('start-spieler-grid');
+  const label     = document.getElementById('start-spieler-label');
+  const anzahlRow = document.getElementById('start-spieler-anzahl-row');
   if (!box || !grid) return;
   if (!eintrag || !Array.isArray(eintrag.spieler) || !eintrag.spieler.length) {
     box.style.display = 'none';
     grid.innerHTML = '';
+    // Anzahl-Auswahl im Neustart-Modus wieder einblenden
+    if (anzahlRow && _startDialogMode === 'reset') anzahlRow.style.display = '';
     return;
   }
+  // Anzahl-Auswahl ausblenden, weil die Auslosung sie vorgibt
+  if (anzahlRow && _startDialogMode === 'reset') anzahlRow.style.display = 'none';
   // Label je nach Serie: Serie 1 = "Auslosung", Serie 2 = "Auslosung/Setzliste"
   if (label) {
     const serie = document.getElementById('start-serie-buttons')?.dataset.selected || '1';
@@ -4070,6 +4131,11 @@ function _renderStartSpielerPreview(eintrag) {
   }
   box.style.display = '';
 }
+
+document.getElementById('start-cancel-btn').addEventListener('click', () => {
+  const dlg = document.getElementById('start-dialog');
+  if (dlg && dlg.open) dlg.close();
+});
 
 document.getElementById('start-confirm-btn').addEventListener('click', () => {
   const sp = document.getElementById('start-spieler-buttons').dataset.selected || '4';
