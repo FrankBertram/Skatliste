@@ -2710,16 +2710,24 @@ function generatePlayerNameButtons() {
 
       const aktuell = spielerNamen[pos - 1];
       const listeAktuell = getAktuelleMitspielerListe();
-      const belegteNamen = new Set(
-        spielerNamen.slice(0, spielerAnzahl)
-          .filter((n, idx) => idx !== (pos - 1) && n && !/^Spieler [1-4]$/.test(n))
-      );
+      // Map: Name → Platz (1-basiert), an dem der Spieler bereits sitzt (außer eigenem Platz)
+      const belegtVonPlatz = new Map();
+      for (let i = 0; i < spielerAnzahl; i++) {
+        const nm = spielerNamen[i];
+        if (i === (pos - 1) || !nm || /^Spieler [1-4]$/.test(nm)) continue;
+        belegtVonPlatz.set(nm, i + 1);
+      }
       listeAktuell.forEach(name => {
         const opt = document.createElement("option");
         opt.value = name;
-        opt.text = name === "Gast" ? "Gast (Name eingeben)" : name;
+        const belegtAn = belegtVonPlatz.get(name);
+        let text = name === "Gast" ? "Gast (Name eingeben)" : name;
+        // Text-Marker (funktioniert auch auf iPad, wo option-Styles ignoriert werden)
+        if (name !== "Gast" && belegtAn) text = `● ${text} (Platz ${belegtAn})`;
+        opt.text = text;
         if (name === aktuell) opt.selected = true;
-        if (name !== "Gast" && belegteNamen.has(name)) {
+        // Farbe/Fettung zusätzlich für Desktop-Browser
+        if (name !== "Gast" && belegtAn) {
           opt.style.color = "#c62828";
           opt.style.fontWeight = "bold";
         }
