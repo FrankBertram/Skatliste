@@ -691,9 +691,12 @@
   <!-- Handy-Querformat: kompakte Ein-Zeilen-Ansicht (nur per Media Query sichtbar) -->
   <div class="header-mobile" style="display:none; align-items:center; gap:6px; flex-wrap:nowrap; flex:1 1 auto; min-width:0;">
     <!-- Spielernamen-, CSV-, PDF- und Neue-Liste-Container werden per JS beim Wechsel hierher verschoben -->
-    <div id="header-info" style="font-size:14px; color:#000; font-weight:bold; white-space:nowrap;">
+    <button type="button" id="header-info" title="Serie / Tisch korrigieren"
+            style="font-size:14px; color:#000; font-weight:bold; white-space:nowrap;
+                   padding:4px 10px; background:#e3f2fd; border:1px solid #90caf9;
+                   border-radius:14px; cursor:pointer; line-height:1;">
       S:1 / T:1
-    </div>
+    </button>
   </div>
 </div>
 
@@ -829,6 +832,9 @@
         <button type="button" data-val="3" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">3</button>
         <button type="button" data-val="4" class="start-opt-btn" style="flex:1; padding:7px 0; font-size:16px; font-weight:bold; border-radius:6px; border:2px solid #ccc; background:#f5f5f5;">4</button>
       </div>
+    </div>
+    <div id="start-anzahl-hinweis" style="display:none; font-size:12px; color:#666; font-style:italic; margin-top:-2px;">
+      Für andere Spieleranzahl bitte „🗑 Neu" starten.
     </div>
 
     <button type="button" id="start-confirm-btn"
@@ -3759,8 +3765,16 @@ function updateHeaderInfo() {
   if (!info) return;
   const sr = document.querySelector('input[name="serie"]:checked')?.value || '1';
   const ti = document.getElementById('tisch-auswahl')?.value || '1';
-  info.textContent = `S:${sr} / T:${ti}`;
+  info.textContent = `S:${sr} / T:${ti} ✎`;
 }
+
+// Klick auf das Chip (Handy-Ansicht) öffnet den Auswahl-Dialog für Korrektur
+document.addEventListener('DOMContentLoaded', () => {
+  const info = document.getElementById('header-info');
+  if (info) info.addEventListener('click', () => {
+    if (typeof openStartDialog === 'function') openStartDialog('config');
+  });
+});
 
 // Kurzlabels für Tabellenkopf im Handy-Querformat (PDF nutzt die Vollversion).
 const _HEADER_LABEL_MAP = {
@@ -3972,6 +3986,15 @@ function openStartDialog(mode) {
   // Dialogtitel je nach Modus
   const h3 = dlg.querySelector('h3');
   if (h3) h3.textContent = (_startDialogMode === 'reset') ? 'Neue Liste' : 'Auswahl';
+  // Config-Modus (Korrektur): Spieleranzahl ausblenden — bleibt unverändert
+  const anzahlRow = document.getElementById('start-spieler-anzahl-row');
+  const hinweis   = document.getElementById('start-anzahl-hinweis');
+  if (anzahlRow) anzahlRow.style.display = (_startDialogMode === 'reset') ? '' : 'none';
+  if (hinweis)   hinweis.style.display   = (_startDialogMode === 'reset') ? 'none' : '';
+  // Button-Beschriftung je nach Modus
+  const confirmBtn = document.getElementById('start-confirm-btn');
+  if (confirmBtn) confirmBtn.textContent =
+    (_startDialogMode === 'reset') ? 'Start' : 'Änderung übernehmen';
   // Vorschau initial ausblenden, dann versuchen zu laden
   _renderStartSpielerPreview(null);
   if (_startDialogMode === 'reset') refreshStartSpielerPreview();
