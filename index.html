@@ -2699,8 +2699,9 @@ function generatePlayerNameButtons() {
       const select = document.createElement("select");
       select.style.fontSize = "15px";
       select.style.padding = "4px 8px";
-      select.style.minWidth = "180px";
-      select.style.maxWidth = "220px";
+      select.style.minWidth = "260px";
+      select.style.maxWidth = "360px";
+      select.style.whiteSpace = "nowrap";
       select.style.marginTop = "4px";
 
       const optDefault = document.createElement("option");
@@ -2723,7 +2724,7 @@ function generatePlayerNameButtons() {
         const belegtAn = belegtVonPlatz.get(name);
         let text = name === "Gast" ? "Gast (Name eingeben)" : name;
         // Text-Marker (funktioniert auch auf iPad, wo option-Styles ignoriert werden)
-        if (name !== "Gast" && belegtAn) text = `● ${text} (Platz ${belegtAn})`;
+        if (name !== "Gast" && belegtAn) text = `${text} (${belegtAn})`;
         opt.text = text;
         if (name === aktuell) opt.selected = true;
         // Farbe/Fettung zusätzlich für Desktop-Browser
