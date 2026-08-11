@@ -911,6 +911,7 @@ let scale = 1.0;
 let spielerAnzahl = 4;  // 3 oder 4 — zentrale Steuerung
 let spielerFehlt = [0, 0, 0, 0];   // Buure: Anzahl gefehlter Spielabende, je +4 €
 let fehltPromptShown = false;       // Prompt nur einmal pro Liste
+let spielerPreset = null;           // Wenn per Turnierauslosung gesetzt: nur diese 4 Namen im Dropdown
 
 function getSpielerAnzahl() {
   return parseInt(document.querySelector('input[name="spieleranzahl"]:checked')?.value || '4');
@@ -2710,7 +2711,12 @@ function generatePlayerNameButtons() {
       select.appendChild(optDefault);
 
       const aktuell = spielerNamen[pos - 1];
-      const listeAktuell = getAktuelleMitspielerListe();
+      let listeAktuell = getAktuelleMitspielerListe();
+      // Bei aktivem Preset (Turnierauslosung): nur die 4 vorgegebenen Namen zeigen
+      // (plus "Gast" behalten wir raus, weil dann kein freier Spielername mehr rein soll)
+      if (Array.isArray(spielerPreset) && spielerPreset.length > 0) {
+        listeAktuell = spielerPreset.slice();
+      }
       // Map: Name → Platz (1-basiert), an dem der Spieler bereits sitzt (außer eigenem Platz)
       const belegtVonPlatz = new Map();
       for (let i = 0; i < spielerAnzahl; i++) {
@@ -3807,7 +3813,8 @@ function _buildState() {
     tisch: document.getElementById('tisch-auswahl')?.value || '1',
     karten: document.querySelector('input[name="karten"]:checked')?.value,
     spielerFehlt: spielerFehlt,
-    fehltPromptShown: fehltPromptShown
+    fehltPromptShown: fehltPromptShown,
+    spielerPreset: spielerPreset
   };
 }
 
@@ -3844,6 +3851,8 @@ function _applyState(state) {
     }
   }
   fehltPromptShown = !!state.fehltPromptShown;
+  spielerPreset = (Array.isArray(state.spielerPreset) && state.spielerPreset.length > 0)
+    ? state.spielerPreset.slice() : null;
 
   const serieRadio = document.querySelector(`input[name="serie"][value="${state.serie}"]`);
   if (serieRadio) serieRadio.checked = true;
@@ -4248,12 +4257,16 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
     fehltPromptShown = false;
     for (let i = 0; i < 4; i++) spielerNamen[i] = `Spieler ${i + 1}`;
     // Wenn im Dialog eine Turnierauslosung geladen wurde, deren Namen übernehmen
+    // und die 4 Namen als Preset merken (Dropdown zeigt dann nur diese).
     if (_startDialogAuslosung && Array.isArray(_startDialogAuslosung.spieler)) {
       const anz = spielerAnzahl;
       for (let i = 0; i < anz; i++) {
         const name = _startDialogAuslosung.spieler[i];
         if (name) spielerNamen[i] = name;
       }
+      spielerPreset = _startDialogAuslosung.spieler.slice(0, anz).filter(Boolean);
+    } else {
+      spielerPreset = null;
     }
     // Live-Doc mit den NEU gewählten Koordinaten löschen — aber nur wenn
     // dieser Tab vorher tatsächlich eigene Einträge hatte.
