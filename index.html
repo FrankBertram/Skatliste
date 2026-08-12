@@ -706,6 +706,7 @@
   <div id="player-btn-container-2"></div>
   <div id="player-btn-container-3"></div>
   <div id="player-btn-container-4"></div>
+  <div id="rotate-players-container"></div>
   <div id="csv-export-container"></div>
   <div id="pdf-export-container"></div>
   <div id="live-view-container"></div>
@@ -902,7 +903,29 @@
   #live-tabelle tbody tr.p2 td.platz { color:#9e9e9e; }
   #live-tabelle tbody tr.p3 td.platz { color:#b06835; }
   #live-dialog::backdrop { background:rgba(0,0,0,0.55); }
+  #rotate-dialog::backdrop { background:rgba(0,0,0,0.55); }
 </style>
+
+<!-- Rotieren-Dialog -->
+<dialog id="rotate-dialog" style="padding:0; border:none; border-radius:12px; width:min(94vw, 480px); background:transparent;">
+  <div style="background:linear-gradient(135deg,#ff9800,#e65100); color:#fff; padding:14px 18px; border-radius:12px 12px 0 0;">
+    <h3 style="margin:0; text-align:center; font-size:18px;">Spieler im Uhrzeigersinn rotieren?</h3>
+  </div>
+  <div style="background:#fff; color:#222; padding:14px 16px; border-radius:0 0 12px 12px;">
+    <div style="display:grid; grid-template-columns:auto auto auto; gap:6px 12px; align-items:center; justify-content:center; font-size:15px; margin-bottom:14px;" id="rotate-preview"></div>
+    <div id="rotate-punkte-hinweis" style="display:none; font-size:13px; background:#fff3cd; color:#856404; border-radius:6px; padding:8px 10px; margin-bottom:12px; text-align:center;"></div>
+    <label id="rotate-punkte-label" style="display:none; align-items:center; gap:8px; margin-bottom:12px; font-size:14px; cursor:pointer;">
+      <input type="checkbox" id="rotate-punkte-check" style="width:18px; height:18px;">
+      <span>Auch Punkte/Historie mitrotieren</span>
+    </label>
+    <div style="display:flex; gap:6px;">
+      <button type="button" id="rotate-confirm-btn" style="flex:5; padding:10px; font-size:15px; font-weight:bold; color:#fff; border:none; border-radius:6px; background:linear-gradient(135deg,#ff9800,#e65100); cursor:pointer;">Rotieren</button>
+      <button type="button" id="rotate-cancel-btn" title="Abbrechen" style="flex:1; padding:10px 0; font-weight:bold; color:#fff; border:none; border-radius:6px; background:linear-gradient(135deg,#e53935,#c62828); cursor:pointer; display:flex; align-items:center; justify-content:center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5.5" y1="18.5" x2="18.5" y2="5.5"/></svg>
+      </button>
+    </div>
+  </div>
+</dialog>
 
 
 <script>
@@ -2254,6 +2277,112 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ev.target === dlg) closeLiveDialog();
     });
   }
+});
+
+function createRotatePlayersButton() {
+  const container = document.getElementById("rotate-players-container");
+  if (!container || container.children.length > 0) return;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.title = "Alle Spieler im Uhrzeigersinn rotieren";
+  btn.innerHTML = "↻";
+  btn.style.cssText = `
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #ff9800, #e65100);
+    color: white; border: none; border-radius: 6px;
+    font-size: 18px; font-weight: bold; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(255,152,0,0.3); transition: transform 0.2s;
+    line-height: 1;
+  `;
+  btn.addEventListener("mouseenter", () => btn.style.transform = "scale(1.05)");
+  btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
+  btn.addEventListener("click", rotiereSpielerImUhrzeigersinn);
+  container.appendChild(btn);
+}
+
+// Alle Spielernamen im Uhrzeigersinn um eine Position weiterschieben:
+//   Position 1 → 2, 2 → 3, 3 → 4, 4 → 1 (bei 3er: 1→2, 2→3, 3→1)
+// Zeigt einen Custom-Dialog mit Vorschau und optionaler Punkte-Rotation.
+function rotiereSpielerImUhrzeigersinn() {
+  const n = spielerAnzahl;
+  const dlg = document.getElementById('rotate-dialog');
+  if (!dlg) return;
+
+  // Vorschau: Grid mit "Platz N: Alt → Neu"
+  const preview = document.getElementById('rotate-preview');
+  preview.innerHTML = '';
+  const escapeHtml = s => String(s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  for (let i = 0; i < n; i++) {
+    const alt = spielerNamen[i] || `Spieler ${i + 1}`;
+    const neu = spielerNamen[(i - 1 + n) % n] || `Spieler ${((i - 1 + n) % n) + 1}`;
+    preview.insertAdjacentHTML('beforeend',
+      `<div style="text-align:right; color:#666;">Platz ${i + 1}:</div>` +
+      `<div style="color:#c62828;"><s>${escapeHtml(alt)}</s></div>` +
+      `<div style="color:#1b5e20; font-weight:bold;">${escapeHtml(neu)}</div>`
+    );
+  }
+
+  // Punkte-Hinweis + Checkbox nur wenn Spiele vorhanden
+  const anzahlSpiele = spielDaten.filter(s => s && s.grundwert).length;
+  const hinweisEl = document.getElementById('rotate-punkte-hinweis');
+  const labelEl   = document.getElementById('rotate-punkte-label');
+  const checkEl   = document.getElementById('rotate-punkte-check');
+  if (anzahlSpiele > 0) {
+    hinweisEl.style.display = '';
+    hinweisEl.textContent = `Es sind bereits ${anzahlSpiele} Spiel${anzahlSpiele === 1 ? '' : 'e'} eingetragen.`;
+    labelEl.style.display = 'flex';
+    checkEl.checked = false;
+  } else {
+    hinweisEl.style.display = 'none';
+    labelEl.style.display = 'none';
+    checkEl.checked = false;
+  }
+
+  dlg.showModal();
+}
+
+// Führt die Rotation nach Bestätigung im Dialog aus
+function _applyRotateSpieler(punkteMit) {
+  const n = spielerAnzahl;
+  const alteNamen = spielerNamen.slice(0, n);
+  for (let i = 0; i < n; i++) {
+    spielerNamen[(i + 1) % n] = alteNamen[i];
+  }
+  if (punkteMit) {
+    const suffixes = ['_delta', '_gew', '_verl', '_punkte'];
+    spielDaten.forEach(s => {
+      if (!s) return;
+      suffixes.forEach(suf => {
+        const werte = [];
+        for (let i = 1; i <= n; i++) werte.push(s[`p${i}${suf}`]);
+        for (let i = 0; i < n; i++) s[`p${((i + 1) % n) + 1}${suf}`] = werte[i];
+      });
+      if (typeof s.spieler === 'number' && s.spieler >= 1 && s.spieler <= n) {
+        s.spieler = (s.spieler % n) + 1;
+      }
+    });
+    fillTable();
+  }
+  generatePlayerNameButtons();
+  updatePlayerNamesInTable();
+  saveState();
+}
+
+// Dialog-Buttons verdrahten
+document.addEventListener('DOMContentLoaded', () => {
+  const dlg    = document.getElementById('rotate-dialog');
+  const okBtn  = document.getElementById('rotate-confirm-btn');
+  const cancel = document.getElementById('rotate-cancel-btn');
+  if (okBtn) okBtn.addEventListener('click', () => {
+    const check = document.getElementById('rotate-punkte-check');
+    const mit   = !!(check && check.checked);
+    dlg.close();
+    _applyRotateSpieler(mit);
+  });
+  if (cancel) cancel.addEventListener('click', () => dlg.close());
+  if (dlg) dlg.addEventListener('click', ev => { if (ev.target === dlg) dlg.close(); });
 });
 
 function createNeuStartButton() {
@@ -4047,6 +4176,7 @@ function applyMobileLayout() {
     'player-btn-container-2',
     'player-btn-container-3',
     'player-btn-container-4',
+    'rotate-players-container',
     'csv-export-container',
     'pdf-export-container',
     'live-view-container',
@@ -4333,6 +4463,7 @@ window.addEventListener("load", async () => {
     createCSVButton();
     createPDFButton();
     createLiveViewButton();
+    createRotatePlayersButton();
     createNeuStartButton();
     // Test-Modus-Badge einblenden, falls ?test in der URL steht
     if (isTestMode()) {
