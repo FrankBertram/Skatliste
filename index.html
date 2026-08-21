@@ -706,7 +706,7 @@
   <div id="player-btn-container-2"></div>
   <div id="player-btn-container-3"></div>
   <div id="player-btn-container-4"></div>
-  <div id="rotate-players-container"></div>
+  <div id="rotate-players-container" style="display:flex;"></div>
   <div id="csv-export-container"></div>
   <div id="pdf-export-container"></div>
   <div id="live-view-container"></div>
@@ -2294,6 +2294,7 @@ function createRotatePlayersButton() {
     color: white; border: none; border-radius: 6px;
     font-size: 15px; font-weight: bold; cursor: pointer;
     box-shadow: 0 4px 12px rgba(255,152,0,0.3); transition: transform 0.2s;
+    display: flex; align-items: center; justify-content: center; flex: 1;
   `;
   btn.addEventListener("mouseenter", () => btn.style.transform = "scale(1.05)");
   btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
