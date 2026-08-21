@@ -1928,7 +1928,7 @@ async function exportPDF() {
     });
 
     const canvas = await html2canvas(table, {
-      scale: 2,
+      scale: 1.5,
       backgroundColor: '#ffffff',
       windowWidth: Math.max(table.scrollWidth, table.offsetWidth),
       windowHeight: Math.max(table.scrollHeight, table.offsetHeight),
@@ -2033,7 +2033,8 @@ async function exportPDF() {
       }
     });
 
-    const imgData = canvas.toDataURL('image/png');
+    // JPEG statt PNG spart ~80–90 % (Skatzettel = viele weiße Flächen, keine Alphakanäle nötig)
+    const imgData = canvas.toDataURL('image/jpeg', 0.85);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -2064,7 +2065,7 @@ async function exportPDF() {
     let imgH = imgW / imgRatio;
     if (imgH > availH) { imgH = availH; imgW = imgH * imgRatio; }
     const imgX = marginX + (availW - imgW) / 2;
-    pdf.addImage(imgData, 'PNG', imgX, imgTopY, imgW, imgH);
+    pdf.addImage(imgData, 'JPEG', imgX, imgTopY, imgW, imgH, undefined, 'FAST');
 
     const isoDatum = new Date().toISOString().split('T')[0];
     pdf.save(`Skatliste_${isoDatum}_S${serie}_T${tisch}.pdf`);
@@ -2288,12 +2289,11 @@ function createRotatePlayersButton() {
   btn.title = "Alle Spieler im Uhrzeigersinn rotieren";
   btn.innerHTML = "↻";
   btn.style.cssText = `
-    padding: 6px 12px;
+    padding: 6px 16px;
     background: linear-gradient(135deg, #ff9800, #e65100);
     color: white; border: none; border-radius: 6px;
-    font-size: 18px; font-weight: bold; cursor: pointer;
+    font-size: 15px; font-weight: bold; cursor: pointer;
     box-shadow: 0 4px 12px rgba(255,152,0,0.3); transition: transform 0.2s;
-    line-height: 1;
   `;
   btn.addEventListener("mouseenter", () => btn.style.transform = "scale(1.05)");
   btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
