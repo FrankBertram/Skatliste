@@ -360,6 +360,25 @@
       z-index: 2;
     }
 
+    #skat-table thead tr:nth-child(3) th {
+      z-index: 2;
+    }
+
+    /* Spielernamen im Kopf etwas größer (Handy-Kompaktmodus überschreibt mit 12px) */
+    #skat-table thead th.player-name {
+      font-size: 14px;
+    }
+    /* Box trägt nicht zur Spaltenbreite bei (width:0), füllt aber die Zelle */
+    #skat-table thead .vorname-box {
+      width: 0;
+      min-width: 100%;
+      overflow: visible;
+    }
+    #skat-table thead .vorname-text {
+      display: inline-block;
+      white-space: nowrap;
+    }
+
     #skat-table tfoot {
       position: static;
       bottom: auto;
@@ -430,8 +449,9 @@
       top: 0 !important;
       z-index: 3 !important;
     }
-    body.mobile-compact-header #skat-table thead tr:nth-child(2) th {
-      /* top wird per JS gesetzt (Höhe von Zeile 1) */
+    body.mobile-compact-header #skat-table thead tr:nth-child(2) th,
+    body.mobile-compact-header #skat-table thead tr:nth-child(3) th {
+      /* top wird per JS gesetzt (Höhe der Zeilen darüber) */
       z-index: 2 !important;
     }
 
@@ -1037,34 +1057,39 @@ function buildTableStructure() {
   // THEAD
   let headerRow1 = `
     <tr>
-      <th rowspan="2" class="vertical-left"><span>Lfd. Nr. Spiel</span></th>
-      <th rowspan="2" class="unten">9 <br>10<br>11<br>12<br>23<br>24<br>E</th>
-      <th rowspan="2" class="vertical-left"><span>mit Spitzen</span></th>
-      <th rowspan="2" class="vertical-left"><span>ohne Spitzen</span></th>
+      <th rowspan="3" class="vertical-left"><span>Lfd. Nr. Spiel</span></th>
+      <th rowspan="3" class="unten">9 <br>10<br>11<br>12<br>23<br>24<br>E</th>
+      <th rowspan="3" class="vertical-left"><span>mit Spitzen</span></th>
+      <th rowspan="3" class="vertical-left"><span>ohne Spitzen</span></th>
       <th colspan="6">Gewinnstufen</th>
       <th colspan="2">Werte</th>`;
   for (let i = 1; i <= n; i++) {
-    headerRow1 += `<th colspan="3" class="player-name${i} player-name">Name${i === 1 ? ' (LF)' : ''}</th>`;
+    headerRow1 += `<th colspan="3" rowspan="2" class="player-name${i} player-name">Name${i === 1 ? ' (LF)' : ''}</th>`;
   }
-  headerRow1 += `<th rowspan="2" class="vertical-left"><span>Eingepasst</span></th><th></th></tr>`;
+  headerRow1 += `<th rowspan="3" class="vertical-left"><span>Eingepasst</span></th><th rowspan="3"></th></tr>`;
 
+  // Zeile 2: Gewinnstufen und Werte (über Zeile 2+3), Spielernamen laufen
+  // aus Zeile 1 weiter (rowspan=2) → mehr Platz für die Namen.
   let headerRow2 = `<tr>
-      <th class="vertical-left"><span>Hand</span></th>
-      <th class="vertical-left"><span>Schneider</span></th>
-      <th class="vertical-left"><span>Schn. ang.</span></th>
-      <th class="vertical-left"><span>Schwarz</span></th>
-      <th class="vertical-left"><span>Schw. ang.</span></th>
-      <th class="vertical-left"><span>Offen</span></th>
-      <th class="spielwert-spalte">+</th>
-      <th class="spielwert-spalte">-</th>`;
-  for (let i = 1; i <= n; i++) {
-    headerRow2 += `<th class="unten">Platz ${i}</th>
-      <th class="vertical-left"><span>gewonnen</span></th>
-      <th class="vertical-left"><span>verloren</span></th>`;
-  }
-  headerRow2 += `<th></th></tr>`;
+      <th rowspan="2" class="vertical-left"><span>Hand</span></th>
+      <th rowspan="2" class="vertical-left"><span>Schneider</span></th>
+      <th rowspan="2" class="vertical-left"><span>Schn. ang.</span></th>
+      <th rowspan="2" class="vertical-left"><span>Schwarz</span></th>
+      <th rowspan="2" class="vertical-left"><span>Schw. ang.</span></th>
+      <th rowspan="2" class="vertical-left"><span>Offen</span></th>
+      <th rowspan="2" class="spielwert-spalte">+</th>
+      <th rowspan="2" class="spielwert-spalte">-</th></tr>`;
 
-  thead.innerHTML = headerRow1 + headerRow2;
+  // Zeile 3: Platz / gew / ver je Spieler
+  let headerRow3 = `<tr>`;
+  for (let i = 1; i <= n; i++) {
+    headerRow3 += `<th class="unten">Platz ${i}</th>
+      <th class="vertical-left"><span>gew</span></th>
+      <th class="vertical-left"><span>ver</span></th>`;
+  }
+  headerRow3 += `</tr>`;
+
+  thead.innerHTML = headerRow1 + headerRow2 + headerRow3;
 
   // TFOOT
   const gMulti = getBonusGMultiplikator();
@@ -1644,13 +1669,42 @@ function closeSpielDialog() {
   }
 }
 
+// Vornamen im Tabellenkopf ohne Umbruch: bei zu breitem Namen Schrift
+// verkleinern, damit die Spielerspalte ihre Breite behält.
+function _fitVornamen() {
+  document.querySelectorAll('#skat-table thead .vorname-box').forEach(box => {
+    const txt = box.querySelector('.vorname-text');
+    if (!txt) return;
+    txt.style.fontSize = '';
+    const verfuegbar = box.clientWidth;
+    const benoetigt  = txt.scrollWidth;
+    if (verfuegbar > 0 && benoetigt > verfuegbar) {
+      const basis = parseFloat(getComputedStyle(txt).fontSize) || 14;
+      txt.style.fontSize = Math.max(8, Math.floor(basis * verfuegbar / benoetigt * 10) / 10) + 'px';
+    }
+  });
+}
+
 function updatePlayerNamesInTable() {
   const n = spielerAnzahl;
   const compact = document.body.classList.contains('mobile-compact-header');
   for (let i = 1; i <= n; i++) {
     const th = document.querySelector(`#skat-table thead tr:nth-child(1) th.player-name${i}`);
-    if (th) th.textContent = spielerNamen[i-1] + ((i === 1 && !compact) ? " (LF)" : "");
+    if (!th) continue;
+    if (compact) {
+      th.textContent = spielerNamen[i-1];
+    } else {
+      // Nicht-Handy: Name fett in 3 Zeilen ("Nachname," / "Vorname" / "(LF)")
+      const esc = t => t.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const name = spielerNamen[i-1] || "";
+      const k = name.indexOf(",");
+      const zeile1 = k >= 0 ? name.slice(0, k + 1) : name;
+      const zeile2 = k >= 0 ? name.slice(k + 1).trim() : "";
+      const zeile3 = i === 1 ? "(LF)" : "";
+      th.innerHTML = `<b>${esc(zeile1)}</b><div class="vorname-box"><b class="vorname-text">${esc(zeile2) || "&nbsp;"}</b></div><span style="display:block; font-size:10px; line-height:1; font-weight:normal;">${zeile3 || "&nbsp;"}</span>`;
+    }
   }
+  if (!compact) requestAnimationFrame(_fitVornamen);
   // Button "neuer Spieleintrag" aktualisieren
   const btn = document.querySelector(".neuer-eintrag-btn");
   if (btn) {
@@ -4066,8 +4120,8 @@ const _HEADER_LABEL_MAP = {
   'Schw. ang.':     '-A',
   'Offen':          'Of',
   'Eingepasst':     'E.',
-  'gewonnen':       'G',
-  'verloren':       'V',
+  'gew':            'G',
+  'ver':            'V',
 };
 function _setHeaderLabels(compact) {
   // Vertikale Spans
@@ -4105,6 +4159,7 @@ function _setHeaderStructure(compact) {
     if (mitCell && ohneCell) {
       mitCell.rowSpan = 1;
       mitCell.colSpan = 2;
+      // "+"/"−" darunter über Zeile 2+3
       mitCell.classList.remove('vertical-left');
       mitCell.classList.add('buben-header');
       mitCell.innerHTML = 'Buben';
@@ -4116,6 +4171,8 @@ function _setHeaderStructure(compact) {
       const minusTh = document.createElement('th');
       minusTh.className = 'buben-sub';
       minusTh.textContent = '−';
+      plusTh.rowSpan = 2;
+      minusTh.rowSpan = 2;
       row2.insertBefore(minusTh, row2.firstChild);
       row2.insertBefore(plusTh,  row2.firstChild);
     }
@@ -4127,13 +4184,13 @@ function _setHeaderStructure(compact) {
     if (!row1 || !row2) return;
     const bubenCell = row1.querySelector('th.buben-header');
     if (bubenCell) {
-      bubenCell.rowSpan = 2;
+      bubenCell.rowSpan = 3;
       bubenCell.colSpan = 1;
       bubenCell.classList.add('vertical-left');
       bubenCell.classList.remove('buben-header');
       bubenCell.innerHTML = '<span>mit Spitzen</span>';
       const ohneCell = document.createElement('th');
-      ohneCell.rowSpan = 2;
+      ohneCell.rowSpan = 3;
       ohneCell.className = 'vertical-left';
       ohneCell.innerHTML = '<span>ohne Spitzen</span>';
       bubenCell.parentNode.insertBefore(ohneCell, bubenCell.nextSibling);
@@ -4156,11 +4213,14 @@ function _updateHeaderLabels() {
 function _syncStickyRow2Top() {
   const thead = document.getElementById('skat-thead');
   if (!thead) return;
-  const row1 = thead.querySelector('tr:first-child');
-  const row2Ths = thead.querySelectorAll('tr:nth-child(2) th');
-  if (!row1) return;
-  const h1 = row1.offsetHeight;
-  row2Ths.forEach(th => { th.style.top = h1 + 'px'; });
+  // Jede Zeile klebt unter der Summe der Höhen der Zeilen darüber
+  // (Zeile 2 unter Zeile 1, Zeile 3 unter Zeile 1+2).
+  const rows = Array.from(thead.rows);
+  let top = 0;
+  rows.forEach((row, idx) => {
+    if (idx > 0) row.querySelectorAll('th').forEach(th => { th.style.top = top + 'px'; });
+    top += row.offsetHeight;
+  });
 }
 
 // Spielernamen-, CSV-, PDF- und Neue-Liste-Container zwischen Desktop-Zeile-2
