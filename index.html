@@ -2667,6 +2667,20 @@ async function loadNeuesteTurnierauslosung(serie) {
       console.warn("[Auslosung] Firestore-Query-APIs nicht verfügbar");
       return null;
     }
+    // Neu: feste Dokument-ID je Tag und Serie (z. B. 2026-12-15_S2). Serie 2 ist entweder
+    // ausgelost (art 'auslosung', turnier.html) oder nach Serie 1 gesetzt (art 'setzliste').
+    // Im Live-Betrieb zuerst direkt das heutige Dokument lesen (1 Lesezugriff).
+    if (!isTestMode() && fs.doc && fs.getDoc) {
+      const d = new Date();
+      const heute = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const snapId = await fs.getDoc(fs.doc(fs.db, "turnierauslosungen", `${heute}_S${serie}`));
+      if (snapId.exists()) {
+        const daten = snapId.data();
+        console.log(`[Auslosung] ${heute}_S${serie} geladen (${daten.art || 'ohne Art'})`);
+        return daten;
+      }
+    }
+    // Fallback (ältere Einträge mit Zufalls-ID, Test-Modus): neueste Auslosung der Serie.
     // Kein orderBy in der Query → kein zusammengesetzter Firestore-Index nötig.
     // Sortierung + limit werden client-seitig gemacht.
     const q = fs.query(
