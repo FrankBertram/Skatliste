@@ -4018,10 +4018,10 @@ function updateKartenAuswahl() {
   const special = isSpecialDay();
 
   // Feste Spielanzahl (nur EIN Wert, keine Auswahl):
-  //   "de 4 Buure" / Alter Peter → 48 (4er) / 36 (3er)
+  //   "de 4 Buure" / Garching / Alter Peter → 48 (4er) / 36 (3er)
   //   Sondertag ohne Verein-Override → 40 (4er) / 30 (3er)
   let festwert = null;
-  if (vereinMode === '4buure' || vereinMode === 'alterpeter') festwert = ist3er ? 36 : 48;
+  if (vereinMode === '4buure' || vereinMode === 'garching' || vereinMode === 'alterpeter') festwert = ist3er ? 36 : 48;
   else if (special && !vereinMode)  festwert = ist3er ? 30 : 40;
   if (festwert !== null) {
     container.innerHTML =
