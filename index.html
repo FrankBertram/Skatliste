@@ -2068,8 +2068,13 @@ async function exportPDF() {
         });
         // Letzte Spalte (Edit-Button / Leer-Spalte) im PDF entfernen,
         // damit "Eingepasst" die letzte Spalte ist.
-        clonedEl.querySelectorAll('thead tr, tbody tr, tfoot tr').forEach(tr => {
-          const cells = tr.children;
+        // Im Kopf steht die Edit-Spalte nur in der ERSTEN Zeile (rowspan über
+        // alle Kopfzeilen) – in den unteren Kopfzeilen darf nichts entfernt
+        // werden, sonst verrutschen "−" bzw. das letzte "ver" gegenüber dem Body.
+        const kopfZeile1 = clonedEl.querySelector('thead tr');
+        const zeilen = [kopfZeile1, ...clonedEl.querySelectorAll('tbody tr, tfoot tr')];
+        zeilen.forEach(tr => {
+          const cells = tr ? tr.children : [];
           if (cells.length > 0) tr.removeChild(cells[cells.length - 1]);
         });
         // html2canvas rendert `writing-mode: vertical-*` unzuverlässig →
@@ -3918,10 +3923,22 @@ function applyDayConfig() {
   const logo = document.getElementById('club-logo');
   const name = document.getElementById('club-name');
 
+  // Browser-Tab (Titel + Favicon) für Buure / Alter Peter anpassen;
+  // Sinthern behält Titel und Skat.png aus dem <head>.
+  const setzeTab = (titel, icon) => {
+    document.title = titel;
+    document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(l => {
+      l.href = icon;
+      if (l.rel === 'icon') l.type = icon.endsWith('.gif') ? 'image/gif' : 'image/png';
+    });
+  };
+
   if (vereinMode === '4buure') {
     if (logo) logo.src = 'devierboore.png';
     if (name) name.textContent = 'de vier Boore';
+    setzeTab('de vier Boore - Skatliste', 'devierboore.png');
   } else if (vereinMode === 'alterpeter') {
+    setzeTab('SC Alter Peter München - Skatliste', 'alterpeter.gif');
     // Logo alterpeter.gif; fehlt die Datei, Fallback auf Skat.png
     if (logo) {
       logo.onerror = () => { logo.onerror = null; logo.src = 'Skat.png'; };
@@ -4007,7 +4024,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.25) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.26) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -4632,7 +4649,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.25)
+    © 2026 by Frank Bertram (V1.26)
     </div>
 </body>
 </html>
