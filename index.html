@@ -970,11 +970,12 @@ function getBonusGMultiplikator() {
 // Primär (Query-Parameter, robust bei Weiterleitung):
 //    …/index.html?club=boore     → "de vier Boore"
 //    …/index.html?club=sinthern  → Sintherner Skatclub (explizit)
-//    …/index.html?club=alterpeter → "SC Alter Peter München"
+//    …/index.html?club=garching  → "Skatfreunde Garching"
+//    (?club=alterpeter → "SC Alter Peter München" ist derzeit deaktiviert)
 // Ebenfalls unterstützt (Hash):
 //    …/index.html#devierboore    → "de vier Boore"
 //    …/index.html#sinthern       → Sintherner Skatclub (explizit)
-//    …/index.html#alterpeter     → "SC Alter Peter München"
+//    …/index.html#garching       → "Skatfreunde Garching"
 // Default (nichts angegeben):
 //    …/index.html                → Sintherner Skatclub
 // Der Boore-Homescreen-Einstieg über `devierboore.html` reicht den Modus
@@ -986,11 +987,14 @@ function getVereinsMode() {
     const club = (params.get('club') || '').toLowerCase();
     if (club === 'boore' || club === 'devierboore') return '4buure';
     if (club === 'sinthern') return 'sinthern';
-    if (club === 'alterpeter') return 'alterpeter';
+    if (club === 'garching') return 'garching';
+    // Alter Peter deaktiviert – zum Reaktivieren die Zeile wieder einkommentieren:
+    // if (club === 'alterpeter') return 'alterpeter';
     const hash = (window.location.hash || '').replace(/^[#\/]+/, '').toLowerCase();
     if (hash === 'boore' || hash === 'devierboore') return '4buure';
     if (hash === 'sinthern') return 'sinthern';
-    if (hash === 'alterpeter') return 'alterpeter';
+    if (hash === 'garching') return 'garching';
+    // if (hash === 'alterpeter') return 'alterpeter';
   } catch {}
   return null; // = Sinthern-Default
 }
@@ -1000,10 +1004,11 @@ function getVereinsMode() {
 function isVereinParamActive() { return true; }
 
 // Vereine ohne Firestore (kein Speichern, kein Live-Sync, keine Setzliste):
-// "de 4 Buure" und "SC Alter Peter München" – nur lokal + PDF.
+// "de 4 Buure", "Skatfreunde Garching" (und das deaktivierte
+// "SC Alter Peter München") – nur lokal + PDF.
 function istVereinOhneFirestore() {
   const m = getVereinsMode();
-  return m === '4buure' || m === 'alterpeter';
+  return m === '4buure' || m === 'alterpeter' || m === 'garching';
 }
 
 // Spieltag-Konfiguration aus Firestore (spieltag_config/{YYYY-MM-DD}):
@@ -1504,6 +1509,7 @@ function fillTable() {
   const abreizRegelEl = document.getElementById("abreiz-regel");
   const istBuure = vereinModeAbreiz === '4buure';
   const istAlterPeter = vereinModeAbreiz === 'alterpeter';
+  const istGarching = vereinModeAbreiz === 'garching';  // Regeln wie Sinthern
   const berechneEigenVerlust = (verl) => istAlterPeter
     ? verl * 1
     : istBuure
@@ -1541,6 +1547,7 @@ function fillTable() {
 
   // Startgeld (Sinthern / Default und Alter Peter):
   //   Alter Peter: Serie 1 = 5 €, Serie 2 = 0 € (keine Sondertag-Config)
+  //   Garching:    wie Sinthern 3 € / 0 €, aber ohne Sinthern-Sondertag-Config
   //   Default: Serie 1 = 3 €, Serie 2 = 0 €
   //   Sondertag (spieltag_config/{MM-DD} in Firestore): abweichende Beträge
   const startgeldRow = document.getElementById("startgeld-row");
@@ -1548,7 +1555,7 @@ function fillTable() {
   if (startgeldRow) {
     if (!istBuure) {
       const serieAktiv = document.querySelector('input[name="serie"]:checked')?.value || '1';
-      const cfg = istAlterPeter ? null : (_spieltagConfigCache?.data || null);
+      const cfg = (istAlterPeter || istGarching) ? null : (_spieltagConfigCache?.data || null);
       // Falls Config-Doc vorhanden: dessen Beträge nehmen, sonst Default 3/0 (Alter Peter 5/0).
       const proSpielerS1 = (cfg && cfg.startgeld_serie1 != null) ? Number(cfg.startgeld_serie1) : (istAlterPeter ? 5 : 3);
       const proSpielerS2 = (cfg && cfg.startgeld_serie2 != null) ? Number(cfg.startgeld_serie2) : 0;
@@ -1891,7 +1898,7 @@ function createCSVButton() {
   const container = document.getElementById("csv-export-container");
   if (!container || container.children.length > 0) return;
 
-  // Speichern-Button nur beim Sintherner Skatclub (nicht bei "de 4 Buure" / Alter Peter)
+  // Speichern-Button nur beim Sintherner Skatclub (nicht bei Buure / Garching / Alter Peter)
   if (istVereinOhneFirestore()) return;
 
   const csvBtn = document.createElement("button");
@@ -2664,6 +2671,12 @@ const MITSPIELER_ALTERPETER = [
 	"Gast"
 ];
 
+// ── Mitspieler-Liste Skatfreunde Garching ──────────────────────────
+// Noch keine Mitglieder hinterlegt: Namen über "Gast (Name eingeben)".
+const MITSPIELER_GARCHING = [
+	"Gast"
+];
+
 // Gesamt-Union für Standard-Dropdown (ohne ?Verein-Parameter, kein Sondertag)
 const MITSPIELER_STANDARD = (() => {
   const set = new Set();
@@ -2896,6 +2909,7 @@ function getAktuelleMitspielerListe() {
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
   if (vereinMode === '4buure')   return MITSPIELER_BUURE;
   if (vereinMode === 'alterpeter') return MITSPIELER_ALTERPETER;
+  if (vereinMode === 'garching')   return MITSPIELER_GARCHING;
   if (vereinMode === 'sinthern') return MITSPIELER_SINTHERN;
   if (isSpecialDay() && Array.isArray(firebaseMitspielerListe) && firebaseMitspielerListe.length > 0) {
     return firebaseMitspielerListe;
@@ -3923,7 +3937,7 @@ function applyDayConfig() {
   const logo = document.getElementById('club-logo');
   const name = document.getElementById('club-name');
 
-  // Browser-Tab (Titel + Favicon) für Buure / Alter Peter anpassen;
+  // Browser-Tab (Titel + Favicon) für Buure / Garching / Alter Peter anpassen;
   // Sinthern behält Titel und Skat.png aus dem <head>.
   const setzeTab = (titel, icon) => {
     document.title = titel;
@@ -3937,6 +3951,14 @@ function applyDayConfig() {
     if (logo) logo.src = 'devierboore.png';
     if (name) name.textContent = 'de vier Boore';
     setzeTab('de vier Boore - Skatliste', 'devierboore.png');
+  } else if (vereinMode === 'garching') {
+    setzeTab('Skatfreunde Garching - Skatliste', 'garching.png');
+    // Logo garching.png; fehlt die Datei, Fallback auf Skat.png
+    if (logo) {
+      logo.onerror = () => { logo.onerror = null; logo.src = 'Skat.png'; };
+      logo.src = 'garching.png';
+    }
+    if (name) name.textContent = 'Skatfreunde Garching';
   } else if (vereinMode === 'alterpeter') {
     setzeTab('SC Alter Peter München - Skatliste', 'alterpeter.gif');
     // Logo alterpeter.gif; fehlt die Datei, Fallback auf Skat.png
@@ -4037,10 +4059,12 @@ function updateCopyright() {
 
 
 // ── Speicher-Abstraktion (localStorage → IndexedDB Fallback) ──────
-// Alter Peter mit eigenem Spielstand, damit sich eine Sinthern-Liste auf
-// demselben Gerät nicht mit einer Alter-Peter-Liste vermischt.
+// Garching / Alter Peter mit eigenem Spielstand, damit sich eine Sinthern-Liste
+// auf demselben Gerät nicht mit der Liste eines anderen Vereins vermischt.
 // Sinthern und Buure teilen sich weiterhin 'skatSpielstand'.
-const STORE_KEY = getVereinsMode() === 'alterpeter' ? 'skatSpielstand_alterpeter' : 'skatSpielstand';
+const STORE_KEY = (['alterpeter', 'garching'].includes(getVereinsMode()))
+  ? 'skatSpielstand_' + getVereinsMode()
+  : 'skatSpielstand';
 let _db = null;
 
 function _storageOK() {

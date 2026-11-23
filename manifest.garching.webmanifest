@@ -1,0 +1,20 @@
+{
+  "name": "Skatfreunde Garching - Spielliste",
+  "short_name": "Garching",
+  "description": "Digitale Spielliste für 4er/3er Skatabende – Skatfreunde Garching",
+  "start_url": "./garching.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#ffffff",
+  "theme_color": "#1e7e34",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "garching.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
