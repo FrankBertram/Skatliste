@@ -970,9 +970,11 @@ function getBonusGMultiplikator() {
 // Primär (Query-Parameter, robust bei Weiterleitung):
 //    …/index.html?club=boore     → "de vier Boore"
 //    …/index.html?club=sinthern  → Sintherner Skatclub (explizit)
+//    …/index.html?club=alterpeter → "SC Alter Peter München"
 // Ebenfalls unterstützt (Hash):
 //    …/index.html#devierboore    → "de vier Boore"
 //    …/index.html#sinthern       → Sintherner Skatclub (explizit)
+//    …/index.html#alterpeter     → "SC Alter Peter München"
 // Default (nichts angegeben):
 //    …/index.html                → Sintherner Skatclub
 // Der Boore-Homescreen-Einstieg über `devierboore.html` reicht den Modus
@@ -984,9 +986,11 @@ function getVereinsMode() {
     const club = (params.get('club') || '').toLowerCase();
     if (club === 'boore' || club === 'devierboore') return '4buure';
     if (club === 'sinthern') return 'sinthern';
+    if (club === 'alterpeter') return 'alterpeter';
     const hash = (window.location.hash || '').replace(/^[#\/]+/, '').toLowerCase();
     if (hash === 'boore' || hash === 'devierboore') return '4buure';
     if (hash === 'sinthern') return 'sinthern';
+    if (hash === 'alterpeter') return 'alterpeter';
   } catch {}
   return null; // = Sinthern-Default
 }
@@ -994,6 +998,13 @@ function getVereinsMode() {
 // Wird als Filter-Gate an vielen Stellen aufgerufen – im neuen Modell
 // ist ein Verein-Kontext immer bekannt (Default = Sinthern), daher true.
 function isVereinParamActive() { return true; }
+
+// Vereine ohne Firestore (kein Speichern, kein Live-Sync, keine Setzliste):
+// "de 4 Buure" und "SC Alter Peter München" – nur lokal + PDF.
+function istVereinOhneFirestore() {
+  const m = getVereinsMode();
+  return m === '4buure' || m === 'alterpeter';
+}
 
 // Spieltag-Konfiguration aus Firestore (spieltag_config/{YYYY-MM-DD}):
 // Wird 1× pro Sitzung geladen. Doc-ID ist das genaue Datum, weil die
@@ -1486,19 +1497,25 @@ function fillTable() {
 
   // Abreizgeld: 0,50 € pro Eingepasstem Spiel + Staffelung eigene Verluste (je nach Verein)
   //   Sinthern: 1–3 je 0,50 €, ab 4 je 1,00 €
-  //   4 Buure:  1–2 je 0,50 €, 3–4 je 1,00 €, ab 5 je 2,00 €
+  //   4 Buure:  1–2 je 0,50 €, 3–4 je 1,00 €, 5–6 je 1,50 €, ab 7 je 2,00 €
+  //   Alter Peter: jedes verlorene Spiel 1,00 €
   const vereinModeAbreiz = isVereinParamActive() ? getVereinsMode() : null;
   const abreizRow = document.getElementById("abreizgeld-row");
   const abreizRegelEl = document.getElementById("abreiz-regel");
   const istBuure = vereinModeAbreiz === '4buure';
-  const berechneEigenVerlust = (verl) => istBuure
+  const istAlterPeter = vereinModeAbreiz === 'alterpeter';
+  const berechneEigenVerlust = (verl) => istAlterPeter
+    ? verl * 1
+    : istBuure
     ? Math.min(verl, 2) * 0.5
       + Math.min(Math.max(verl - 2, 0), 2) * 1
       + Math.min(Math.max(verl - 4, 0), 2) * 1.5
       + Math.max(verl - 6, 0) * 2
     : Math.min(verl, 3) * 0.5 + Math.max(0, verl - 3) * 1;
   if (abreizRegelEl) {
-    abreizRegelEl.innerHTML = istBuure
+    abreizRegelEl.innerHTML = istAlterPeter
+      ? '(Eingepasst: je 0,50 €, Verlorene: je 1,00 €)'
+      : istBuure
       ? '(Eingepasst: je 0,50 €, Verlorene 1–2: je 0,50 €, 3–4: je 1,00 €, 5–6: je 1,50 €, ab 7: je 2,00 €)'
       : '(Eingepasst: je 0,50 €, Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)';
   }
@@ -1522,7 +1539,8 @@ function fillTable() {
   }
   abreizgeldTisch = Math.round(abreizSumme * 100) / 100;
 
-  // Startgeld (nur Sinthern / Default):
+  // Startgeld (Sinthern / Default und Alter Peter):
+  //   Alter Peter: Serie 1 = 5 €, Serie 2 = 0 € (keine Sondertag-Config)
   //   Default: Serie 1 = 3 €, Serie 2 = 0 €
   //   Sondertag (spieltag_config/{MM-DD} in Firestore): abweichende Beträge
   const startgeldRow = document.getElementById("startgeld-row");
@@ -1530,9 +1548,9 @@ function fillTable() {
   if (startgeldRow) {
     if (!istBuure) {
       const serieAktiv = document.querySelector('input[name="serie"]:checked')?.value || '1';
-      const cfg = _spieltagConfigCache?.data || null;
-      // Falls Config-Doc vorhanden: dessen Beträge nehmen, sonst Default 3/0.
-      const proSpielerS1 = (cfg && cfg.startgeld_serie1 != null) ? Number(cfg.startgeld_serie1) : 3;
+      const cfg = istAlterPeter ? null : (_spieltagConfigCache?.data || null);
+      // Falls Config-Doc vorhanden: dessen Beträge nehmen, sonst Default 3/0 (Alter Peter 5/0).
+      const proSpielerS1 = (cfg && cfg.startgeld_serie1 != null) ? Number(cfg.startgeld_serie1) : (istAlterPeter ? 5 : 3);
       const proSpielerS2 = (cfg && cfg.startgeld_serie2 != null) ? Number(cfg.startgeld_serie2) : 0;
       const proSpieler = (serieAktiv === '1') ? proSpielerS1 : proSpielerS2;
       startgeldRow.style.display = "";
@@ -1554,7 +1572,9 @@ function fillTable() {
           const name  = cfg.name ? `${cfg.name} — ` : '';
           regelEl.textContent = `(${name}Serie 1: ${s1txt} €, Serie 2: ${s2txt} €)`;
         } else {
-          regelEl.textContent = '(Serie 1: 3,00 €, Serie 2: 0,00 €)';
+          regelEl.textContent = istAlterPeter
+            ? '(Serie 1: 5,00 €, Serie 2: 0,00 €)'
+            : '(Serie 1: 3,00 €, Serie 2: 0,00 €)';
         }
       }
     } else {
@@ -1871,9 +1891,8 @@ function createCSVButton() {
   const container = document.getElementById("csv-export-container");
   if (!container || container.children.length > 0) return;
 
-  // Speichern-Button nur beim Sintherner Skatclub (nicht bei "de 4 Buure")
-  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
-  if (vereinMode === '4buure') return;
+  // Speichern-Button nur beim Sintherner Skatclub (nicht bei "de 4 Buure" / Alter Peter)
+  if (istVereinOhneFirestore()) return;
 
   const csvBtn = document.createElement("button");
   csvBtn.innerHTML = "☁️ Speichern";
@@ -2147,9 +2166,8 @@ function createLiveViewButton() {
   const container = document.getElementById("live-view-container");
   if (!container || container.children.length > 0) return;
 
-  // Nur beim Sintherner Skatclub (nicht bei "de 4 Buure")
-  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
-  if (vereinMode === '4buure') return;
+  // Nur beim Sintherner Skatclub (nicht bei "de 4 Buure" / Alter Peter)
+  if (istVereinOhneFirestore()) return;
 
   // Nur wenn per URL freigeschaltet: ?live oder ?live=1 (auch #live)
   const params = new URLSearchParams(location.search);
@@ -2607,6 +2625,40 @@ const MITSPIELER_BUURE = [
 	"Gast"
 ];
 
+// ── Mitspieler-Liste SC Alter Peter München ────────────────────────
+const MITSPIELER_ALTERPETER = [
+	"Bobbert, Cornelius",
+	"Brunner, Peter",
+	"Buschner, Willy",
+	"Fleischer, Wolfgang",
+	"Gnadl, Hannelore",
+	"Grabow, Rolf",
+	"Hensen, Olaf",
+	"Hirschmann, Peter",
+	"Hornbrook, Michael",
+	"Jeskandt, Horst",
+	"Kaade, Thomas",
+	"Kapp, Udo",
+	"Kawka, Bernd",
+	"Kulzer, Johannes",
+	"Leeb, Florian",
+	"Lehmann, Uwe",
+	"Mazur, Alexander",
+	"Nöhles, Filip",
+	"Preiß, Stefan",
+	"Rudolf, Martin",
+	"Schiwalsky, Siegfried",
+	"Schmidhuber, Inger",
+	"Schmilinsky, Knut",
+	"Schreyer, Andreas",
+	"Schwab, Jürgen",
+	"Springer, Wolfgang",
+	"Waschkowski, Richard",
+	"Weil, Domenic",
+	"Winter, Thomas",
+	"Gast"
+];
+
 // Gesamt-Union für Standard-Dropdown (ohne ?Verein-Parameter, kein Sondertag)
 const MITSPIELER_STANDARD = (() => {
   const set = new Set();
@@ -2754,9 +2806,9 @@ async function refreshTurnierauslosung() {
   const sondertag = isSpecialDay();
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
 
-  // "de 4 Buure": Setzliste nie laden (nur Sintherner Skatclub)
-  if (vereinMode === '4buure') {
-    console.log("[Auslosung] Buure-Modus – übersprungen");
+  // "de 4 Buure" / Alter Peter: Setzliste nie laden (nur Sintherner Skatclub)
+  if (istVereinOhneFirestore()) {
+    console.log(`[Auslosung] Vereinsmodus ${vereinMode} – übersprungen`);
     return;
   }
 
@@ -2838,6 +2890,7 @@ async function refreshTurnierauslosung() {
 function getAktuelleMitspielerListe() {
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
   if (vereinMode === '4buure')   return MITSPIELER_BUURE;
+  if (vereinMode === 'alterpeter') return MITSPIELER_ALTERPETER;
   if (vereinMode === 'sinthern') return MITSPIELER_SINTHERN;
   if (isSpecialDay() && Array.isArray(firebaseMitspielerListe) && firebaseMitspielerListe.length > 0) {
     return firebaseMitspielerListe;
@@ -3549,9 +3602,8 @@ function _liveDocId() {
 
 async function saveGameLive(index) {
   if (!window.__firestore) return;
-  // Nur für Sinthern (nicht "de 4 Buure")
-  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
-  if (vereinMode === '4buure') return;
+  // Nur für Sinthern (nicht "de 4 Buure" / Alter Peter)
+  if (istVereinOhneFirestore()) return;
   // Spielernamen komplett? Sonst noch nicht sinnvoll live zeigen
   for (let i = 0; i < spielerAnzahl; i++) {
     if (!spielerNamen[i] || spielerNamen[i] === `Spieler ${i+1}`) return;
@@ -3589,8 +3641,7 @@ async function saveGameLive(index) {
 // geöffneter zweiter Tab die Daten des ersten Tabs wegräumen.
 async function clearLiveDoc() {
   if (!window.__firestore) return;
-  const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
-  if (vereinMode === '4buure') return;
+  if (istVereinOhneFirestore()) return;
   const { db, doc, deleteDoc } = window.__firestore;
   const { id } = _liveDocId();
   try { await deleteDoc(doc(db, _spieltageLiveCollection(), id)); }
@@ -3870,6 +3921,13 @@ function applyDayConfig() {
   if (vereinMode === '4buure') {
     if (logo) logo.src = 'devierboore.png';
     if (name) name.textContent = 'de vier Boore';
+  } else if (vereinMode === 'alterpeter') {
+    // Logo alterpeter.gif; fehlt die Datei, Fallback auf Skat.png
+    if (logo) {
+      logo.onerror = () => { logo.onerror = null; logo.src = 'Skat.png'; };
+      logo.src = 'alterpeter.gif';
+    }
+    if (name) name.textContent = 'SC Alter Peter München';
   } else if (vereinMode === 'sinthern') {
     if (logo) logo.src = 'Skat.png';
     if (name) name.textContent = '1. Sintherner Skatclub';
@@ -3913,10 +3971,10 @@ function updateKartenAuswahl() {
   const special = isSpecialDay();
 
   // Feste Spielanzahl (nur EIN Wert, keine Auswahl):
-  //   "de 4 Buure" → 48 (4er) / 36 (3er)
+  //   "de 4 Buure" / Alter Peter → 48 (4er) / 36 (3er)
   //   Sondertag ohne Verein-Override → 40 (4er) / 30 (3er)
   let festwert = null;
-  if (vereinMode === '4buure')      festwert = ist3er ? 36 : 48;
+  if (vereinMode === '4buure' || vereinMode === 'alterpeter') festwert = ist3er ? 36 : 48;
   else if (special && !vereinMode)  festwert = ist3er ? 30 : 40;
   if (festwert !== null) {
     container.innerHTML =
@@ -3954,7 +4012,10 @@ function updateCopyright() {
 
 
 // ── Speicher-Abstraktion (localStorage → IndexedDB Fallback) ──────
-const STORE_KEY = 'skatSpielstand';
+// Alter Peter mit eigenem Spielstand, damit sich eine Sinthern-Liste auf
+// demselben Gerät nicht mit einer Alter-Peter-Liste vermischt.
+// Sinthern und Buure teilen sich weiterhin 'skatSpielstand'.
+const STORE_KEY = getVereinsMode() === 'alterpeter' ? 'skatSpielstand_alterpeter' : 'skatSpielstand';
 let _db = null;
 
 function _storageOK() {
@@ -4365,7 +4426,7 @@ async function refreshStartSpielerPreview() {
   if (_startDialogMode !== 'reset') return;
   if (!window.__firestore) return;
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
-  if (vereinMode === '4buure') { _renderStartSpielerPreview(null); return; }
+  if (istVereinOhneFirestore()) { _renderStartSpielerPreview(null); return; }
   const serie = document.getElementById('start-serie-buttons')?.dataset.selected || '1';
   const tisch = document.getElementById('start-tisch-buttons')?.dataset.selected || '1';
   const reqId = ++_startDialogPreviewReqId;
