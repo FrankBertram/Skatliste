@@ -1,0 +1,20 @@
+{
+  "name": "SC Alter Peter München - Spielliste",
+  "short_name": "Alter Peter",
+  "description": "Digitale Spielliste für 4er/3er Skatabende – SC Alter Peter München",
+  "start_url": "./alterpeter.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#ffffff",
+  "theme_color": "#1e7e34",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "alterpeter.gif",
+      "sizes": "any",
+      "type": "image/gif",
+      "purpose": "any"
+    }
+  ]
+}
