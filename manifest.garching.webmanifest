@@ -11,9 +11,9 @@
   "lang": "de",
   "icons": [
     {
-      "src": "garching.png",
+      "src": "logo_garching.jpg",
       "sizes": "any",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any"
     }
   ]

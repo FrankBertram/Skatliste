@@ -1504,6 +1504,7 @@ function fillTable() {
   //   Sinthern: 1–3 je 0,50 €, ab 4 je 1,00 €
   //   4 Buure:  1–2 je 0,50 €, 3–4 je 1,00 €, 5–6 je 1,50 €, ab 7 je 2,00 €
   //   Alter Peter: jedes verlorene Spiel 1,00 €
+  //   Garching: 1–3 je 0,50 €, 4–6 je 1,00 €, ab 7 je 2,00 €
   const vereinModeAbreiz = isVereinParamActive() ? getVereinsMode() : null;
   const abreizRow = document.getElementById("abreizgeld-row");
   const abreizRegelEl = document.getElementById("abreiz-regel");
@@ -1512,6 +1513,10 @@ function fillTable() {
   const istGarching = vereinModeAbreiz === 'garching';  // Regeln wie Sinthern
   const berechneEigenVerlust = (verl) => istAlterPeter
     ? verl * 1
+    : istGarching
+    ? Math.min(verl, 3) * 0.5
+      + Math.min(Math.max(verl - 3, 0), 3) * 1
+      + Math.max(verl - 6, 0) * 2
     : istBuure
     ? Math.min(verl, 2) * 0.5
       + Math.min(Math.max(verl - 2, 0), 2) * 1
@@ -1521,6 +1526,8 @@ function fillTable() {
   if (abreizRegelEl) {
     abreizRegelEl.innerHTML = istAlterPeter
       ? '(Eingepasst: je 0,50 €, Verlorene: je 1,00 €)'
+      : istGarching
+      ? '(Eingepasst: je 0,50 €, Verlorene 1–3: je 0,50 €, 4–6: je 1,00 €, ab 7: je 2,00 €)'
       : istBuure
       ? '(Eingepasst: je 0,50 €, Verlorene 1–2: je 0,50 €, 3–4: je 1,00 €, 5–6: je 1,50 €, ab 7: je 2,00 €)'
       : '(Eingepasst: je 0,50 €, Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)';
@@ -2672,8 +2679,26 @@ const MITSPIELER_ALTERPETER = [
 ];
 
 // ── Mitspieler-Liste Skatfreunde Garching ──────────────────────────
-// Noch keine Mitglieder hinterlegt: Namen über "Gast (Name eingeben)".
 const MITSPIELER_GARCHING = [
+	"Dunsch, Heiko",
+	"Fölsner, Sabine",
+	"Ganssmüller-Maluche, Annette",
+	"Gehrer, Resi",
+	"Grosshuldermann, Hans",
+	"Kuhn, Petra",
+	"Landmann, Werner",
+	"Lehmann, Uwe",
+	"Lo Bianco, Giuseppe",
+	"Loger, Michael",
+	"Maegle, Thomas",
+	"Müller, Christian",
+	"Obermeier, Angelika",
+	"Peteranderl, Benjamin",
+	"Ranft, Bernd",
+	"Scheibe, Thorsten",
+	"Steinmüller, Gunter",
+	"Steinmüller, Ulrike",
+	"Wraikow, Nedjalko (Nicki)",
 	"Gast"
 ];
 
@@ -3943,7 +3968,8 @@ function applyDayConfig() {
     document.title = titel;
     document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(l => {
       l.href = icon;
-      if (l.rel === 'icon') l.type = icon.endsWith('.gif') ? 'image/gif' : 'image/png';
+      if (l.rel === 'icon') l.type = icon.endsWith('.gif') ? 'image/gif'
+        : /\.jpe?g$/i.test(icon) ? 'image/jpeg' : 'image/png';
     });
   };
 
@@ -3952,11 +3978,11 @@ function applyDayConfig() {
     if (name) name.textContent = 'de vier Boore';
     setzeTab('de vier Boore - Skatliste', 'devierboore.png');
   } else if (vereinMode === 'garching') {
-    setzeTab('Skatfreunde Garching - Skatliste', 'garching.png');
-    // Logo garching.png; fehlt die Datei, Fallback auf Skat.png
+    setzeTab('Skatfreunde Garching - Skatliste', 'logo_garching.jpg');
+    // Logo logo_garching.jpg; fehlt die Datei, Fallback auf Skat.png
     if (logo) {
       logo.onerror = () => { logo.onerror = null; logo.src = 'Skat.png'; };
-      logo.src = 'garching.png';
+      logo.src = 'logo_garching.jpg';
     }
     if (name) name.textContent = 'Skatfreunde Garching';
   } else if (vereinMode === 'alterpeter') {
