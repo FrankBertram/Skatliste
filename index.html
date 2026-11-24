@@ -23,6 +23,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
     const firebaseConfig = {
       apiKey: "AIzaSyDmiQvDu0pxQYoidaZfRVY0BXZjLOHhw7w",
       authDomain: "skatverein-b77ef.firebaseapp.com",
@@ -33,7 +34,8 @@
     };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    window.__firestore = { db, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs, onSnapshot };
+    const auth = getAuth(app);   // anonyme Anmeldung für die Spieltag-Freigabe (Tablet-Kennung)
+    window.__firestore = { db, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, query, where, orderBy, limit, getDocs, onSnapshot, auth, signInAnonymously };
   </script>
   <!-- PDF-Export: html2canvas + jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -661,6 +663,13 @@
   <div style="font-size:32px; font-weight:bold; line-height:1.3;">Bitte<br>Querformat<br>anwenden</div>
 </div>
 
+<button id="freigabe-code-btn" type="button" onclick="freigabeCodeEingeben()"
+        title="Spieltag-Code vom Spielleiter eingeben"
+        style="display:none; position:fixed; top:6px; left:50%; transform:translateX(-50%); z-index:9000;
+               padding:6px 14px; border-radius:16px; border:1px solid #e65100;
+               background:#ff9800; color:#fff; font-size:15px; font-weight:bold; cursor:pointer;
+               box-shadow:0 2px 6px rgba(0,0,0,0.25);">🔑 Spieltag-Code eingeben</button>
+
 <button id="zoom-reset-btn" onclick="resetZoom()"
         title="Darstellung zurücksetzen"
         style="display:none; position:fixed; top:6px; right:6px; z-index:9000;
@@ -1048,6 +1057,91 @@ function isTestMode() {
 }
 function _spieltageCollection()    { return isTestMode() ? 'spieltage_test'      : 'spieltage'; }
 function _spieltageLiveCollection() { return isTestMode() ? 'spieltage_live_test' : 'spieltage_live'; }
+
+// ── Spieltag-Freigabe durch den Spielleiter ───────────────────────
+// Der Spielleiter gibt im Spieltag-Programm den Abend frei (freigabe/{datum},
+// offen = true) und erhält einen 6-stelligen Code (freigabe_code/{datum}, nur
+// für Spielleiter lesbar). Jedes Tablet meldet sich anonym bei Firebase an und
+// trägt sich mit dem Code unter freigabe/{datum}/geraete/{uid} ein. Die
+// Firestore-Regeln lassen Schreiben in spieltage/spieltage_live nur für
+// freigegebene Tablets (oder Spielleiter) bei offener Freigabe zu.
+// Test-Modus und Vereine ohne Firestore brauchen keine Freigabe.
+function _freigabeDatum() { return new Date().toISOString().split('T')[0]; }  // wie datum in spieltage
+function _freigabeNoetig() { return !isTestMode() && !istVereinOhneFirestore(); }
+function _istRechteFehler(e) {
+  return !!e && (e.code === 'permission-denied' || /permission/i.test(e.message || ''));
+}
+function _zeigeCodeButton(sichtbar) {
+  const b = document.getElementById('freigabe-code-btn');
+  if (b) b.style.display = sichtbar ? '' : 'none';
+}
+
+// Anonyme Firebase-Anmeldung (bleibt im Browser gespeichert = feste Tablet-Kennung).
+// Liefert null, wenn die anonyme Anmeldung nicht möglich ist.
+async function _tabletAnmelden() {
+  const fs = window.__firestore;
+  if (!fs || !fs.auth) return null;
+  try {
+    if (fs.auth.authStateReady) await fs.auth.authStateReady();
+    if (fs.auth.currentUser) return fs.auth.currentUser;
+    const cred = await fs.signInAnonymously(fs.auth);
+    return cred.user;
+  } catch (e) {
+    console.warn('[Freigabe] Anonyme Anmeldung fehlgeschlagen:', e?.code || e?.message);
+    return null;
+  }
+}
+
+// Beim Start: Ist der Abend freigegeben und dieses Tablet noch nicht angemeldet?
+// Dann den Code-Knopf einblenden (kein Pop-up beim Laden).
+async function pruefeFreigabeStatus() {
+  if (!_freigabeNoetig() || !window.__firestore) return;
+  const { db, doc, getDoc } = window.__firestore;
+  const datum = _freigabeDatum();
+  try {
+    const fg = await getDoc(doc(db, 'freigabe', datum));
+    if (!fg.exists() || fg.data().offen !== true) { _zeigeCodeButton(false); return; }
+    const user = await _tabletAnmelden();
+    if (!user) { _zeigeCodeButton(true); return; }
+    const g = await getDoc(doc(db, 'freigabe', datum, 'geraete', user.uid));
+    _zeigeCodeButton(!g.exists());
+  } catch (e) {
+    console.warn('[Freigabe] Status nicht prüfbar:', e?.code || e?.message);
+  }
+}
+
+// Code abfragen und dieses Tablet für heute anmelden.
+// true = erfolgreich, false = abgelehnt/Fehler (Meldung kam schon), null = abgebrochen.
+async function freigabeCodeEingeben(grund) {
+  if (!window.__firestore) return false;
+  const eingabe = prompt((grund ? grund + '\n\n' : '') + 'Bitte den Spieltag-Code vom Spielleiter eingeben:');
+  if (eingabe == null) return null;
+  const code = String(eingabe).replace(/\D/g, '');
+  if (!code) return null;
+  const user = await _tabletAnmelden();
+  if (!user) {
+    alert('❌ Anmeldung bei Firebase nicht möglich.\n\n(Ist die anonyme Anmeldung in der Firebase-Konsole aktiviert? Besteht eine Internetverbindung?)');
+    return false;
+  }
+  const { db, doc, setDoc, serverTimestamp } = window.__firestore;
+  try {
+    await setDoc(doc(db, 'freigabe', _freigabeDatum(), 'geraete', user.uid), {
+      code,
+      angemeldetAm: serverTimestamp(),
+      tisch: document.getElementById('tisch-auswahl')?.value || '',
+      verein: document.getElementById('club-name')?.textContent || ''
+    });
+    _zeigeCodeButton(false);
+    alert('✅ Tablet für den heutigen Spieltag freigeschaltet.');
+    return true;
+  } catch (e) {
+    console.warn('[Freigabe] Code abgelehnt:', e?.code || e?.message);
+    alert(_istRechteFehler(e)
+      ? '❌ Code falsch oder der Spieltag ist vom Spielleiter nicht freigegeben.'
+      : '❌ Freischalten fehlgeschlagen: ' + (e?.message || e));
+    return false;
+  }
+}
 
 const kartenDefault = 36;
 spielDaten = Array(kartenDefault).fill(null).map((_, i) => ({
@@ -3614,19 +3708,30 @@ async function saveSerieToFirestore() {
       }
     }
 
-    await setDoc(docRef, {
+    const daten = {
       datum, serie, tisch, spielerAnzahl, spieler,
       abreizgeld: abreizgeldTisch,   // Summe Abreizgeld des Tisches in €, ohne Spieleinsatz
       gespeichertAm: new Date().toISOString(),
       ...(isTestMode() ? { test: true } : {})
-    });
+    };
+    if (_freigabeNoetig()) await _tabletAnmelden();
+    try {
+      await setDoc(docRef, daten);
+    } catch (e) {
+      // Ohne Spieltag-Freigabe: Code abfragen, dann einmal wiederholen
+      if (!_freigabeNoetig() || !_istRechteFehler(e)) throw e;
+      const ok = await freigabeCodeEingeben('Speichern ist nur mit Freigabe des Spielleiters möglich.');
+      if (ok === null) alert('ℹ️ Nicht gespeichert – ohne Spieltag-Code ist Speichern nicht möglich.');
+      if (!ok) return;
+      await setDoc(docRef, daten);
+    }
     alert(isTestMode()
       ? "✅ Serie in Firebase (TEST-Collection) gespeichert!"
       : "✅ Serie in Firebase gespeichert!");
   } catch (e) {
     console.error("Firestore-Fehler:", e);
     if (e.code === "permission-denied" || /permission/i.test(e.message)) {
-      alert("❌ Speichern nur am Clubabend möglich.");
+      alert("❌ Speichern nicht erlaubt – der Spieltag ist nicht (mehr) vom Spielleiter freigegeben.");
     } else {
       alert("❌ Speichern in Firebase fehlgeschlagen: " + e.message);
     }
@@ -3666,6 +3771,7 @@ async function saveGameLive(index) {
     minuswert: (s.minuswert === "" || s.minuswert == null) ? 0 : Number(s.minuswert)
   };
   try {
+    if (_freigabeNoetig()) await _tabletAnmelden();
     await setDoc(doc(db, _spieltageLiveCollection(), id), {
       datum, serie: parseInt(serie), tisch: parseInt(tisch),
       spielerAnzahl,
@@ -3675,6 +3781,7 @@ async function saveGameLive(index) {
     }, { merge: true });
   } catch (e) {
     console.warn("Live-Save fehlgeschlagen:", e?.code || e?.message);
+    if (_freigabeNoetig() && _istRechteFehler(e)) _zeigeCodeButton(true);
   }
 }
 
@@ -3688,6 +3795,7 @@ async function clearLiveDoc() {
   if (istVereinOhneFirestore()) return;
   const { db, doc, deleteDoc } = window.__firestore;
   const { id } = _liveDocId();
+  if (_freigabeNoetig()) await _tabletAnmelden();
   try { await deleteDoc(doc(db, _spieltageLiveCollection(), id)); }
   catch (e) { /* silent — evtl. gab es noch kein Doc */ }
 }
@@ -4080,7 +4188,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.26) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.27) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -4653,6 +4761,7 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
 
 window.addEventListener("load", async () => {
   applyDayConfig();  // Logo + Vereinsname je nach Datum / URL-Hash
+  pruefeFreigabeStatus();  // Spieltag-Code-Knopf einblenden, falls nötig (nicht blockierend)
 
   // An Sondertagen die Mitspieler-Liste aus Firebase nachladen (Preisskat = 'J')
   if (isSpecialDay()) {
@@ -4707,7 +4816,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.26)
+    © 2026 by Frank Bertram (V1.27)
     </div>
 </body>
 </html>
