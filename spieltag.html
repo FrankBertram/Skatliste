@@ -145,6 +145,7 @@
         })();
         // Spielstand je Verein getrennt speichern
         const SKAT_STATE_KEY = VEREIN.extern ? 'skat_state_' + VEREIN.id : 'skat_state';
+        const SETZLISTE_KEY = VEREIN.extern ? 'skat_setzliste2_' + VEREIN.id : 'skat_setzliste2';
         // Vereinskonfiguration, lokal zwischengespeichert (Termine sofort beim Start verfügbar)
         let VEREIN_KONFIG = null;
         if (VEREIN.extern) {
@@ -222,7 +223,7 @@
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.4" aria-hidden="true" style="flex-shrink:0;"><rect x="1.5" y="2.5" width="11" height="7" rx="1"/><line x1="5" y1="12" x2="9" y2="12"/><line x1="7" y1="9.5" x2="7" y2="12"/></svg>
                 Online
             </button>
-            <button data-nur-sinthern onclick="showMitspielerVerwaltung()" style="background:#00897b;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
+            <button onclick="showMitspielerVerwaltung()" style="background:#00897b;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.4" aria-hidden="true" style="flex-shrink:0;"><circle cx="7" cy="5" r="2.5"/><path d="M2.5 12 C2.5 9.5 4.5 8.5 7 8.5 C9.5 8.5 11.5 9.5 11.5 12"/></svg>
                 Mitspieler
             </button>
@@ -244,8 +245,8 @@
             <div style="display:flex;gap:5px;margin-bottom:5px;">
                 <button onclick="alleWaehlen(true)" style="font-size:11px;padding:3px 6px;margin:0;width:auto;">Alle</button>
                 <button onclick="alleWaehlen(false)" style="font-size:11px;padding:3px 6px;margin:0;width:auto;">Keine</button>
-                <button data-nur-sinthern onclick="loadMitspielerFromFirebase(this)" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#00897b;color:white;border:none;border-radius:4px;cursor:pointer;">Aus Firebase laden</button>
-                <button data-nur-sinthern onclick="auslosungStarten()" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#6a1b9a;color:white;border:none;border-radius:4px;cursor:pointer;">Auslosung</button>
+                <button onclick="loadMitspielerFromFirebase(this)" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#00897b;color:white;border:none;border-radius:4px;cursor:pointer;">Aus Firebase laden</button>
+                <button onclick="auslosungStarten()" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#6a1b9a;color:white;border:none;border-radius:4px;cursor:pointer;">Auslosung</button>
             </div>
             <div class="checkbox-list" id="playerCheckboxes"></div>
             
@@ -276,7 +277,7 @@
                     </select>
                     <button id="signInBtn" onclick="signInGoogle()" style="background:#424242;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Anmelden</button>
                     <button id="signOutBtn" onclick="signOutGoogle()" style="display:none;background:#9e9e9e;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Abmelden</button>
-                    <button id="copyUidBtn" onclick="copyUid()" style="display:none;background:#1976d2;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">UID kopieren</button>
+                    <button id="copyUidBtn" onclick="copyUid()" style="display:none;background:#1976d2;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;" title="E-Mail mit der UID an den Admin vorbereiten (für die Spielleiter-Freischaltung)">✉️ UID an Admin</button>
                     <span id="authStatus" style="font-size:12px;color:#888;">nicht angemeldet</span>
                 </div>
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;">
@@ -306,11 +307,11 @@
                 Serie 2 starten
             </button>
 
-            <button data-nur-sinthern id="saveSetzlisteBtn" onclick="saveSetzlisteSerie2(this)" style="display:none; background:#1565c0;">
+            <button class="nur-2-serien" id="saveSetzlisteBtn" onclick="saveSetzlisteSerie2(this)" style="display:none; background:#1565c0;">
                 Setzliste für Serie 2 speichern
             </button>
 
-            <button data-nur-sinthern id="showTischverteilungBtn" onclick="showTischverteilung()" style="display:none; background:#6a1b9a;">
+            <button class="nur-2-serien" id="showTischverteilungBtn" onclick="showTischverteilung()" style="display:none; background:#6a1b9a;">
                 Tischverteilung Serie 2 anzeigen
             </button>
 
@@ -639,12 +640,8 @@
         // Spielerliste laden: bevorzugt die Preisskat-Mitspieler aus Firebase (mitspieler/Liste), alphabetisch.
         // Nur wenn Firebase nicht erreichbar oder leer ist, Rückfall auf Mitspieler.txt.
         async function loadStartPlayers() {
-            if (VEREIN.extern) {
-                // erst nach dem Initialisieren des restlichen Skripts (maskiert, Tabellen …)
-                await new Promise(r => setTimeout(r, 0));
-                loadPlayers(VEREIN.mitspieler.slice().sort((a, b) => a.localeCompare(b, 'de')).join('\n'));
-                return true;
-            }
+            // erst nach dem Initialisieren des restlichen Skripts (maskiert, Tabellen …)
+            await new Promise(r => setTimeout(r, 0));
             // Firebase-Modul wird nach diesem Skript geladen – kurz darauf warten
             for (let i = 0; i < 50 && typeof window.fetchFirebaseMitspielerNames !== 'function'; i++) {
                 await new Promise(r => setTimeout(r, 100));
@@ -656,6 +653,11 @@
                 }
             } catch (e) {
                 console.warn('Mitspieler aus Firebase konnten nicht geladen werden:', e);
+            }
+            // Andere Vereine: feste Liste aus VEREINE_SPIELTAG, solange in Firestore keine Liste gepflegt ist
+            if (VEREIN.extern) {
+                loadPlayers(VEREIN.mitspieler.slice().sort((a, b) => a.localeCompare(b, 'de')).join('\n'));
+                return true;
             }
             try {
                 const r = await fetch('Mitspieler.txt');
@@ -808,7 +810,7 @@ function loadPlayers(text) {
             } catch (e) {
                 console.warn('Teilnehmer konnten nicht übergeben werden:', e);
             }
-            window.location.href = 'turnier.html';
+            window.location.href = 'turnier.html' + (VEREIN.extern ? '?club=' + VEREIN.id : '');
         }
 
         // Namens-Schlüssel für den Abgleich Firestore <-> Haupt-Spielerliste.
@@ -1252,7 +1254,7 @@ window.saveSetzlisteSerie2 = async function(btn) {
         try {
             const punkte = {};
             list.forEach(p => { punkte[p.name] = p.res1 === '' || p.res1 == null ? 0 : p.res1; });
-            localStorage.setItem('skat_setzliste2', JSON.stringify({ datum: new Date().toISOString().slice(0, 10), tische, punkte }));
+            localStorage.setItem(SETZLISTE_KEY, JSON.stringify({ datum: new Date().toISOString().slice(0, 10), tische, punkte }));
         } catch (e) { console.warn('Setzliste konnte nicht lokal gemerkt werden:', e); }
         updateTischverteilungBtn();
     }
@@ -1260,7 +1262,7 @@ window.saveSetzlisteSerie2 = async function(btn) {
 
 function loadGespeicherteSetzliste() {
     try {
-        const s = JSON.parse(localStorage.getItem('skat_setzliste2') || 'null');
+        const s = JSON.parse(localStorage.getItem(SETZLISTE_KEY) || 'null');
         return (s && s.datum === new Date().toISOString().slice(0, 10) && Array.isArray(s.tische)) ? s : null;
     } catch (e) { return null; }
 }
@@ -1642,7 +1644,7 @@ function updateRanking() {
         function neustart() {
             if (!confirm('Wirklich alle Ergebnisse löschen und neu starten?')) return;
             localStorage.removeItem(SKAT_STATE_KEY);
-            localStorage.removeItem('skat_setzliste2');
+            localStorage.removeItem(SETZLISTE_KEY);
             updateTischverteilungBtn();
             currentRound = 1;
             editingPlayer = null;
@@ -1791,7 +1793,7 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.13)
+    © 2026 by Frank Bertram (V1.15)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
@@ -1878,7 +1880,7 @@ function updateRanking() {
             </div>
             <h2 style="margin:0;font-size:22px;font-weight:700;text-align:center;letter-spacing:0.3px;">Mitspieler-Verwaltung</h2>
             <div style="justify-self:end;display:flex;align-items:center;gap:8px;">
-                <button onclick="copyPreisskatNames(this)" style="background:#1565c0;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">Preisskat kopieren</button>
+                <button data-nur-sinthern onclick="copyPreisskatNames(this)" style="background:#1565c0;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">Preisskat kopieren</button>
                 <button onclick="saveMitspielerVerw()" style="background:#388e3c;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">Speichern</button>
                 <button onclick="closeMitspielerVerw()" style="background:#9e9e9e;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">Schließen</button>
             </div>
@@ -2408,7 +2410,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 // Mitspieler-Liste aus Firestore: Dokument 'mitspieler/Liste', Feld 'Mitspieler' (Array)
                 // Alt: Array von Strings. Neu: Array von Objekten { name, eintritt, mitglied }.
                 const extern = VEREIN.extern;
-                const listeSnap = extern ? null : await getDoc(doc(db, 'mitspieler', 'Liste'));
+                const listeSnap = extern ? null : await getDoc(doc(db, BEREICH + 'mitspieler', 'Liste'));
                 const mitspieler = new Set();
                 const mitspielerInfo = {}; // name -> { eintritt, mitglied }
                 // Andere Vereine: keine Mitgliederliste – es zählen alle Spieler mit Ergebnissen der Saison
@@ -2788,7 +2790,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             const datesWithData = new Set();
             // Andere Vereine: nur Spieler mit Ergebnis zeigen (keine Mitgliederliste in Firestore)
             if (!VEREIN.extern) try {
-                const listeSnap = await getDoc(doc(db, 'mitspieler', 'Liste'));
+                const listeSnap = await getDoc(doc(db, BEREICH + 'mitspieler', 'Liste'));
                 if (listeSnap.exists()) {
                     const arr = listeSnap.data().Mitspieler || [];
                     arr.forEach(entry => {
@@ -3792,6 +3794,36 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
 
         let mitspielerVerwData = [];
 
+        // ===== Geschützte Mitspieler-Daten =====
+        // Öffentlich (Skatliste, Wertungen): mitspieler/Liste { name, eintritt, mitglied, preisskat, online }.
+        // Nur Spielleiter: mitspieler_privat/Liste { Mitspieler: [{ name, email, geburtsdatum }] }
+        // (andere Vereine jeweils unter vereine/<id>/…). Ältere öffentliche Listen enthalten E-Mail /
+        // Geburtsdatum noch – sie werden als Rückfall gelesen und beim nächsten Speichern entfernt.
+        let mvPrivatLesbar = false;
+        async function ladeMitspielerMitPrivat() {
+            const [snap, privat] = await Promise.all([
+                getDoc(doc(db, BEREICH + 'mitspieler', 'Liste')),
+                getDoc(doc(db, BEREICH + 'mitspieler_privat', 'Liste')).catch(err => {
+                    console.warn('Geschützte Mitspieler-Daten nicht lesbar (nur Spielleiter):', err && err.message);
+                    return null;
+                })
+            ]);
+            mvPrivatLesbar = !!privat;
+            const p = {};
+            if (privat && privat.exists()) {
+                (privat.data().Mitspieler || []).forEach(e => {
+                    if (e && e.name) p[String(e.name).trim().toLowerCase()] = e;
+                });
+            }
+            const arr = (snap.exists() ? (snap.data().Mitspieler || []) : []).map(e => {
+                if (!e || typeof e !== 'object') return e;
+                const x = p[String(e.name || '').trim().toLowerCase()];
+                return x ? { ...e, email: x.email || e.email || '', geburtsdatum: x.geburtsdatum || e.geburtsdatum || '' } : e;
+            });
+            // getDoc-ähnliches Ergebnis, damit die Aufrufer unverändert bleiben
+            return { exists: () => snap.exists(), data: () => ({ Mitspieler: arr }) };
+        }
+
         // Preisskat-Teilnehmer: tolerant lesen (true, 'J'/'j'/'ja', 'y', 1).
         function isPreisskatTrue(v) {
             if (v === true || v === 1) return true;
@@ -3810,7 +3842,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             if (__preisskatLoading) return;
             __preisskatLoading = true;
             try {
-                const snap = await getDoc(doc(db, 'mitspieler', 'Liste'));
+                const snap = await getDoc(doc(db, BEREICH + 'mitspieler', 'Liste'));
                 const names = [];
                 if (snap.exists()) {
                     (snap.data().Mitspieler || []).forEach(e => {
@@ -3836,7 +3868,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
         // bereits vorhandene Spieler/Ergebnisse bleiben erhalten, nur fehlende werden ergänzt).
         // Namen aus 'mitspieler/Liste' mit Preisskat-Haken, alphabetisch. Wird auch beim Start und bei Neustart genutzt.
         window.fetchFirebaseMitspielerNames = async function() {
-            const snap = await getDoc(doc(db, 'mitspieler', 'Liste'));
+            const snap = await getDoc(doc(db, BEREICH + 'mitspieler', 'Liste'));
             const names = [];
             if (snap.exists()) {
                 (snap.data().Mitspieler || []).forEach(e => {
@@ -3856,7 +3888,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             try {
                 const names = await window.fetchFirebaseMitspielerNames();
                 if (!names.length) {
-                    alert('Keine Mitspieler mit Preisskat-Haken in Firebase gefunden.');
+                    alert(VEREIN.extern ? 'Keine Mitspieler mit Haken „Auswahlliste“ in Firebase gefunden (Mitspieler-Verwaltung).' : 'Keine Mitspieler mit Preisskat-Haken in Firebase gefunden.');
                     return;
                 }
                 let added = 0;
@@ -3869,7 +3901,9 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 updateSelectedPlayers();
                 if (typeof window.applyPreisskatFilter === 'function') window.applyPreisskatFilter();
                 saveState();
-                alert(`${names.length} Preisskat-Mitspieler in Firebase – ${added} neu übernommen, ${removed} ohne Preisskat-Haken entfernt.`);
+                alert(VEREIN.extern
+                    ? `${names.length} Mitspieler in der Auswahlliste – ${added} neu übernommen, ${removed} entfernt.`
+                    : `${names.length} Preisskat-Mitspieler in Firebase – ${added} neu übernommen, ${removed} ohne Preisskat-Haken entfernt.`);
             } catch (err) {
                 console.error('Mitspieler aus Firebase laden fehlgeschlagen:', err);
                 alert('Laden fehlgeschlagen: ' + (err && err.message ? err.message : err));
@@ -3891,7 +3925,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             openOverlay('mitspielerVerwModal');
             content.innerHTML = 'Lade Daten aus Firestore …';
             try {
-                const snap = await getDoc(doc(db, 'mitspieler', 'Liste'));
+                const snap = await ladeMitspielerMitPrivat();
                 const arr = snap.exists() ? (snap.data().Mitspieler || []) : [];
                 mitspielerVerwData = arr.map(e => {
                     if (typeof e === 'string') {
@@ -3908,8 +3942,21 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                         email: (e.email || '').trim()
                     };
                 }).filter(e => e && e.name);
+                // Andere Vereine: noch keine Liste in Firestore → mit der festen Vereinsliste vorbelegen
+                if (VEREIN.extern && !snap.exists()) {
+                    mitspielerVerwData = VEREIN.mitspieler.map(name => ({ name, eintritt: '', geburtsdatum: '',
+                        mitglied: true, preisskat: true, online: false, email: '' }));
+                }
                 mitspielerVerwData.sort((a, b) => a.name.localeCompare(b.name, 'de'));
                 renderMitspielerVerw();
+                if (!mvPrivatLesbar) {
+                    document.getElementById('mitspielerVerwContent').insertAdjacentHTML('afterbegin',
+                        '<p style="max-width:1200px;margin:0 auto 10px;padding:8px 10px;background:#ffebee;border-radius:4px;font-size:13px;">🔒 E-Mail und Geburtsdatum sind geschützt und nur für angemeldete Spielleiter sichtbar. Bitte anmelden, um die Liste zu bearbeiten.</p>');
+                }
+                if (VEREIN.extern && !snap.exists()) {
+                    document.getElementById('mitspielerVerwContent').insertAdjacentHTML('afterbegin',
+                        '<p style="max-width:1200px;margin:0 auto 10px;padding:8px 10px;background:#fff8e1;border-radius:4px;font-size:13px;">Noch keine Mitspielerliste in Firestore – vorbelegt mit der Vereinsliste. Bitte prüfen und <b>Speichern</b>.</p>');
+                }
             } catch (err) {
                 console.error(err);
                 content.innerHTML = `<p style="color:#d32f2f;">Fehler beim Laden: ${err.message || err}</p>`;
@@ -3935,8 +3982,8 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             html += `<th style="${th}text-align:left;width:140px;">Eintritt</th>`;
             html += `<th style="${th}text-align:left;width:140px;">Geburtsdatum</th>`;
             html += `<th style="${th}text-align:center;width:80px;">Mitglied</th>`;
-            html += `<th style="${th}text-align:center;width:90px;">Preisskat</th>`;
-            html += `<th style="${th}text-align:center;width:70px;">Online</th>`;
+            html += `<th style="${th}text-align:center;width:90px;" title="${VEREIN.extern ? 'erscheint in der Auswahlliste (Spieltag und Skatliste)' : ''}">${VEREIN.extern ? 'Auswahlliste' : 'Preisskat'}</th>`;
+            if (!VEREIN.extern) html += `<th style="${th}text-align:center;width:70px;">Online</th>`;
             html += `<th style="${th}text-align:left;width:420px;">E-Mail</th>`;
             html += `<th style="${th}text-align:center;width:60px;"></th>`;
             html += '</tr></thead><tbody>';
@@ -3948,7 +3995,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 html += `<td style="${cell}"><input type="date" value="${escapeHtmlAttr(e.geburtsdatum)}" oninput="mvSet(${i},'geburtsdatum',this.value)" style="${inputStyle}"></td>`;
                 html += `<td style="${cell}text-align:center;"><input type="checkbox" ${e.mitglied ? 'checked' : ''} onchange="mvSet(${i},'mitglied',this.checked)" style="width:18px;height:18px;cursor:pointer;"></td>`;
                 html += `<td style="${cell}text-align:center;"><input type="checkbox" ${e.preisskat ? 'checked' : ''} onchange="mvSet(${i},'preisskat',this.checked)" style="width:18px;height:18px;cursor:pointer;"></td>`;
-                html += `<td style="${cell}text-align:center;"><input type="checkbox" ${e.online ? 'checked' : ''} onchange="mvSet(${i},'online',this.checked)" style="width:18px;height:18px;cursor:pointer;"></td>`;
+                if (!VEREIN.extern) html += `<td style="${cell}text-align:center;"><input type="checkbox" ${e.online ? 'checked' : ''} onchange="mvSet(${i},'online',this.checked)" style="width:18px;height:18px;cursor:pointer;"></td>`;
                 html += `<td style="${cell}"><input type="email" id="mvEmail_${i}" value="${escapeHtmlAttr(e.email)}" oninput="mvSet(${i},'email',this.value)" style="${inputStyle}"></td>`;
                 html += `<td style="${cell}text-align:center;"><button onclick="removeMitspielerVerw(${i})" style="background:#e53935;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:14px;line-height:1;">×</button></td>`;
                 html += '</tr>';
@@ -4140,7 +4187,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 }
 
                 const seen = new Set();
-                const snap = await getDoc(doc(db, 'mitspieler', 'Liste'));
+                const snap = await ladeMitspielerMitPrivat();
                 if (snap.exists()) {
                     const arr = snap.data().Mitspieler || [];
                     arr.forEach(e => {
@@ -4246,7 +4293,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             let recipients = [];
             try {
                 const seen = new Set();
-                const snap = await getDoc(doc(db, 'mitspieler', 'Liste'));
+                const snap = await ladeMitspielerMitPrivat();
                 (snap.exists() ? (snap.data().Mitspieler || []) : []).forEach(e => {
                     if (!e || typeof e !== 'object' || e.online !== true) return;
                     const email = (e.email || '').trim();
@@ -4459,7 +4506,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
         }
 
         async function loadOnlineTeilnehmer() {
-            const snap = await getDoc(doc(db, 'mitspieler', 'Liste'));
+            const snap = await getDoc(doc(db, BEREICH + 'mitspieler', 'Liste'));
             const arr = snap.exists() ? (snap.data().Mitspieler || []) : [];
             return arr
                 .filter(e => e && typeof e === 'object' && e.online === true && (e.name || '').trim())
@@ -4829,8 +4876,17 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 alert('Doppelte Namen: ' + [...new Set(dupes)].join(', '));
                 return;
             }
+            if (!mvPrivatLesbar) {
+                alert('Speichern nur für angemeldete Spielleiter (E-Mail und Geburtsdatum sind geschützt).\nBitte anmelden und die Mitspieler-Verwaltung neu öffnen.');
+                return;
+            }
+            // E-Mail und Geburtsdatum nur im geschützten Dokument, öffentlich ohne diese Felder
+            const oeffentlich = clean.map(({ email, geburtsdatum, ...rest }) => rest);
+            const geschuetzt = clean.filter(e => e.email || e.geburtsdatum)
+                .map(e => ({ name: e.name, email: e.email, geburtsdatum: e.geburtsdatum }));
             try {
-                await setDoc(doc(db, 'mitspieler', 'Liste'), { vereinId: VEREIN_ID, Mitspieler: clean });
+                await setDoc(doc(db, BEREICH + 'mitspieler_privat', 'Liste'), { vereinId: VEREIN_ID, Mitspieler: geschuetzt });
+                await setDoc(doc(db, BEREICH + 'mitspieler', 'Liste'), { vereinId: VEREIN_ID, Mitspieler: oeffentlich });
                 // Preisskat-Namen-Cache aktualisieren, damit die Filterung sofort greift
                 window.__preisskatNames = clean.filter(e => e.preisskat).map(e => e.name);
                 window.__preisskatLoaded = true;
@@ -4860,18 +4916,16 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
         window.signOutGoogle = function() {
             signOut(auth);
         };
+        // Statt "UID kopieren": E-Mail an den Admin mit UID vorbereiten (öffnet das Mailprogramm)
+        const ADMIN_EMAIL = 'frank.bertram@koeln.de';
         window.copyUid = function() {
             const u = auth.currentUser;
             if (!u) { alert('Nicht angemeldet.'); return; }
-            const txt = u.uid;
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(txt).then(
-                    () => alert('UID in Zwischenablage:\n' + txt),
-                    () => prompt('UID (manuell kopieren):', txt)
-                );
-            } else {
-                prompt('UID (manuell kopieren):', txt);
-            }
+            const betreff = `Spielleiter-Freischaltung ${VEREIN.name}`;
+            const text = `Hallo Frank,\n\nbitte schalte mich als Spielleiter für „${VEREIN.name}“ frei` +
+                ` (Firestore: spielleiter/<UID>, Feld verein = ${VEREIN.id}).\n\n` +
+                `Name: ${u.displayName || ''}\nE-Mail: ${u.email || ''}\nUID: ${u.uid}\nVereins-ID: ${VEREIN.id}\n\nViele Grüße`;
+            location.href = `mailto:${ADMIN_EMAIL}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
         };
 
         // Setzliste/Turnierauslosung in Firestore-Collection 'turnierauslosungen' ablegen
@@ -4885,7 +4939,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 // erneutes Speichern überschreibt statt Duplikate anzulegen.
                 const dateInput = document.getElementById('importDate');
                 const datum = (dateInput && dateInput.value) || new Date().toISOString().slice(0, 10);
-                const ref = doc(db, 'turnierauslosungen', `${datum}_S${payload.serie}`);
+                const ref = doc(db, BEREICH + 'turnierauslosungen', `${datum}_S${payload.serie}`);
                 // Serie 2 kann ausgelost (turnier.html, art 'auslosung') oder nach Serie 1
                 // gesetzt sein (art 'setzliste'). Eine Auslosung nur nach Rückfrage ersetzen.
                 const vorhanden = await getDoc(ref);

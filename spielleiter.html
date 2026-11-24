@@ -68,7 +68,7 @@
     <div class="zeile">
       <button id="btn-login">Mit Google anmelden</button>
       <button id="btn-logout" class="grau" style="display:none;">Abmelden</button>
-      <button id="btn-uid" class="grau" style="display:none;">UID kopieren</button>
+      <button id="btn-uid" class="grau" style="display:none;" title="E-Mail mit der UID an den Admin vorbereiten">✉️ UID an Admin</button>
       <span class="status" id="login-status">nicht angemeldet</span>
     </div>
     <div class="zeile" id="verein-zeile" style="margin-top:10px; display:none;">
@@ -198,10 +198,19 @@
   $('btn-login').onclick = () => signInWithPopup(auth, new GoogleAuthProvider())
     .catch(e => alert('Anmeldung fehlgeschlagen: ' + (e?.message || e)));
   $('btn-logout').onclick = () => signOut(auth);
-  $('btn-uid').onclick = async () => {
-    const uid = auth.currentUser?.uid || '';
-    try { await navigator.clipboard.writeText(uid); alert('UID kopiert:\n' + uid); }
-    catch { prompt('UID:', uid); }
+  // Statt "UID kopieren": E-Mail an den Admin mit UID vorbereiten (öffnet das Mailprogramm)
+  const ADMIN_EMAIL = 'frank.bertram@koeln.de';
+  $('btn-uid').onclick = () => {
+    const u = auth.currentUser;
+    if (!u) return;
+    const w = (new URLSearchParams(location.search).get('verein') || '').toLowerCase();
+    const vid = VEREINE[w] ? w : (verein || 'sinthern');
+    const vname = VEREINE[vid].name;
+    const betreff = `Spielleiter-Freischaltung ${vname}`;
+    const text = `Hallo Frank,\n\nbitte schalte mich als Spielleiter für „${vname}“ frei` +
+      ` (Firestore: spielleiter/<UID>, Feld verein = ${vid}).\n\n` +
+      `Name: ${u.displayName || ''}\nE-Mail: ${u.email || ''}\nUID: ${u.uid}\nVereins-ID: ${vid}\n\nViele Grüße`;
+    location.href = `mailto:${ADMIN_EMAIL}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
   };
   $('verein-auswahl').onchange = e => setzeVerein(e.target.value);
 
@@ -263,7 +272,7 @@
     erlaubteVereine = erlaubteVereine.filter(v => VEREINE[v]);
     if (erlaubteVereine.length === 0) {
       $('login-status').innerHTML = esc(user.displayName || user.email || '') +
-        ' – <b>kein Spielleiter</b>. Bitte die UID („UID kopieren“) an den Admin schicken.';
+        ' – <b>kein Spielleiter</b>. Bitte über „✉️ UID an Admin“ die Freischaltung anfordern.';
       return;
     }
     $('login-status').textContent = (user.displayName || user.email || '') + ' – Spielleiter';

@@ -548,10 +548,10 @@
 <div class="container">
   <div class="top-bar">
     <div class="clock" id="clock"></div>
-    <div class="top-title"><img src="Skat.png" alt="" style="height:1.3em;vertical-align:middle;border-radius:3px;"> Turnier-Auslosung</div>
+    <div class="top-title"><img id="vereinLogo" src="Skat.png" alt="" style="height:1.3em;vertical-align:middle;border-radius:3px;"> Turnier-Auslosung</div>
     <div class="top-actions">
     <button class="nav-link" id="authBtn" onclick="toggleAuth()" title="Mit Google anmelden">Anmelden</button>
-    <a class="nav-link" href="spieltag.html" title="Zur Auslosung Tisch 1">&larr; Tisch 1</a>
+    <a class="nav-link" href="spieltag.html" id="zurueckLink" title="Zur Auslosung Tisch 1">&larr; Tisch 1</a>
     <button class="sound-toggle" onclick="toggleSound()" title="Sound an/aus">
       <svg id="soundOn" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
       <svg id="soundOff" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
@@ -632,7 +632,9 @@
     const d = new Date();
     const datum = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const id = `${datum}_S${data.serie}`;
-    const ref = doc(db, "turnierauslosungen", id);
+    // Andere Vereine (?club=garching|boore): eigener Bereich vereine/<id>/turnierauslosungen
+    const v = window.TURNIER_VEREIN;
+    const ref = doc(db, (v ? `vereine/${v.id}/` : "") + "turnierauslosungen", id);
     // Serie 2 kann auch als Setzliste nach Serie 1 gespeichert sein (art 'setzliste'):
     // die nur nach Rückfrage durch die Auslosung ersetzen.
     const vorhanden = await getDoc(ref);
@@ -642,7 +644,7 @@
     await setDoc(ref, {
       ...data,
       datum,
-      vereinId: "sinthern",   // Vereins-ID (Stammdaten unter vereine/sinthern)
+      vereinId: v ? v.id : "sinthern",   // Vereins-ID (Stammdaten unter vereine/<id>)
       art: "auslosung",
       uid: user ? user.uid : null,
       email: user ? (user.email || null) : null,
@@ -654,6 +656,24 @@
 </script>
 
 <script>
+  // Verein aus der URL (?club=garching | ?club=boore), ohne Parameter = Sintherner Skatclub
+  window.TURNIER_VEREIN = (function() {
+    let c = (new URLSearchParams(location.search).get('club') || '').toLowerCase();
+    if (c === 'devierboore' || c === '4boore') c = 'boore';
+    const VEREINE = {
+      garching: { id: 'garching', name: 'Skatfreunde Garching', logo: 'logo_garching.jpg' },
+      boore:    { id: 'boore',    name: 'de vier Boore',        logo: 'devierboore.png' }
+    };
+    return VEREINE[c] || null;
+  })();
+  if (window.TURNIER_VEREIN) {
+    const v = window.TURNIER_VEREIN;
+    document.getElementById('vereinLogo').src = v.logo;
+    document.title = 'Turnier-Auslosung – ' + v.name;
+    const z = document.getElementById('zurueckLink');
+    z.href = z.getAttribute('href') + '?club=' + v.id;
+  }
+
   const SEGMENT_COLORS = ['#dc2626','#ea580c','#ca8a04','#16a34a','#0d9488','#2563eb','#7c3aed','#be185d'];
   const CELL = 36; // Zellhöhe der Rolle in px (muss zu .roll-cell / .roll-window passen)
 
