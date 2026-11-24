@@ -44,6 +44,11 @@
     td.r, th.r { text-align: right; }
     .leer { color: #999; font-size: 14px; }
     #links a { color: #1976d2; text-decoration: none; font-weight: 600; }
+    .kf-tab { border-collapse: collapse; font-size: 14px; }
+    .kf-tab th { text-align: left; font-weight: 600; padding: 3px 6px; color: #555; }
+    .kf-tab td { padding: 3px 6px; }
+    .kf-tab input, .kf-tab select { font-size: 14px; padding: 4px; }
+    .kf-tab input[type=number] { width: 70px; }
   </style>
 </head>
 <body>
@@ -94,6 +99,27 @@
       Ein neuer Code gilt nur für Tablets, die sich danach anmelden.</p>
   </div>
 
+  <div class="card" id="karte-konfig" style="display:none;">
+    <h2>Vereinskonfiguration</h2>
+    <div class="status" style="margin-bottom:8px;">Termine und Serien für das Spieltag-Programm (Tages- und Jahreswertung).</div>
+    <div class="zeile">
+      <span>Serien pro Spieltag:</span>
+      <select id="kf-serien"><option value="1">1 Serie</option><option value="2">2 Serien</option></select>
+    </div>
+    <h3 style="font-size:15px;margin:14px 0 4px;">Reguläre Spieltage je Saison</h3>
+    <table class="kf-tab" id="kf-saisons"></table>
+    <div class="zeile" style="margin-top:6px;"><button class="grau" id="kf-saison-neu">+ Saison</button></div>
+    <h3 style="font-size:15px;margin:14px 0 4px;">Sondertermine</h3>
+    <table class="kf-tab" id="kf-sonder"></table>
+    <div class="zeile" style="margin-top:6px;"><button class="grau" id="kf-sonder-neu">+ Sondertermin</button></div>
+    <div class="zeile" style="margin-top:12px;">
+      <button id="kf-speichern">Konfiguration speichern</button>
+      <span class="status" id="kf-status"></span>
+    </div>
+    <h3 style="font-size:15px;margin:14px 0 4px;">Vorschau <select id="kf-jahr"></select></h3>
+    <div id="kf-vorschau" class="status"></div>
+  </div>
+
   <div class="card" id="karte-ergebnisse" style="display:none;">
     <h2>Ergebnisse des Abends</h2>
     <div id="ergebnisse">Lade …</div>
@@ -123,15 +149,17 @@
   const VEREINE = {
     sinthern: { name: '1. Sintherner Skatclub', bereich: '',                   logo: 'Skat.png',
                 links: [['📋 Skatliste', 'index.html'], ['🏆 Spieltag-Programm', 'spieltag.html?firestore=1']] },
-    garching: { name: 'Skatfreunde Garching',   bereich: 'vereine/garching/', logo: 'logo_garching.jpg',
-                links: [['📋 Skatliste Garching', 'index.html?club=garching']] }
+    garching: { name: 'Skatfreunde Garching',   bereich: 'vereine/garching/', logo: 'logo_garching.jpg', serien: 1,
+                links: [['📋 Skatliste Garching', 'index.html?club=garching'], ['🏆 Spieltag-Programm', 'spieltag.html?club=garching&firestore=1']] },
+    boore:    { name: 'de vier Boore',          bereich: 'vereine/boore/',    logo: 'devierboore.png',   serien: 2,
+                links: [['📋 Skatliste Boore', 'index.html?club=boore'], ['🏆 Spieltag-Programm', 'spieltag.html?club=boore&firestore=1']] }
   };
 
   // Stammdaten aller Vereine (Dokument-ID = Vereins-ID, wie getVereinsId() in index.html)
   const VEREINE_STAMMDATEN = {
     sinthern:   { name: '1. Sintherner Skatclub 1992 e.V.', kurz: 'Sinthern',    logo: 'Skat.png',          firestore: true,  bereich: '',                  aktiv: true  },
     garching:   { name: 'Skatfreunde Garching',             kurz: 'Garching',    logo: 'logo_garching.jpg', firestore: true,  bereich: 'vereine/garching/', aktiv: true  },
-    buure:      { name: 'de vier Boore',                    kurz: 'Boore',       logo: 'devierboore.png',   firestore: false, bereich: null,                aktiv: true  },
+    boore:      { name: 'de vier Boore',                    kurz: 'Boore',       logo: 'devierboore.png',   firestore: true,  bereich: 'vereine/boore/',    aktiv: true  },
     alterpeter: { name: 'SC Alter Peter München',           kurz: 'Alter Peter', logo: 'alterpeter.gif',    firestore: false, bereich: null,                aktiv: false }
   };
 
@@ -211,6 +239,7 @@
     $('btn-uid').style.display    = user ? '' : 'none';
     $('karte-freigabe').style.display = 'none';
     $('karte-ergebnisse').style.display = 'none';
+    $('karte-konfig').style.display = 'none';
     $('karte-vereine').style.display = (user && user.uid === ADMIN_UID) ? '' : 'none';
     if (user && user.uid === ADMIN_UID) zeigeVereine();
     $('verein-zeile').style.display = 'none';
@@ -255,7 +284,176 @@
     if (!verein || !auth.currentUser) return;
     ladeFreigabe();
     ladeErgebnisse();
+    ladeKonfig();
   }
+
+  // ── Vereinskonfiguration (vereine/{verein}.konfig) ──
+  // { serien: 1|2,
+  //   saisons:    { "2026": { start: "2026-01-13", rhythmus: 14, anzahl: 24 } },   anzahl leer = bis Jahresende
+  //   sondertage: [ { datum, name, art: "zusatz" | "extra" | "entfaellt" } ] }
+  // zusatz = zusätzlicher Spieltag (zählt in der Wertung), extra = Sonderspieltag (zählt nicht),
+  // entfaellt = regulärer Termin fällt aus. Gleiche Berechnung wie vereinsTermine() in spieltag.html.
+  const ARTEN = { zusatz: 'Zusätzlicher Spieltag (zählt)', extra: 'Sonderspieltag (zählt nicht)', entfaellt: 'Spieltag fällt aus' };
+  let konfig = null;
+
+  function termineDesJahres(k, jahr) {
+    const s = (k.saisons || {})[String(jahr)];
+    const liste = [];
+    if (s && /^\d{4}-\d{2}-\d{2}$/.test(s.start || '')) {
+      const d = new Date(s.start + 'T00:00:00Z');
+      const schritt = Number(s.rhythmus) === 7 ? 7 : 14;
+      const max = Number(s.anzahl) > 0 ? Number(s.anzahl) : 999;
+      while (liste.length < max && d.getUTCFullYear() === Number(jahr)) {
+        liste.push({ iso: d.toISOString().slice(0, 10) });
+        d.setUTCDate(d.getUTCDate() + schritt);
+      }
+    }
+    const sonder = (k.sondertage || []).filter(e => (e.datum || '').startsWith(jahr + '-'));
+    const weg = new Set(sonder.filter(e => e.art === 'entfaellt').map(e => e.datum));
+    let regulaer = liste.filter(t => !weg.has(t.iso));
+    sonder.filter(e => e.art === 'zusatz' && !regulaer.some(t => t.iso === e.datum))
+      .forEach(e => regulaer.push({ iso: e.datum, name: e.name }));
+    regulaer.forEach(t => { const e = sonder.find(x => x.datum === t.iso && x.art === 'zusatz'); if (e) t.name = e.name; });
+    regulaer.sort((a, b) => a.iso.localeCompare(b.iso));
+    const extra = sonder.filter(e => e.art === 'extra').sort((a, b) => a.datum.localeCompare(b.datum));
+    return { regulaer, extra };
+  }
+
+  const de = iso => iso ? iso.split('-').reverse().join('.') : '';
+  const wtag = iso => ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][new Date(iso + 'T00:00:00Z').getUTCDay()];
+
+  function zeichneKonfig() {
+    $('kf-serien').value = String(konfig.serien || VEREINE[verein].serien || 2);
+    const jahre = Object.keys(konfig.saisons || {}).sort();
+    let h = '<tr><th>Saison</th><th>Erster Spieltag</th><th>Rhythmus</th><th>Anzahl</th><th></th></tr>';
+    jahre.forEach(j => {
+      const s = konfig.saisons[j];
+      h += `<tr data-jahr="${esc(j)}"><td><b>${esc(j)}</b></td>
+        <td><input type="date" data-f="start" value="${esc(s.start || '')}"></td>
+        <td><select data-f="rhythmus"><option value="14"${Number(s.rhythmus) !== 7 ? ' selected' : ''}>alle 14 Tage</option><option value="7"${Number(s.rhythmus) === 7 ? ' selected' : ''}>wöchentlich</option></select></td>
+        <td><input type="number" min="0" data-f="anzahl" value="${s.anzahl ? esc(s.anzahl) : ''}" placeholder="bis Jahresende"></td>
+        <td><button class="grau" data-weg-saison="${esc(j)}">✕</button></td></tr>`;
+    });
+    if (!jahre.length) h += '<tr><td colspan="5" class="status">Noch keine Saison angelegt.</td></tr>';
+    $('kf-saisons').innerHTML = h;
+
+    const sonder = (konfig.sondertage || []).slice().sort((a, b) => (a.datum || '').localeCompare(b.datum || ''));
+    konfig.sondertage = sonder;
+    let h2 = '<tr><th>Datum</th><th>Name</th><th>Art</th><th></th></tr>';
+    sonder.forEach((e, i) => {
+      h2 += `<tr data-i="${i}"><td><input type="date" data-f="datum" value="${esc(e.datum || '')}"></td>
+        <td><input type="text" data-f="name" value="${esc(e.name || '')}" placeholder="z. B. Weihnachtsturnier"></td>
+        <td><select data-f="art">${Object.entries(ARTEN).map(([k, t]) => `<option value="${k}"${e.art === k ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
+        <td><button class="grau" data-weg-sonder="${i}">✕</button></td></tr>`;
+    });
+    if (!sonder.length) h2 += '<tr><td colspan="4" class="status">Keine Sondertermine.</td></tr>';
+    $('kf-sonder').innerHTML = h2;
+
+    const jahrSel = $('kf-jahr');
+    const alt = jahrSel.value;
+    const auswahl = [...new Set([...jahre, String(new Date().getFullYear())])].sort();
+    jahrSel.innerHTML = auswahl.map(j => `<option>${j}</option>`).join('');
+    jahrSel.value = auswahl.includes(alt) ? alt : String(new Date().getFullYear());
+    zeigeVorschau();
+  }
+
+  // Eingaben der Tabellen in "konfig" übernehmen
+  function liesKonfig() {
+    konfig.serien = Number($('kf-serien').value) === 1 ? 1 : 2;
+    $('kf-saisons').querySelectorAll('tr[data-jahr]').forEach(tr => {
+      const s = konfig.saisons[tr.dataset.jahr];
+      s.start = tr.querySelector('[data-f=start]').value;
+      s.rhythmus = Number(tr.querySelector('[data-f=rhythmus]').value) === 7 ? 7 : 14;
+      const a = parseInt(tr.querySelector('[data-f=anzahl]').value, 10);
+      s.anzahl = a > 0 ? a : null;
+    });
+    $('kf-sonder').querySelectorAll('tr[data-i]').forEach(tr => {
+      const e = konfig.sondertage[Number(tr.dataset.i)];
+      e.datum = tr.querySelector('[data-f=datum]').value;
+      e.name = tr.querySelector('[data-f=name]').value.trim();
+      e.art = tr.querySelector('[data-f=art]').value;
+    });
+  }
+
+  function zeigeVorschau() {
+    const jahr = $('kf-jahr').value;
+    const { regulaer, extra } = termineDesJahres(konfig, jahr);
+    let h = regulaer.length
+      ? regulaer.map((t, i) => `ST ${i + 1}: ${wtag(t.iso)} ${de(t.iso)}${t.name ? ' – ' + esc(t.name) : ''}`).join('<br>')
+      : `Keine regulären Spieltage für ${esc(jahr)}.`;
+    if (extra.length) h += '<br><br><b>Sonderspieltage (zählen nicht):</b><br>' + extra.map(e => `${wtag(e.datum)} ${de(e.datum)} – ${esc(e.name || '')}`).join('<br>');
+    $('kf-vorschau').innerHTML = h;
+  }
+
+  async function ladeKonfig() {
+    const karte = $('karte-konfig');
+    if (verein === 'sinthern') { karte.style.display = 'none'; return; }   // Sinthern: feste Termine im Spieltag-Programm
+    karte.style.display = '';
+    $('kf-status').textContent = '';
+    try {
+      const d = await getDoc(doc(db, 'vereine', verein));
+      konfig = (d.exists() && d.data().konfig) || {};
+    } catch (e) {
+      konfig = {};
+      $('kf-status').textContent = 'Konfiguration nicht lesbar: ' + (e?.message || e);
+    }
+    konfig.saisons = konfig.saisons || {};
+    konfig.sondertage = konfig.sondertage || [];
+    zeichneKonfig();
+  }
+
+  $('karte-konfig').addEventListener('change', e => {
+    if (!konfig) return;
+    liesKonfig();
+    if (e.target.id !== 'kf-jahr') $('kf-status').textContent = 'Geändert – bitte speichern.';
+    zeigeVorschau();
+  });
+  $('karte-konfig').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || !konfig) return;
+    if (b.dataset.wegSaison) { liesKonfig(); delete konfig.saisons[b.dataset.wegSaison]; zeichneKonfig(); $('kf-status').textContent = 'Geändert – bitte speichern.'; }
+    if (b.dataset.wegSonder != null) { liesKonfig(); konfig.sondertage.splice(Number(b.dataset.wegSonder), 1); zeichneKonfig(); $('kf-status').textContent = 'Geändert – bitte speichern.'; }
+  });
+  $('kf-saison-neu').onclick = () => {
+    liesKonfig();
+    const jahre = Object.keys(konfig.saisons).map(Number);
+    const jahr = String(jahre.length ? Math.max(...jahre) + 1 : new Date().getFullYear());
+    const j = prompt('Saison (Jahr):', jahr);
+    if (!j || !/^\d{4}$/.test(j.trim())) return;
+    const vorlage = konfig.saisons[String(Number(j) - 1)] || {};
+    konfig.saisons[j.trim()] = { start: '', rhythmus: vorlage.rhythmus || 14, anzahl: vorlage.anzahl || null };
+    zeichneKonfig();
+    $('kf-jahr').value = j.trim(); zeigeVorschau();
+    $('kf-status').textContent = 'Bitte den ersten Spieltag eintragen und speichern.';
+  };
+  $('kf-sonder-neu').onclick = () => {
+    liesKonfig();
+    konfig.sondertage.push({ datum: heute(), name: '', art: 'extra' });
+    zeichneKonfig();
+  };
+  $('kf-speichern').onclick = async () => {
+    liesKonfig();
+    const fehler = [];
+    Object.entries(konfig.saisons).forEach(([j, s]) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s.start || '')) fehler.push(`Saison ${j}: erster Spieltag fehlt`);
+      else if (!s.start.startsWith(j + '-')) fehler.push(`Saison ${j}: erster Spieltag liegt nicht in ${j}`);
+    });
+    konfig.sondertage.forEach(e => { if (!/^\d{4}-\d{2}-\d{2}$/.test(e.datum || '')) fehler.push('Sondertermin ohne Datum'); });
+    if (fehler.length) { alert(fehler.join('\n')); return; }
+    const daten = {
+      serien: konfig.serien,
+      saisons: konfig.saisons,
+      sondertage: konfig.sondertage.map(e => ({ datum: e.datum, name: e.name || '', art: e.art }))
+    };
+    $('kf-speichern').disabled = true;
+    try {
+      await setDoc(doc(db, 'vereine', verein), { vereinId: verein, konfig: daten, geaendertAm: serverTimestamp() }, { merge: true });
+      $('kf-status').textContent = '✅ Gespeichert.';
+    } catch (e) {
+      alert('Speichern fehlgeschlagen: ' + (e?.message || e));
+    }
+    $('kf-speichern').disabled = false;
+  };
 
   // ── Freigabe ──
   function neuerCode() {

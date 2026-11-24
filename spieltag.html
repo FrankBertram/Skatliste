@@ -120,17 +120,90 @@
 <body>
     <script>
         window.SKAT_LOGO_DATA = 'data:image/png;base64,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';
+        // ===== Verein: ?club=garching | ?club=boore (auch boore); ohne Parameter = Sintherner Skatclub =====
+        // Garching und de vier Boore nutzen die Grundfunktionen (Ergebnisse, Rangliste/Tische, Siegerehrung,
+        // Abreizgeld, Freigabe, Tages- und Jahreswertung) im eigenen Firestore-Bereich vereine/<id>/.
+        // Termine und Serienzahl kommen aus der Vereinskonfiguration (vereine/<id>.konfig, spielleiter.html).
+        const VEREINE_SPIELTAG = {
+            sinthern: { id: 'sinthern', name: '1. Sintherner Skatclub', logo: null, bereich: '', serien: 2, extern: false, skatlisteClub: '' },
+            garching: { id: 'garching', name: 'Skatfreunde Garching', logo: 'logo_garching.jpg', bereich: 'vereine/garching/',
+                serien: 1, extern: true, startgeld: 3, skatlisteClub: 'garching',
+                mitspieler: ['Dunsch, Heiko', 'Fölsner, Sabine', 'Ganssmüller-Maluche, Annette', 'Gehrer, Resi',
+                    'Grosshuldermann, Hans', 'Kuhn, Petra', 'Landmann, Werner', 'Lehmann, Uwe', 'Lo Bianco, Giuseppe',
+                    'Loger, Michael', 'Maegle, Thomas', 'Müller, Christian', 'Obermeier, Angelika', 'Peteranderl, Benjamin',
+                    'Ranft, Bernd', 'Scheibe, Thorsten', 'Steinmüller, Gunter', 'Steinmüller, Ulrike', 'Wraikow, Nedjalko (Nicki)'] },
+            boore: { id: 'boore', name: 'de vier Boore', logo: 'devierboore.png', bereich: 'vereine/boore/',
+                serien: 2, extern: true, startgeld: null, skatlisteClub: 'boore',
+                mitspieler: ['Bleckmann, Norbert', 'Gebhardt, Harry', 'Jost, Uwe', 'Langer, Kurt', 'Müller, Werner',
+                    'Opitz, Jürgen', 'Pestotnik, Ralf', 'Schekerka, Herbert', 'Schwarz, Peter', 'Weyer, Wilfried', 'Winand, Hermann'] }
+        };
+        const VEREIN = (function() {
+            const p = new URLSearchParams(location.search);
+            let c = (p.get('club') || p.get('verein') || '').toLowerCase();
+            if (c === 'boore' || c === 'devierboore' || c === '4boore') c = 'boore';
+            return VEREINE_SPIELTAG[c] || VEREINE_SPIELTAG.sinthern;
+        })();
+        // Spielstand je Verein getrennt speichern
+        const SKAT_STATE_KEY = VEREIN.extern ? 'skat_state_' + VEREIN.id : 'skat_state';
+        // Vereinskonfiguration, lokal zwischengespeichert (Termine sofort beim Start verfügbar)
+        let VEREIN_KONFIG = null;
+        if (VEREIN.extern) {
+            try { VEREIN_KONFIG = JSON.parse(localStorage.getItem('skat_vereinskonfig_' + VEREIN.id) || 'null'); } catch (e) {}
+        }
+        function vereinSerien() {
+            if (!VEREIN.extern) return 2;
+            const s = VEREIN_KONFIG ? Number(VEREIN_KONFIG.serien) : 0;
+            return s === 1 || s === 2 ? s : VEREIN.serien;
+        }
+        function setzeSerienKlasse() {
+            document.documentElement.classList.toggle('eine-serie', vereinSerien() === 1);
+        }
+        (function() {
+            const st = document.createElement('style');
+            st.textContent = 'html.verein-extern [data-nur-sinthern], html.eine-serie .nur-2-serien { display: none !important; }';
+            document.head.appendChild(st);
+            if (VEREIN.extern) {
+                document.documentElement.classList.add('verein-extern');
+                document.title = VEREIN.name + ' – Spieltag';
+                // Logo: zuerst als Datei (für <img>), danach als PNG-Daten (für den PDF-Export)
+                window.SKAT_LOGO_DATA = VEREIN.logo;
+                const im = new Image();
+                im.onload = () => {
+                    try {
+                        const c = document.createElement('canvas');
+                        c.width = im.naturalWidth; c.height = im.naturalHeight;
+                        c.getContext('2d').drawImage(im, 0, 0);
+                        window.SKAT_LOGO_DATA = c.toDataURL('image/png');
+                    } catch (e) { console.warn('Vereinslogo nicht als PDF-Bild verfügbar:', e); }
+                };
+                im.src = VEREIN.logo;
+            }
+            setzeSerienKlasse();
+        })();
+        // Logo für jsPDF nur als data:-URL
+        function logoFuerPdf() {
+            const d = window.SKAT_LOGO_DATA;
+            return d && String(d).startsWith('data:') ? d : null;
+        }
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('img[data-skat-logo]').forEach(img => {
                 img.src = window.SKAT_LOGO_DATA;
             });
+            document.querySelectorAll('[data-verein-name]').forEach(el => { el.textContent = VEREIN.name; });
+            if (VEREIN.extern) {
+                document.querySelectorAll('link[rel=icon], link[rel=apple-touch-icon]').forEach(l => { l.href = VEREIN.logo; });
+            }
+            const ls = document.getElementById('linkSkatliste');
+            if (ls) ls.href = VEREIN.skatlisteClub ? 'index.html?club=' + VEREIN.skatlisteClub : 'index.html';
+            const lsl = document.getElementById('linkSpielleiter');
+            if (lsl) lsl.href = 'spielleiter.html?verein=' + VEREIN.id;
         });
     </script>
 
     <div class="header">
         <div style="display:flex;align-items:center;gap:10px;">
             <img data-skat-logo alt="Skat-Logo">
-            <h3 style="margin:0;white-space:nowrap;">1. Sintherner Skatclub<span id="aktuelles-datum" style="display:none;"></span></h3>
+            <h3 style="margin:0;white-space:nowrap;"><span data-verein-name>1. Sintherner Skatclub</span><span id="aktuelles-datum" style="display:none;"></span></h3>
         </div>
         <div id="fileSection" class="file-block" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <button onclick="showGesamtliste()" style="background:#6a1b9a;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
@@ -141,23 +214,23 @@
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.4" aria-hidden="true" style="flex-shrink:0;"><rect x="2" y="3" width="10" height="9" rx="1"/><line x1="2" y1="6" x2="12" y2="6"/><line x1="5" y1="2" x2="5" y2="4"/><line x1="9" y1="2" x2="9" y2="4"/><rect x="5.5" y="8" width="3" height="2.5" fill="white" stroke="none"/></svg>
                 Spieltag
             </button>
-            <button onclick="showMonatswertung()" style="background:#6a1b9a;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
+            <button data-nur-sinthern onclick="showMonatswertung()" style="background:#6a1b9a;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.2" aria-hidden="true" style="flex-shrink:0;"><rect x="2" y="3" width="10" height="9" rx="1"/><line x1="2" y1="6" x2="12" y2="6"/><line x1="5" y1="6" x2="5" y2="12"/><line x1="9" y1="6" x2="9" y2="12"/><line x1="2" y1="9" x2="12" y2="9"/><line x1="5" y1="2" x2="5" y2="4"/><line x1="9" y1="2" x2="9" y2="4"/></svg>
                 Monat
             </button>
-            <button onclick="showOnlineWertung()" style="background:#6a1b9a;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
+            <button data-nur-sinthern onclick="showOnlineWertung()" style="background:#6a1b9a;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.4" aria-hidden="true" style="flex-shrink:0;"><rect x="1.5" y="2.5" width="11" height="7" rx="1"/><line x1="5" y1="12" x2="9" y2="12"/><line x1="7" y1="9.5" x2="7" y2="12"/></svg>
                 Online
             </button>
-            <button onclick="showMitspielerVerwaltung()" style="background:#00897b;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
+            <button data-nur-sinthern onclick="showMitspielerVerwaltung()" style="background:#00897b;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.4" aria-hidden="true" style="flex-shrink:0;"><circle cx="7" cy="5" r="2.5"/><path d="M2.5 12 C2.5 9.5 4.5 8.5 7 8.5 C9.5 8.5 11.5 9.5 11.5 12"/></svg>
                 Mitspieler
             </button>
-            <button onclick="sendSpieltagEmail()" style="background:#1976d2;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
+            <button data-nur-sinthern onclick="sendSpieltagEmail()" style="background:#1976d2;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><rect x="2" y="3.5" width="10" height="7" rx="1"/><polyline points="2.5,4 7,7.5 11.5,4"/></svg>
                 E-Mail (C)
             </button>
-            <button onclick="sendOnlineEmail()" style="background:#1976d2;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
+            <button data-nur-sinthern onclick="sendOnlineEmail()" style="background:#1976d2;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:105px;margin:0;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;box-sizing:border-box;">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><rect x="2" y="3.5" width="10" height="7" rx="1"/><polyline points="2.5,4 7,7.5 11.5,4"/></svg>
                 E-Mail (O)
             </button>
@@ -171,8 +244,8 @@
             <div style="display:flex;gap:5px;margin-bottom:5px;">
                 <button onclick="alleWaehlen(true)" style="font-size:11px;padding:3px 6px;margin:0;width:auto;">Alle</button>
                 <button onclick="alleWaehlen(false)" style="font-size:11px;padding:3px 6px;margin:0;width:auto;">Keine</button>
-                <button onclick="loadMitspielerFromFirebase(this)" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#00897b;color:white;border:none;border-radius:4px;cursor:pointer;">Aus Firebase laden</button>
-                <button onclick="auslosungStarten()" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#6a1b9a;color:white;border:none;border-radius:4px;cursor:pointer;">Auslosung</button>
+                <button data-nur-sinthern onclick="loadMitspielerFromFirebase(this)" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#00897b;color:white;border:none;border-radius:4px;cursor:pointer;">Aus Firebase laden</button>
+                <button data-nur-sinthern onclick="auslosungStarten()" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#6a1b9a;color:white;border:none;border-radius:4px;cursor:pointer;">Auslosung</button>
             </div>
             <div class="checkbox-list" id="playerCheckboxes"></div>
             
@@ -193,7 +266,7 @@
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                     <button id="saveSerie1Btn" onclick="saveSerieToFirestore(1)" style="background:#388e3c;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Serie 1 → T0</button>
-                    <button id="saveSerie2Btn" onclick="saveSerieToFirestore(2)" style="background:#388e3c;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Serie 2 → T0</button>
+                    <button class="nur-2-serien" id="saveSerie2Btn" onclick="saveSerieToFirestore(2)" style="background:#388e3c;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Serie 2 → T0</button>
                     <button id="abreizgeldBtn" onclick="showAbreizgeld()" style="background:#6d4c41;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Abreizgeld</button>
                     <button id="freigabeBtn" onclick="showFreigabe()" title="Spieltag für die Skatliste-Tablets freigeben (Spielleiter)" style="background:#f57c00;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">🔑 Freigabe</button>
                 </div>
@@ -208,11 +281,11 @@
                 </div>
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;">
                     <!-- Verweise innerhalb des GitHub-Repos "Skatliste" (Spieltag liegt dort als spieltag.html) -->
-                    <a href="index.html" target="_blank" rel="noopener" style="color:#1976d2;">📋 Skatliste</a>
-                    <a href="spielleiter.html?verein=sinthern" target="_blank" rel="noopener" style="color:#1976d2;">🔑 Spielleiter-Seite</a>
+                    <a id="linkSkatliste" href="index.html" target="_blank" rel="noopener" style="color:#1976d2;">📋 Skatliste</a>
+                    <a id="linkSpielleiter" href="spielleiter.html?verein=sinthern" target="_blank" rel="noopener" style="color:#1976d2;">🔑 Spielleiter-Seite</a>
                 </div>
             </div>
-            <div id="uploadSection" style="display:none;margin:0 0 10px 0;padding:6px;background:#f5f5f5;border-radius:4px;">
+            <div data-nur-sinthern id="uploadSection" style="display:none;margin:0 0 10px 0;padding:6px;background:#f5f5f5;border-radius:4px;">
                 <label for="csvUpload" style="font-size:12px;color:#333;display:block;margin-bottom:3px;">CSV nachladen (Datum;Serie;Name;Punkte):</label>
                 <input type="file" id="csvUpload" accept=".csv,.txt" style="font-size:12px;">
             </div>
@@ -229,15 +302,15 @@
             
             <button onclick="saveCurrentResult()">Speichern und nächsten wählen</button>
             
-            <button id="startRound2" onclick="startRound2()" style="display:none; background:#ff9800;">
+            <button class="nur-2-serien" id="startRound2" onclick="startRound2()" style="display:none; background:#ff9800;">
                 Serie 2 starten
             </button>
 
-            <button id="saveSetzlisteBtn" onclick="saveSetzlisteSerie2(this)" style="display:none; background:#1565c0;">
+            <button data-nur-sinthern id="saveSetzlisteBtn" onclick="saveSetzlisteSerie2(this)" style="display:none; background:#1565c0;">
                 Setzliste für Serie 2 speichern
             </button>
 
-            <button id="showTischverteilungBtn" onclick="showTischverteilung()" style="display:none; background:#6a1b9a;">
+            <button data-nur-sinthern id="showTischverteilungBtn" onclick="showTischverteilung()" style="display:none; background:#6a1b9a;">
                 Tischverteilung Serie 2 anzeigen
             </button>
 
@@ -264,8 +337,8 @@
                         <th>Name</th>
                         <th>Serie 1</th>
 			<th>T.</th>
-                        <th>Serie 2</th>
-                        <th>Gesamt</th>
+                        <th class="nur-2-serien">Serie 2</th>
+                        <th class="nur-2-serien">Gesamt</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -310,6 +383,7 @@
         const SAISON_ERSTES_JAHR = 2026;
         let saisonJahr = new Date().getFullYear();
         function saisonTermine(year, offsetTage) {
+            if (VEREIN.extern) return vereinsTermine(year);   // andere Vereine: Vereinskonfiguration
             const start = new Date(Date.UTC(year, 0, 1));
             const bisDienstag = (2 - start.getUTCDay() + 7) % 7;
             start.setUTCDate(1 + bisDienstag + 7 + (offsetTage || 0));
@@ -347,6 +421,12 @@
             EXTRA_SPIELTAGE.filter(ex => ex.yyyy === String(saisonJahr))
                 .sort((a, b) => a.iso.localeCompare(b.iso))
                 .forEach(ex => add(ex.iso, `${ex.name} (${ex.dd}.${ex.mm}.${ex.yyyy})`));
+            if (VEREIN.extern && sel.options.length === 1) {
+                const opt = document.createElement('option');
+                opt.disabled = true;
+                opt.textContent = `Keine Termine ${saisonJahr} – bitte auf der Spielleiter-Seite anlegen`;
+                sel.appendChild(opt);
+            }
         }
 
         // Sondertage aus Firestore 'spieltag_config' (Doc-ID = YYYY-MM-DD, Feld name,
@@ -371,6 +451,52 @@
             fuelleSpieltagSelect();
             if (typeof window.applyPreisskatFilter === 'function') window.applyPreisskatFilter();
         }
+
+        // ===== Termine anderer Vereine (Vereinskonfiguration, gleiche Berechnung wie spielleiter.html) =====
+        // konfig.saisons[jahr] = { start, rhythmus: 7|14, anzahl } (anzahl leer = bis Jahresende);
+        // konfig.sondertage = [{ datum, name, art }] mit art 'zusatz' (zusätzlicher Spieltag, zählt),
+        // 'extra' (Sonderspieltag, zählt nicht → EXTRA_SPIELTAGE) oder 'entfaellt' (regulärer Termin fällt aus).
+        function vereinsTermine(year) {
+            const k = VEREIN_KONFIG || {};
+            const s = (k.saisons || {})[String(year)];
+            const isos = [];
+            if (s && /^\d{4}-\d{2}-\d{2}$/.test(s.start || '')) {
+                const d = new Date(s.start + 'T00:00:00Z');
+                const schritt = Number(s.rhythmus) === 7 ? 7 : 14;
+                const max = Number(s.anzahl) > 0 ? Number(s.anzahl) : 999;
+                while (isos.length < max && d.getUTCFullYear() === Number(year)) {
+                    isos.push(d.toISOString().slice(0, 10));
+                    d.setUTCDate(d.getUTCDate() + schritt);
+                }
+            }
+            const sonder = (k.sondertage || []).filter(e => String(e.datum || '').startsWith(year + '-'));
+            const weg = new Set(sonder.filter(e => e.art === 'entfaellt').map(e => e.datum));
+            const alle = new Set(isos.filter(iso => !weg.has(iso)));
+            sonder.filter(e => e.art === 'zusatz').forEach(e => alle.add(e.datum));
+            return [...alle].sort().map(iso => {
+                const [yyyy, mm, dd] = iso.split('-');
+                return { iso, label: `${dd}.${mm}`, dd, mm, yyyy, full: `${dd}.${mm}.${yyyy}` };
+            });
+        }
+        function uebernimmVereinsKonfig(konfig, mitAnzeige) {
+            VEREIN_KONFIG = konfig || {};
+            try { localStorage.setItem('skat_vereinskonfig_' + VEREIN.id, JSON.stringify(VEREIN_KONFIG)); } catch (e) {}
+            Object.keys(SPIELTAG_NAMEN).forEach(k => delete SPIELTAG_NAMEN[k]);
+            EXTRA_SPIELTAGE.length = 0;
+            (VEREIN_KONFIG.sondertage || []).forEach(e => {
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(e.datum || '')) return;
+                const [yyyy, mm, dd] = e.datum.split('-');
+                if (e.art === 'zusatz' && e.name) SPIELTAG_NAMEN[e.datum] = e.name;
+                if (e.art === 'extra') EXTRA_SPIELTAGE.push({ iso: e.datum, dd, mm, yyyy, label: `${dd}.${mm}`,
+                    name: e.name || 'Sonderspieltag', extra: true, preisskat: false });
+            });
+            setzeSerienKlasse();
+            fuelleSpieltagSelect();
+            if (mitAnzeige) {
+                if (currentRound === 1) setupRound1(); else { updateRanking(); checkRoundComplete(); }
+            }
+        }
+        if (VEREIN.extern) uebernimmVereinsKonfig(VEREIN_KONFIG, false);
 
         // Jahresauswahl in den Wertungs-Fenstern (select[data-saison-select]) befüllen
         function fillSaisonSelects() {
@@ -459,7 +585,7 @@
                 if (results[p]) persistResults[p] = results[p];
                 if (imported[p]) persistImported[p] = imported[p];
             });
-            localStorage.setItem('skat_state', JSON.stringify({
+            localStorage.setItem(SKAT_STATE_KEY, JSON.stringify({
                 allPlayers: persistPlayers, selectedPlayers: checked,
                 results: persistResults, imported: persistImported,
                 currentRound, guests: [...guests]
@@ -467,7 +593,7 @@
         }
 
         function restoreState() {
-            const raw = localStorage.getItem('skat_state');
+            const raw = localStorage.getItem(SKAT_STATE_KEY);
             if (!raw) return false;
             try {
                 const state = JSON.parse(raw);
@@ -513,6 +639,12 @@
         // Spielerliste laden: bevorzugt die Preisskat-Mitspieler aus Firebase (mitspieler/Liste), alphabetisch.
         // Nur wenn Firebase nicht erreichbar oder leer ist, Rückfall auf Mitspieler.txt.
         async function loadStartPlayers() {
+            if (VEREIN.extern) {
+                // erst nach dem Initialisieren des restlichen Skripts (maskiert, Tabellen …)
+                await new Promise(r => setTimeout(r, 0));
+                loadPlayers(VEREIN.mitspieler.slice().sort((a, b) => a.localeCompare(b, 'de')).join('\n'));
+                return true;
+            }
             // Firebase-Modul wird nach diesem Skript geladen – kurz darauf warten
             for (let i = 0; i < 50 && typeof window.fetchFirebaseMitspielerNames !== 'function'; i++) {
                 await new Promise(r => setTimeout(r, 100));
@@ -911,6 +1043,8 @@ function loadPlayers(text) {
             if (currentRound === 1) {
                 const allHaveRes1 = done1 === total;
                 document.getElementById('startRound2').style.display = allHaveRes1 ? 'block' : 'none';
+                // Nur eine Serie (z. B. Garching): nach Serie 1 ist der Endstand erreicht
+                if (vereinSerien() === 1) document.getElementById('exportSection').style.display = (allHaveRes1 && total > 0) ? 'block' : 'none';
                 document.getElementById('progress').innerHTML = total > 0
                     ? `Serie 1: ${done1} von ${total} eingetragen${allHaveRes1 ? check : ''}`
                     : '';
@@ -1290,13 +1424,13 @@ function updateRanking() {
                 </div>
             </td>
             <td>${p.table}</td>
-            <td>
+            <td class="nur-2-serien">
                 <div class="edit-cell">
                     ${res2Html}
                     ${p.res2 !== '' ? `<button class="edit-btn" onclick="prepareEdit('${safeName}', 2)">Kor.</button>` : ''}
                 </div>
             </td>
-            <td>${currentRound === 2 ? maskWert(p.total) : '-'}</td>
+            <td class="nur-2-serien">${currentRound === 2 ? maskWert(p.total) : '-'}</td>
         `;
         tbody.appendChild(row);
     });
@@ -1423,7 +1557,7 @@ function updateRanking() {
             }
             if (currentRound !== 2 && !confirm('Serie 2 ist noch nicht gestartet – Siegerehrung mit dem Stand nach Serie 1 zeigen?')) return;
             const datum = siegerehrungDatum();
-            const weihnachten = datum.monat === 12;
+            const weihnachten = datum.monat === 12 && !VEREIN.extern;
             siegerehrung = { liste, pos: liste.length, weihnachten, datum }; // pos = liste.length: Introseite
             let box = document.getElementById('siegerehrungModal');
             if (!box) {
@@ -1473,8 +1607,8 @@ function updateRanking() {
             box.classList.toggle('se-neutral', !weihnachten);
             // Vereinslogo (weiß hinterlegt, damit es auf dem dunklen Hintergrund gut sichtbar ist)
             const kopfText = weihnachten
-                ? `🎄 1. Sintherner Skatclub – Weihnachtsturnier ${datum.de} 🎄`
-                : `1. Sintherner Skatclub – Siegerehrung ${datum.de}`;
+                ? `🎄 ${VEREIN.name} – Weihnachtsturnier ${datum.de} 🎄`
+                : `${VEREIN.name} – Siegerehrung ${datum.de}`;
             box.querySelector('.se-kopf').innerHTML =
                 (window.SKAT_LOGO_DATA ? `<span class="se-logo"><img src="${window.SKAT_LOGO_DATA}" alt="Vereinslogo"></span>` : '') +
                 `<span>${kopfText}</span>`;
@@ -1507,7 +1641,7 @@ function updateRanking() {
 
         function neustart() {
             if (!confirm('Wirklich alle Ergebnisse löschen und neu starten?')) return;
-            localStorage.removeItem('skat_state');
+            localStorage.removeItem(SKAT_STATE_KEY);
             localStorage.removeItem('skat_setzliste2');
             updateTischverteilungBtn();
             currentRound = 1;
@@ -1536,9 +1670,10 @@ function updateRanking() {
 
             playersToExport.sort((a, b) => b.total - a.total);
 
-            let csv = 'Rang;Name;Serie 1;Serie 2;Gesamt\n';
+            const eineSerie = vereinSerien() === 1;
+            let csv = eineSerie ? 'Rang;Name;Punkte\n' : 'Rang;Name;Serie 1;Serie 2;Gesamt\n';
             playersToExport.forEach((p, i) => {
-                csv += `${i + 1};${p.name};${p.res1};${p.res2};${p.total}\n`;
+                csv += eineSerie ? `${i + 1};${p.name};${p.res1}\n` : `${i + 1};${p.name};${p.res1};${p.res2};${p.total}\n`;
             });
 
             const today = new Date();
@@ -1573,7 +1708,7 @@ function updateRanking() {
             document.getElementById('currentResult').placeholder = 'Ergebnis Serie 1 eintragen';
             document.getElementById('startRound2').style.display = 'none';
             document.getElementById('exportSection').style.display = 'none';
-            document.getElementById('rankingTitle').textContent = 'Zwischenstand nach Serie 1 ('+count+' Mitspieler)';
+            document.getElementById('rankingTitle').textContent = (vereinSerien() === 1 ? 'Ergebnis (' : 'Zwischenstand nach Serie 1 (')+count+' Mitspieler)';
             updatePlayerSelect(true);
             updateRanking();
         }
@@ -1656,14 +1791,14 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.12)
+    © 2026 by Frank Bertram (V1.13)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
         <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:15px;gap:10px;font-family:Arial,sans-serif;">
             <div style="display:flex;align-items:center;gap:12px;justify-self:start;">
                 <img data-skat-logo alt="Skat-Logo" style="height:44px;width:auto;">
-                <span style="font-size:22px;font-weight:700;letter-spacing:0.3px;">1. Sintherner Skatclub</span>
+                <span data-verein-name style="font-size:22px;font-weight:700;letter-spacing:0.3px;">1. Sintherner Skatclub</span>
             </div>
             <h2 id="gesamtlisteHeading" style="margin:0;font-size:22px;font-weight:700;text-align:center;letter-spacing:0.3px;">Jahreswertung</h2>
             <div style="justify-self:end;display:flex;align-items:center;gap:12px;">
@@ -1681,7 +1816,7 @@ function updateRanking() {
         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;font-family:Arial,sans-serif;">
             <div style="display:flex;align-items:center;gap:12px;">
                 <img data-skat-logo alt="Skat-Logo" style="height:44px;width:auto;">
-                <span style="font-size:22px;font-weight:700;letter-spacing:0.3px;white-space:nowrap;">1. Sintherner Skatclub</span>
+                <span data-verein-name style="font-size:22px;font-weight:700;letter-spacing:0.3px;white-space:nowrap;">1. Sintherner Skatclub</span>
             </div>
             <h2 id="tageswertungHeading" style="margin:0;flex:1 1 300px;font-size:22px;font-weight:700;text-align:center;letter-spacing:0.3px;">Tageswertung</h2>
         </div>
@@ -1691,9 +1826,9 @@ function updateRanking() {
                 <select id="tageswertungSelect" style="font-size:14px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;width:auto;margin:0;font-family:Arial,sans-serif;"></select>
                 <button onclick="exportTageswertungPdf()" style="background:#1976d2;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;white-space:nowrap;margin-left:auto;">PDF</button>
                 <button onclick="exportTageswertungExcel()" style="background:#2e7d32;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;white-space:nowrap;">Excel</button>
-                <button onclick="druckeTagesUmschlaege()" style="background:#ef6c00;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;white-space:nowrap;">Umschläge</button>
-                <button onclick="showSpieltagUebersicht()" style="background:#00897b;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;white-space:nowrap;">Übersicht</button>
-                <button onclick="showSpieltagListen()" style="background:#5d4037;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;white-space:nowrap;">Listen</button>
+                <button data-nur-sinthern onclick="druckeTagesUmschlaege()" style="background:#ef6c00;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;white-space:nowrap;">Umschläge</button>
+                <button data-nur-sinthern onclick="showSpieltagUebersicht()" style="background:#00897b;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;white-space:nowrap;">Übersicht</button>
+                <button data-nur-sinthern onclick="showSpieltagListen()" style="background:#5d4037;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;white-space:nowrap;">Listen</button>
                 <button onclick="closeTageswertung()" style="background:#9e9e9e;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;white-space:nowrap;">Schließen</button>
         </div>
         <div id="tageswertungContent" style="font-size:14px;font-family:Arial,sans-serif;">Lade …</div>
@@ -1704,7 +1839,7 @@ function updateRanking() {
         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;font-family:Arial,sans-serif;">
             <div style="display:flex;align-items:center;gap:12px;">
                 <img data-skat-logo alt="Skat-Logo" style="height:44px;width:auto;">
-                <span style="font-size:22px;font-weight:700;letter-spacing:0.3px;white-space:nowrap;">1. Sintherner Skatclub</span>
+                <span data-verein-name style="font-size:22px;font-weight:700;letter-spacing:0.3px;white-space:nowrap;">1. Sintherner Skatclub</span>
             </div>
             <h2 id="monatswertungHeading" style="margin:0;flex:1 1 300px;font-size:22px;font-weight:700;text-align:center;letter-spacing:0.3px;">Monatswertung</h2>
         </div>
@@ -1724,7 +1859,7 @@ function updateRanking() {
         <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:15px;gap:10px;font-family:Arial,sans-serif;">
             <div style="display:flex;align-items:center;gap:12px;justify-self:start;">
                 <img data-skat-logo alt="Skat-Logo" style="height:44px;width:auto;">
-                <span style="font-size:22px;font-weight:700;letter-spacing:0.3px;">1. Sintherner Skatclub</span>
+                <span data-verein-name style="font-size:22px;font-weight:700;letter-spacing:0.3px;">1. Sintherner Skatclub</span>
             </div>
             <h2 id="uebersichtHeading" style="margin:0;font-size:22px;font-weight:700;text-align:center;letter-spacing:0.3px;">Spieltag-Übersicht</h2>
             <div style="justify-self:end;display:flex;align-items:center;gap:12px;">
@@ -1739,7 +1874,7 @@ function updateRanking() {
         <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:15px;gap:10px;font-family:Arial,sans-serif;">
             <div style="display:flex;align-items:center;gap:12px;justify-self:start;">
                 <img data-skat-logo alt="Skat-Logo" style="height:44px;width:auto;">
-                <span style="font-size:22px;font-weight:700;letter-spacing:0.3px;">1. Sintherner Skatclub</span>
+                <span data-verein-name style="font-size:22px;font-weight:700;letter-spacing:0.3px;">1. Sintherner Skatclub</span>
             </div>
             <h2 style="margin:0;font-size:22px;font-weight:700;text-align:center;letter-spacing:0.3px;">Mitspieler-Verwaltung</h2>
             <div style="justify-self:end;display:flex;align-items:center;gap:8px;">
@@ -1755,7 +1890,7 @@ function updateRanking() {
         <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:15px;gap:10px;font-family:Arial,sans-serif;">
             <div style="display:flex;align-items:center;gap:12px;justify-self:start;">
                 <img data-skat-logo alt="Skat-Logo" style="height:44px;width:auto;">
-                <span style="font-size:22px;font-weight:700;letter-spacing:0.3px;">1. Sintherner Skatclub</span>
+                <span data-verein-name style="font-size:22px;font-weight:700;letter-spacing:0.3px;">1. Sintherner Skatclub</span>
             </div>
             <h2 id="onlineHeading" style="margin:0;font-size:22px;font-weight:700;text-align:center;letter-spacing:0.3px;">Online-Wertung</h2>
             <div style="justify-self:end;display:flex;align-items:center;gap:8px;">
@@ -1802,7 +1937,7 @@ function updateRanking() {
         <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:15px;gap:10px;font-family:Arial,sans-serif;">
             <div style="display:flex;align-items:center;gap:12px;justify-self:start;">
                 <img data-skat-logo alt="Skat-Logo" style="height:44px;width:auto;">
-                <span style="font-size:22px;font-weight:700;letter-spacing:0.3px;">1. Sintherner Skatclub</span>
+                <span data-verein-name style="font-size:22px;font-weight:700;letter-spacing:0.3px;">1. Sintherner Skatclub</span>
             </div>
             <div style="text-align:center;">
                 <h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.3px;">Tischverteilung Serie 2</h2>
@@ -1880,11 +2015,19 @@ function updateRanking() {
         const db = getFirestore(app);
         const auth = getAuth(app);
         // Vereins-ID (Stammdaten unter vereine/sinthern) – wird in allen Dokumenten mitgespeichert
-        const VEREIN_ID = 'sinthern';
+        const VEREIN_ID = VEREIN.id;
+        // Firestore-Bereich: Sinthern = oberste Ebene, andere Vereine = vereine/<id>/
+        const BEREICH = VEREIN.bereich;
         const provider = new GoogleAuthProvider();
 
-        // Sondertage (Name, ggf. preisskat) aus 'spieltag_config' einmalig laden
-        getDocs(collection(db, 'spieltag_config'))
+        // Andere Vereine: Vereinskonfiguration (Termine, Serien) aus vereine/<id> laden
+        if (VEREIN.extern) {
+            getDoc(doc(db, 'vereine', VEREIN.id))
+                .then(d => uebernimmVereinsKonfig((d.exists() && d.data().konfig) || {}, true))
+                .catch(err => console.warn('Vereinskonfiguration nicht lesbar:', err && err.message));
+        }
+        // Sondertage (Name, ggf. preisskat) aus 'spieltag_config' einmalig laden (nur Sinthern)
+        if (!VEREIN.extern) getDocs(collection(db, 'spieltag_config'))
             .then(snap => {
                 const eintraege = [];
                 snap.forEach(d => {
@@ -1979,17 +2122,17 @@ function updateRanking() {
                 return;
             }
 
-            const fgRef = doc(db, 'freigabe', datum);
-            const codeRef = doc(db, 'freigabe_code', datum);
+            const fgRef = doc(db, BEREICH + 'freigabe', datum);
+            const codeRef = doc(db, BEREICH + 'freigabe_code', datum);
             let fg, codeSnap, geraete;
             try {
                 [fg, codeSnap, geraete] = await Promise.all([
-                    getDoc(fgRef), getDoc(codeRef), getDocs(collection(db, 'freigabe', datum, 'geraete'))
+                    getDoc(fgRef), getDoc(codeRef), getDocs(collection(db, BEREICH + 'freigabe', datum, 'geraete'))
                 ]);
             } catch (err) {
                 const verweigert = err && (err.code === 'permission-denied' || /permission/i.test(err.message || ''));
                 inhalt.innerHTML = verweigert
-                    ? `Dieses Konto ist <b>kein Spielleiter</b> (oder die neuen Firestore-Regeln sind noch nicht veröffentlicht).<br><br>Der Admin muss in Firestore das Dokument <code>spielleiter/${u.uid}</code> anlegen (Feld <code>name</code>).`
+                    ? `Dieses Konto ist <b>kein Spielleiter</b> (oder die neuen Firestore-Regeln sind noch nicht veröffentlicht).<br><br>Der Admin muss in Firestore das Dokument <code>spielleiter/${u.uid}</code> anlegen (Feld <code>name</code>${VEREIN.extern ? `, Feld <code>verein</code> = <code>${VEREIN.id}</code>` : ''}).`
                     : 'Fehler beim Laden: ' + (err && err.message ? err.message : err);
                 return;
             }
@@ -2071,8 +2214,8 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 const pageW = 297, pageH = 210, margin = 8;
 
                 // ---------- Kopfzeile ----------
-                const clubName = '1. Sintherner Skatclub';
-                const logoData = window.SKAT_LOGO_DATA || null;
+                const clubName = VEREIN.name;
+                const logoData = logoFuerPdf();
                 let logoRatio = 45 / 44;
                 if (logoData) {
                     try {
@@ -2100,9 +2243,9 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 cols.push({ key: 'rank', w: 6, align: 'right' });
                 cols.push({ key: 'name', w: 35, align: 'left' });
                 dates.forEach((d, i) => cols.push({ key: 'st', iso: d.iso, header: 'ST ' + (i + 1), sub: d.label, w: 8.2, align: 'right', subSize: 5 }));
-                cols.push({ key: 'total', w: 15, align: 'right', fill: [227, 242, 253], header: 'Gesamt', sub: 'beste 18 ST *', subSize: 5 });
-                cols.push({ key: 'streich', w: 16, align: 'right', fill: [255, 243, 224], header: 'Streich', sub: 'nächste 2 ST', subSize: 5 });
-                cols.push({ key: 'form', w: 17, align: 'right', fill: [232, 245, 233], header: 'Form', sub: 'Ø letzte 8 ST', subSize: 5 });
+                cols.push({ key: 'total', w: 15, align: 'right', fill: [227, 242, 253], header: 'Gesamt', sub: data.extern ? 'alle ST' : 'beste 18 ST *', subSize: 5 });
+                if (!data.extern) cols.push({ key: 'streich', w: 16, align: 'right', fill: [255, 243, 224], header: 'Streich', sub: 'nächste 2 ST', subSize: 5 });
+                if (!data.extern) cols.push({ key: 'form', w: 17, align: 'right', fill: [232, 245, 233], header: 'Form', sub: 'Ø letzte 8 ST', subSize: 5 });
                 const totalW = cols.reduce((s, c) => s + c.w, 0);
                 const startX = Math.max(margin / 2, (pageW - totalW) / 2);
                 let cxpos = startX;
@@ -2218,7 +2361,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 // ---------- Fußnoten (direkt unter der Tabelle) ----------
                 pdf.setFontSize(7); pdf.setTextColor(120, 120, 120);
                 let footY = tableBottom + 4;
-                pdf.text('* negative Tagesergebnisse zählen immer für die Jahreswertung (kein Streichergebnis)', startX, footY);
+                if (!data.extern) pdf.text('* negative Tagesergebnisse zählen immer für die Jahreswertung (kein Streichergebnis)', startX, footY);
                 if (data.hasTie) {
                     footY += 3.5;
                     pdf.text('* Bei Punktgleichstand entscheidet das höchste Tagesergebnis, bei erneutem Gleichstand das zweithöchste usw.', startX, footY);
@@ -2264,10 +2407,12 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
 
                 // Mitspieler-Liste aus Firestore: Dokument 'mitspieler/Liste', Feld 'Mitspieler' (Array)
                 // Alt: Array von Strings. Neu: Array von Objekten { name, eintritt, mitglied }.
-                const listeSnap = await getDoc(doc(db, 'mitspieler', 'Liste'));
+                const extern = VEREIN.extern;
+                const listeSnap = extern ? null : await getDoc(doc(db, 'mitspieler', 'Liste'));
                 const mitspieler = new Set();
                 const mitspielerInfo = {}; // name -> { eintritt, mitglied }
-                if (listeSnap.exists()) {
+                // Andere Vereine: keine Mitgliederliste – es zählen alle Spieler mit Ergebnissen der Saison
+                if (listeSnap && listeSnap.exists()) {
                     const arr = listeSnap.data().Mitspieler || [];
                     arr.forEach(entry => {
                         if (!entry || typeof entry !== 'object') return;
@@ -2281,7 +2426,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                         };
                     });
                 }
-                if (mitspieler.size === 0) {
+                if (mitspieler.size === 0 && !extern) {
                     content.innerHTML = '<p>Keine Mitspieler in „mitspieler/Liste.Mitspieler" gefunden.</p>';
                     return;
                 }
@@ -2311,7 +2456,8 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     const serie = String(data.serie);
                     (data.spieler || []).forEach(s => {
                         if (!s || !s.name) return;
-                        if (!mitspieler.has(s.name)) return;
+                        if (extern) { if (String(datum).startsWith(String(saisonJahr))) mitspieler.add(s.name); }
+                        else if (!mitspieler.has(s.name)) return;
                         const val = parseFloat(s.gesamtpunkte);
                         if (Number.isNaN(val)) return;
                         datesWithData.add(datum);
@@ -2369,7 +2515,8 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
                     return '';
                 }
-                const KEEP_BEST = 18;
+                // Andere Vereine: keine Streichergebnisse (alle Spieltage zählen)
+                const KEEP_BEST = extern ? 999 : 18;
                 const players = [...mitspieler].map(name => {
                     const byDate = {};
                     const missing = new Set();
@@ -2389,9 +2536,9 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                             const s2 = day['2'] || 0;
                             const sum = s1 + s2;
                             byDate[d.iso] = sum;
-                            if (has1 !== has2) single.add(d.iso);
+                            if (has1 !== has2 && vereinSerien() === 2) single.add(d.iso);
                             pairs.push({ iso: d.iso, value: sum });
-                        } else if (d.iso <= todayIso && datesWithData.has(d.iso)) {
+                        } else if (!extern && d.iso <= todayIso && datesWithData.has(d.iso)) {
                             // Nur auffüllen, wenn der Tag tatsächlich gespielt wurde (Einträge vorhanden).
                             byDate[d.iso] = DEFAULT_PUNKTE;
                             missing.add(d.iso);
@@ -2452,6 +2599,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                             console.log('Liga-Debug', name, '\nTage:', ligaDates, '\nWerte:', ligaValues, '\nanwesend:', present, '\nForm:', form);
                         }
                     }
+                    if (extern) { streich.length = 0; form = null; }
                     return { name, byDate, missing, dropped, single, total, streich, sortedDays, form };
                 });
 
@@ -2521,7 +2669,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 window.__gesamtData = {
                     players, dates,
                     titelText, standText, seasonYear, playedSpieltage,
-                    hasTie: tieNotes.length > 0
+                    hasTie: tieNotes.length > 0, extern
                 };
 
                 if (players.length === 0) {
@@ -2543,9 +2691,9 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 dates.forEach((d, i) => {
                     html += `<th style="${th}text-align:right;white-space:nowrap;font-size:10px;width:26px;min-width:26px;max-width:26px;">ST ${i + 1}<br><span style="font-weight:normal;color:#666;font-size:8px;">${d.label}</span></th>`;
                 });
-                html += `<th style="${th}text-align:right;background:#e3f2fd;width:48px;min-width:48px;max-width:48px;">Gesamt<br><span style="font-weight:normal;color:#666;font-size:8px;white-space:nowrap;">beste 18 ST&nbsp;<span style="color:#d32f2f;">*</span></span></th>`;
-                html += `<th style="${th}text-align:right;background:#fff3e0;width:65px;min-width:65px;max-width:65px;">Streich<br><span style="font-weight:normal;color:#666;font-size:8px;white-space:nowrap;">nächste 2 ST</span></th>`;
-                html += `<th style="${th}text-align:right;background:#e8f5e9;width:72px;min-width:72px;max-width:72px;">Form<br><span style="font-weight:normal;color:#666;font-size:8px;white-space:nowrap;">Ø letzte 8 ST</span></th>`;
+                html += `<th style="${th}text-align:right;background:#e3f2fd;width:48px;min-width:48px;max-width:48px;">Gesamt<br><span style="font-weight:normal;color:#666;font-size:8px;white-space:nowrap;">${extern ? 'alle ST' : 'beste 18 ST&nbsp;<span style="color:#d32f2f;">*</span>'}</span></th>`;
+                if (!extern) html += `<th style="${th}text-align:right;background:#fff3e0;width:65px;min-width:65px;max-width:65px;">Streich<br><span style="font-weight:normal;color:#666;font-size:8px;white-space:nowrap;">nächste 2 ST</span></th>`;
+                if (!extern) html += `<th style="${th}text-align:right;background:#e8f5e9;width:72px;min-width:72px;max-width:72px;">Form<br><span style="font-weight:normal;color:#666;font-size:8px;white-space:nowrap;">Ø letzte 8 ST</span></th>`;
                 html += '</tr></thead><tbody>';
 
                 players.forEach((p, idx) => {
@@ -2575,16 +2723,16 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     });
                     html += `<td style="${cell}text-align:right;background:#e3f2fd;font-weight:bold;width:48px;min-width:48px;max-width:48px;">${p.total}</td>`;
                     const streichStr = p.streich.length ? p.streich.join(', ') : '-';
-                    html += `<td style="${cell}text-align:right;background:#fff3e0;color:#666;width:65px;min-width:65px;max-width:65px;word-break:break-word;">${streichStr}</td>`;
+                    if (!extern) html += `<td style="${cell}text-align:right;background:#fff3e0;color:#666;width:65px;min-width:65px;max-width:65px;word-break:break-word;">${streichStr}</td>`;
                     const formCell = p.form == null
                         ? '-'
                         : `<span style="display:inline-block;width:40px;text-align:right;">${p.formNum}</span><span style="display:inline-block;width:26px;text-align:left;padding-left:4px;box-sizing:border-box;font-weight:normal;color:#555;">${p.formRankStr}</span>`;
-                    html += `<td style="${cell}text-align:right;background:#e8f5e9;font-weight:bold;width:72px;min-width:72px;max-width:72px;white-space:nowrap;">${formCell}</td>`;
+                    if (!extern) html += `<td style="${cell}text-align:right;background:#e8f5e9;font-weight:bold;width:72px;min-width:72px;max-width:72px;white-space:nowrap;">${formCell}</td>`;
                     html += '</tr>';
                 });
                 html += '</tbody></table></div>';
                 html += '<div style="margin:8px 4px 0;font-size:11px;color:#555;font-family:Arial,sans-serif;line-height:1.5;">';
-                html += '<div><span style="color:#d32f2f;">*</span> negative Tagesergebnisse zählen immer für die Jahreswertung (kein Streichergebnis)</div>';
+                if (!extern) html += '<div><span style="color:#d32f2f;">*</span> negative Tagesergebnisse zählen immer für die Jahreswertung (kein Streichergebnis)</div>';
                 if (tieNotes.length) {
                     html += '<div style="margin-top:4px;"><span style="color:#d32f2f;">*</span> Bei Punktgleichstand entscheidet das höchste Tagesergebnis, bei erneutem Gleichstand das zweithöchste usw.</div>';
                     tieNotes.forEach(n => { html += `<div style="margin-left:12px;">${n}</div>`; });
@@ -2616,7 +2764,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
         function ladeSpieltageJahr(jahr) {
             const c = spieltageCache.get(jahr);
             if (c && Date.now() - c.zeit < SPIELTAGE_CACHE_MS) return c.promise;
-            const promise = getDocs(query(collection(db, 'spieltage'),
+            const promise = getDocs(query(collection(db, BEREICH + 'spieltage'),
                     where('datum', '>=', `${jahr}-01-01`), where('datum', '<=', `${jahr}-12-31`)))
                 .then(snap => { const docs = []; snap.forEach(ds => docs.push(ds.data())); return docs; });
             spieltageCache.set(jahr, { zeit: Date.now(), promise });
@@ -2638,7 +2786,8 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             const members = new Set();
             const playerData = {};
             const datesWithData = new Set();
-            try {
+            // Andere Vereine: nur Spieler mit Ergebnis zeigen (keine Mitgliederliste in Firestore)
+            if (!VEREIN.extern) try {
                 const listeSnap = await getDoc(doc(db, 'mitspieler', 'Liste'));
                 if (listeSnap.exists()) {
                     const arr = listeSnap.data().Mitspieler || [];
@@ -2763,7 +2912,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 const hasEntry = has1 || has2;
                 if (!hasEntry && !members.has(name)) return null;
                 const s1 = has1 ? day['1'] : 0;
-                const s2 = has2 ? day['2'] : 750;
+                const s2 = has2 ? day['2'] : (VEREIN.extern ? 0 : 750);
                 return { name, s1, s2, has1, has2, sum: s1 + s2, hasEntry };
             }).filter(Boolean);
             if (dayHasData) {
@@ -2796,7 +2945,8 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             html += `<th style="${th}width:50px;text-align:right;">Rang</th>`;
             html += `<th style="${th}text-align:left;">Name</th>`;
             html += `<th style="${th}width:90px;text-align:right;">Serie 1</th>`;
-            html += `<th style="${th}width:90px;text-align:right;">Serie 2</th>`;
+            const zweiSerien = vereinSerien() === 2;
+            if (zweiSerien) html += `<th style="${th}width:90px;text-align:right;">Serie 2</th>`;
             html += `<th style="${th}width:90px;text-align:right;background:#e3f2fd;">Gesamt</th>`;
             html += '</tr></thead><tbody>';
             players.forEach((p, idx2) => {
@@ -2812,11 +2962,11 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 html += `<td style="${cell}">${p.name}</td>`;
                 if (!dayHasData) {
                     html += `<td style="${cell}text-align:right;color:#bbb;">-</td>`;
-                    html += `<td style="${cell}text-align:right;color:#bbb;">-</td>`;
+                    if (zweiSerien) html += `<td style="${cell}text-align:right;color:#bbb;">-</td>`;
                     html += `<td style="${cell}text-align:right;background:#e3f2fd;color:#bbb;">-</td>`;
                 } else {
                     html += `<td style="${cell}${cellNeg(p.s1, !p.has1)}">${p.s1}</td>`;
-                    html += `<td style="${cell}${cellNeg(p.s2, !p.has2)}">${p.s2}</td>`;
+                    if (zweiSerien) html += `<td style="${cell}${cellNeg(p.s2, !p.has2)}">${p.s2}</td>`;
                     html += `<td style="${cell}text-align:right;background:#e3f2fd;font-weight:bold;">${p.sum}</td>`;
                 }
                 html += '</tr>';
@@ -2951,8 +3101,8 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             const pageW = 210, pageH = 297, margin = 12;
 
             // ---------- Kopf ----------
-            const clubName = '1. Sintherner Skatclub';
-            const logoData = window.SKAT_LOGO_DATA || null;
+            const clubName = VEREIN.name;
+            const logoData = logoFuerPdf();
             let logoRatio = 45 / 44;
             if (logoData) {
                 try {
@@ -3041,7 +3191,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 { header: 'Rang', w: 20, align: 'right', render: p => ({ text: p.displayRank }) },
                 { header: 'Name', w: 75, align: 'left', render: p => ({ text: p.name }) },
                 { header: 'Serie 1', w: 28, align: 'right', render: p => dayHasData ? Object.assign({ text: p.s1, bold: true }, wertStil(p.s1, !p.has1)) : dash },
-                { header: 'Serie 2', w: 28, align: 'right', render: p => dayHasData ? Object.assign({ text: p.s2, bold: true }, wertStil(p.s2, !p.has2)) : dash },
+                ...(vereinSerien() === 2 ? [{ header: 'Serie 2', w: 28, align: 'right', render: p => dayHasData ? Object.assign({ text: p.s2, bold: true }, wertStil(p.s2, !p.has2)) : dash }] : []),
                 { header: 'Gesamt', w: 28, align: 'right', headerFill: [227, 242, 253], fill: [227, 242, 253], render: p => dayHasData ? { text: p.sum, bold: true } : dash }
             ];
             const filename = date.extra
@@ -3269,7 +3419,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             inhalt.innerHTML = 'Lade …';
             box.style.display = 'flex';
             try {
-                const snap = await getDocs(query(collection(db, 'spieltage'), where('datum', '==', datum)));
+                const snap = await getDocs(query(collection(db, BEREICH + 'spieltage'), where('datum', '==', datum)));
                 // werte[tisch][serie] = { betrag, zeit } – bei mehreren Docs je Tisch/Serie gilt das zuletzt gespeicherte
                 const werte = {};
                 snap.forEach(ds => {
@@ -3287,7 +3437,8 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 const summe = { '1': 0, '2': 0 };
                 let ohneFeld = false;
                 // Info-Spalte Serie 1: Startgeld (Spieler × Startgeld je Spieler) + Abreizgeld
-                const startgeldS1 = (SPIELTAG_STARTGELD[datum] || { s1: 3 }).s1;
+                const mitStartgeld = !VEREIN.extern || VEREIN.startgeld != null;
+                const startgeldS1 = VEREIN.extern ? (VEREIN.startgeld || 0) : (SPIELTAG_STARTGELD[datum] || { s1: 3 }).s1;
                 let summeMitStart = 0;
                 const zelleMitStart = t => {
                     const w = (werte[t] || {})['1'];
@@ -3309,18 +3460,18 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 let html = `<table style="width:100%;border-collapse:collapse;"><thead><tr>
                     <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #555;">Tisch</th>
                     <th ${th}>Serie 1</th>
-                    <th style="text-align:right;padding:6px 10px;border-bottom:2px solid #555;color:#666;font-weight:normal;line-height:1.2;">S1 inkl. Startgeld<br><span style="font-size:11px;">(${euro(startgeldS1)} je Spieler)</span></th>
+                    ${mitStartgeld ? `<th style="text-align:right;padding:6px 10px;border-bottom:2px solid #555;color:#666;font-weight:normal;line-height:1.2;">S1 inkl. Startgeld<br><span style="font-size:11px;">(${euro(startgeldS1)} je Spieler)</span></th>` : ''}
                     <th ${th}>Serie 2</th></tr></thead><tbody>`;
                 for (let t = 1; t <= maxTisch; t++) {
-                    html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 10px;">Tisch ${t}</td>${zelle(t, '1')}${zelleMitStart(t)}${zelle(t, '2')}</tr>`;
+                    html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 10px;">Tisch ${t}</td>${zelle(t, '1')}${mitStartgeld ? zelleMitStart(t) : ''}${zelle(t, '2')}</tr>`;
                 }
                 const fuss = `style="${td}padding:7px 10px;font-weight:bold;border-top:2px solid #555;"`;
                 html += `</tbody><tfoot><tr><td style="padding:7px 10px;font-weight:bold;border-top:2px solid #555;">Summe</td>` +
                     `<td ${fuss}>${euro(summe['1'])}</td>` +
-                    `<td style="${td}padding:7px 10px;font-weight:bold;border-top:2px solid #555;color:#666;">${euro(summeMitStart)}</td>` +
+                    (mitStartgeld ? `<td style="${td}padding:7px 10px;font-weight:bold;border-top:2px solid #555;color:#666;">${euro(summeMitStart)}</td>` : '') +
                     `<td ${fuss}>${euro(summe['2'])}</td></tr>` +
                     `<tr><td style="padding:8px 10px;font-weight:bold;font-size:16px;">Gesamt</td>` +
-                    `<td colspan="3" style="${td}padding:8px 10px;font-weight:bold;font-size:16px;color:#2e7d32;">${euro(summe['1'] + summe['2'])}</td></tr></tfoot></table>`;
+                    `<td colspan="${mitStartgeld ? 3 : 2}" style="${td}padding:8px 10px;font-weight:bold;font-size:16px;color:#2e7d32;">${euro(summe['1'] + summe['2'])}</td></tr></tfoot></table>`;
                 if (ohneFeld) html += '<p style="margin:10px 0 0;font-size:12px;color:#d32f2f;">? = Liste ohne Abreizgeld gespeichert (vor der Umstellung der 4erListe).</p>';
                 if (!Object.keys(werte).length) html += '<p style="margin:10px 0 0;font-size:13px;color:#555;">Für diesen Tag sind noch keine Tische gespeichert.</p>';
                 inhalt.innerHTML = html;
@@ -4171,7 +4322,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 const pageW = 297, margin = 8;
 
                 // ---------- Kopfzeile ----------
-                const logoData = window.SKAT_LOGO_DATA || null;
+                const logoData = logoFuerPdf();
                 let logoRatio = 45 / 44;
                 if (logoData) {
                     try {
@@ -4781,7 +4932,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             const msgEl = document.getElementById('message');
             msgEl.textContent = `Lade aus Firestore (${datum}) …`;
             try {
-                const q = query(collection(db, 'spieltage'), where('datum', '==', datum));
+                const q = query(collection(db, BEREICH + 'spieltage'), where('datum', '==', datum));
                 const snap = await getDocs(q);
                 if (snap.empty) {
                     msgEl.textContent = '';
@@ -4850,7 +5001,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             msgEl.textContent = `Lade Serie ${serie} hoch …`;
             try {
                 // Existierende Einträge ermitteln, damit nichts doppelt geschrieben wird.
-                const q = query(collection(db, 'spieltage'),
+                const q = query(collection(db, BEREICH + 'spieltage'),
                     where('datum', '==', datum), where('serie', '==', serieStr));
                 const snap = await getDocs(q);
                 const existing = new Set();
@@ -4872,7 +5023,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     return;
                 }
                 const merged = [...tisch0ExistingPlayers, ...newEntries];
-                await setDoc(doc(db, 'spieltage', tisch0Id), {
+                await setDoc(doc(db, BEREICH + 'spieltage', tisch0Id), {
                     datum, serie: serieStr, tisch: '0',
                     vereinId: VEREIN_ID,
                     spieler: merged,
@@ -4942,7 +5093,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 for (const [key, groupRows] of groups) {
                     const [datum, serie] = key.split('||');
                     const tisch0Id = `${datum}_S${serie}_T0`;
-                    const q = query(collection(db, 'spieltage'),
+                    const q = query(collection(db, BEREICH + 'spieltage'),
                         where('datum', '==', datum), where('serie', '==', serie));
                     const snap = await getDocs(q);
 
@@ -4963,7 +5114,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     if (newEntries.length === 0) continue;
 
                     const merged = [...tisch0ExistingPlayers, ...newEntries];
-                    await setDoc(doc(db, 'spieltage', tisch0Id), {
+                    await setDoc(doc(db, BEREICH + 'spieltage', tisch0Id), {
                         datum, serie, tisch: '0',
                         vereinId: VEREIN_ID,
                         spieler: merged,

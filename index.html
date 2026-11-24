@@ -962,7 +962,7 @@ let spielDaten = [];
 let scale = 1.0;
 let spielerAnzahl = 4;  // 3 oder 4 — zentrale Steuerung
 let abreizgeldTisch = 0;           // Abreizgeld des Tisches ohne Startgeld/Spieleinsatz (für Firestore 'spieltage')
-let spielerFehlt = [0, 0, 0, 0];   // Buure: Anzahl gefehlter Spielabende, je +4 €
+let spielerFehlt = [0, 0, 0, 0];   // Boore: Anzahl gefehlter Spielabende, je +4 €
 let fehltPromptShown = false;       // Prompt nur einmal pro Liste
 let spielerPreset = null;           // Wenn per Turnierauslosung gesetzt: nur diese 4 Namen im Dropdown
 
@@ -994,13 +994,13 @@ function getVereinsMode() {
   try {
     const params = new URLSearchParams(window.location.search);
     const club = (params.get('club') || '').toLowerCase();
-    if (club === 'boore' || club === 'devierboore') return '4buure';
+    if (club === 'boore' || club === 'devierboore') return '4boore';
     if (club === 'sinthern') return 'sinthern';
     if (club === 'garching') return 'garching';
     // Alter Peter deaktiviert – zum Reaktivieren die Zeile wieder einkommentieren:
     // if (club === 'alterpeter') return 'alterpeter';
     const hash = (window.location.hash || '').replace(/^[#\/]+/, '').toLowerCase();
-    if (hash === 'boore' || hash === 'devierboore') return '4buure';
+    if (hash === 'boore' || hash === 'devierboore') return '4boore';
     if (hash === 'sinthern') return 'sinthern';
     if (hash === 'garching') return 'garching';
     // if (hash === 'alterpeter') return 'alterpeter';
@@ -1013,10 +1013,10 @@ function getVereinsMode() {
 function isVereinParamActive() { return true; }
 
 // Vereine ohne Firestore (kein Speichern, kein Live-Sync, keine Setzliste):
-// "de 4 Buure" (und das deaktivierte "SC Alter Peter München") – nur lokal + PDF.
+// nur noch das deaktivierte "SC Alter Peter München" – nur lokal + PDF.
+// "de vier Boore" speichert seit V1.30 wie Garching im eigenen Bereich vereine/boore/.
 function istVereinOhneFirestore() {
-  const m = getVereinsMode();
-  return m === '4buure' || m === 'alterpeter';
+  return getVereinsMode() === 'alterpeter';
 }
 
 // Sintherner Skatclub (Default, auch Sondertage wie die Stadtmeisterschaft):
@@ -1027,21 +1027,21 @@ function istSinthernModus() {
 }
 
 // Vereins-ID für Firestore (Feld "vereinId" in allen gespeicherten Dokumenten,
-// Stammdaten unter vereine/<id>): sinthern, garching, buure, alterpeter.
+// Stammdaten unter vereine/<id>): sinthern, garching, boore, alterpeter.
 // Sondertage ohne Vereinsauswahl (z. B. Stadtmeisterschaft) zählen zu Sinthern.
 function getVereinsId() {
   const m = getVereinsMode();
-  if (m === '4buure') return 'buure';
+  if (m === '4boore') return 'boore';
   if (m === 'garching' || m === 'alterpeter') return m;
   return 'sinthern';
 }
 
 // Vereine mit eigenem Firestore-Bereich vereine/<id>/… – eigene Spielleiter,
 // eigene Freigabe, eigene Ergebnisse (nicht in der Sinthern-Wertung).
-const VEREINE_MIT_EIGENEM_BEREICH = ['garching'];
+const VEREINE_MIT_EIGENEM_BEREICH = ['garching', 'boore'];
 function _vereinsBereich() {
-  const m = getVereinsMode();
-  return VEREINE_MIT_EIGENEM_BEREICH.includes(m) ? `vereine/${m}/` : '';
+  const id = getVereinsId();
+  return VEREINE_MIT_EIGENEM_BEREICH.includes(id) ? `vereine/${id}/` : '';
 }
 
 // Spieltag-Konfiguration aus Firestore (spieltag_config/{YYYY-MM-DD}):
@@ -1622,13 +1622,13 @@ function fillTable() {
 
   // Abreizgeld: 0,50 € pro Eingepasstem Spiel + Staffelung eigene Verluste (je nach Verein)
   //   Sinthern: 1–3 je 0,50 €, ab 4 je 1,00 €
-  //   4 Buure:  1–2 je 0,50 €, 3–4 je 1,00 €, 5–6 je 1,50 €, ab 7 je 2,00 €
+  //   4 Boore:  1–2 je 0,50 €, 3–4 je 1,00 €, 5–6 je 1,50 €, ab 7 je 2,00 €
   //   Alter Peter: jedes verlorene Spiel 1,00 €
   //   Garching: 1–3 je 0,50 €, 4–6 je 1,00 €, ab 7 je 2,00 €
   const vereinModeAbreiz = isVereinParamActive() ? getVereinsMode() : null;
   const abreizRow = document.getElementById("abreizgeld-row");
   const abreizRegelEl = document.getElementById("abreiz-regel");
-  const istBuure = vereinModeAbreiz === '4buure';
+  const istBoore = vereinModeAbreiz === '4boore';
   const istAlterPeter = vereinModeAbreiz === 'alterpeter';
   const istGarching = vereinModeAbreiz === 'garching';  // Regeln wie Sinthern
   const berechneEigenVerlust = (verl) => istAlterPeter
@@ -1637,7 +1637,7 @@ function fillTable() {
     ? Math.min(verl, 3) * 0.5
       + Math.min(Math.max(verl - 3, 0), 3) * 1
       + Math.max(verl - 6, 0) * 2
-    : istBuure
+    : istBoore
     ? Math.min(verl, 2) * 0.5
       + Math.min(Math.max(verl - 2, 0), 2) * 1
       + Math.min(Math.max(verl - 4, 0), 2) * 1.5
@@ -1648,7 +1648,7 @@ function fillTable() {
       ? '(Eingepasst: je 0,50 €, Verlorene: je 1,00 €)'
       : istGarching
       ? '(Eingepasst: je 0,50 €, Verlorene 1–3: je 0,50 €, 4–6: je 1,00 €, ab 7: je 2,00 €)'
-      : istBuure
+      : istBoore
       ? '(Eingepasst: je 0,50 €, Verlorene 1–2: je 0,50 €, 3–4: je 1,00 €, 5–6: je 1,50 €, ab 7: je 2,00 €)'
       : '(Eingepasst: je 0,50 €, Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)';
   }
@@ -1680,7 +1680,7 @@ function fillTable() {
   const startgeldRow = document.getElementById("startgeld-row");
   const startgeldBetraege = new Array(n).fill(0);
   if (startgeldRow) {
-    if (!istBuure) {
+    if (!istBoore) {
       const serieAktiv = document.querySelector('input[name="serie"]:checked')?.value || '1';
       const cfg = (istAlterPeter || istGarching) ? null : (_spieltagConfigCache?.data || null);
       // Falls Config-Doc vorhanden: dessen Beträge nehmen, sonst Default 3/0 (Alter Peter 5/0).
@@ -1716,12 +1716,12 @@ function fillTable() {
     }
   }
 
-  // Rangzahlung (nur Buure): nach Spielpunkten (ohne Bonus) — 0/1/2/3 €, bei Gleichstand geteilt
+  // Rangzahlung (nur Boore): nach Spielpunkten (ohne Bonus) — 0/1/2/3 €, bei Gleichstand geteilt
   const rangRow = document.getElementById("rangzahlung-row");
   const summeRowEl = document.getElementById("summe-row");
   const rangBetrag = new Array(n).fill(0);
   if (rangRow) {
-    if (istBuure) {
+    if (istBoore) {
       rangRow.style.display = "";
       const spielpunkteArr = [];
       for (let i = 0; i < n; i++) spielpunkteArr.push({ idx: i, pkt: punkteSummen[i] || 0 });
@@ -1779,11 +1779,11 @@ function fillTable() {
     }
   }
 
-  // Prompt nach dem ersten Spieleintrag (nur Buure, nur einmal pro Liste)
+  // Prompt nach dem ersten Spieleintrag (nur Boore, nur einmal pro Liste)
   const filledCount = spielDaten.filter(d =>
     d && (d.grundwert || d.hand || d.schneider || d.schneiderang || d.schwarz || d.schwarzang || d.offen)
   ).length;
-  if (istBuure && filledCount >= 1 && !fehltPromptShown) {
+  if (istBoore && filledCount >= 1 && !fehltPromptShown) {
     fehltPromptShown = true;
     saveState();
     setTimeout(() => {
@@ -1792,21 +1792,21 @@ function fillTable() {
   }
 
   // Summenzeile:
-  //   Buure    → Abreizgeld + Rangzahlung
+  //   Boore    → Abreizgeld + Rangzahlung
   //   Sinthern → Startgeld  + Abreizgeld
   if (summeRowEl) {
     summeRowEl.style.display = "";
     const summeLabelEl = summeRowEl.querySelector('th');
     let tischSumme = 0;
     for (let i = 0; i < n; i++) {
-      const zusatz = istBuure ? (rangBetrag[i] || 0) : (startgeldBetraege[i] || 0);
+      const zusatz = istBoore ? (rangBetrag[i] || 0) : (startgeldBetraege[i] || 0);
       const summe = (abreizBetraege[i] || 0) + zusatz;
       tischSumme += summe;
       const cell = document.getElementById(`summe-p${i+1}`);
       if (cell) cell.textContent = summe.toFixed(2).replace('.', ',') + ' €';
     }
     if (summeLabelEl) {
-      const labelText = istBuure
+      const labelText = istBoore
         ? 'Summe (Abreizgeld + Rangzahlung): '
         : 'Summe (Startgeld + Abreizgeld): ';
       summeLabelEl.innerHTML = labelText + `<b id="tisch-summe">${tischSumme.toFixed(2).replace('.', ',')} €</b>`;
@@ -2025,7 +2025,7 @@ function createCSVButton() {
   const container = document.getElementById("csv-export-container");
   if (!container || container.children.length > 0) return;
 
-  // Speichern-Button: Sinthern und Garching (nicht bei Buure / Alter Peter)
+  // Speichern-Button: Sinthern, Garching und Boore (nicht bei Alter Peter)
   if (istVereinOhneFirestore()) return;
 
   const csvBtn = document.createElement("button");
@@ -2305,7 +2305,7 @@ function createLiveViewButton() {
   const container = document.getElementById("live-view-container");
   if (!container || container.children.length > 0) return;
 
-  // Nur beim Sintherner Skatclub (nicht bei Buure / Garching / Alter Peter)
+  // Nur beim Sintherner Skatclub (nicht bei Boore / Garching / Alter Peter)
   if (!istSinthernModus()) return;
 
   // Nur wenn per URL freigeschaltet: ?live oder ?live=1 (auch #live)
@@ -2717,7 +2717,7 @@ function downloadCSV(csv, filename) {
 const spielerNamen = ["Spieler 1", "Spieler 2", "Spieler 3", "Spieler 4"];
 
 // ── Mitspieler-Liste Sintherner Skatclub ───────────────────────────
-// Doppelmitgliedschaften: Name zusätzlich in MITSPIELER_BUURE eintragen.
+// Doppelmitgliedschaften: Name zusätzlich in MITSPIELER_BOORE eintragen.
 const MITSPIELER_SINTHERN = [
 	"Bertram, Frank",
 	"Bleckmann, Norbert",
@@ -2747,9 +2747,9 @@ const MITSPIELER_SINTHERN = [
 	"Gast"
 ];
 
-// ── Mitspieler-Liste de 4 Buure ────────────────────────────────────
+// ── Mitspieler-Liste de 4 Boore ────────────────────────────────────
 // Doppelmitgliedschaften: Name zusätzlich in MITSPIELER_SINTHERN eintragen.
-const MITSPIELER_BUURE = [
+const MITSPIELER_BOORE = [
 	"Bleckmann, Norbert",
 	"Gebhardt, Harry",
 	"Jost, Uwe",
@@ -2826,7 +2826,7 @@ const MITSPIELER_GARCHING = [
 const MITSPIELER_STANDARD = (() => {
   const set = new Set();
   MITSPIELER_SINTHERN.forEach(n => { if (n !== 'Gast') set.add(n); });
-  MITSPIELER_BUURE.forEach(n => { if (n !== 'Gast') set.add(n); });
+  MITSPIELER_BOORE.forEach(n => { if (n !== 'Gast') set.add(n); });
   return [...set].sort((a, b) => a.localeCompare(b, 'de')).concat('Gast');
 })();
 
@@ -2969,7 +2969,7 @@ async function refreshTurnierauslosung() {
   const sondertag = isSpecialDay();
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
 
-  // "de 4 Buure" / Alter Peter: Setzliste nie laden (nur Sintherner Skatclub)
+  // "de 4 Boore" / Alter Peter: Setzliste nie laden (nur Sintherner Skatclub)
   if (!istSinthernModus()) {
     console.log(`[Auslosung] Vereinsmodus ${vereinMode} – übersprungen`);
     return;
@@ -3052,7 +3052,7 @@ async function refreshTurnierauslosung() {
 
 function getAktuelleMitspielerListe() {
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
-  if (vereinMode === '4buure')   return MITSPIELER_BUURE;
+  if (vereinMode === '4boore')   return MITSPIELER_BOORE;
   if (vereinMode === 'alterpeter') return MITSPIELER_ALTERPETER;
   if (vereinMode === 'garching')   return MITSPIELER_GARCHING;
   if (vereinMode === 'sinthern') return MITSPIELER_SINTHERN;
@@ -3778,7 +3778,7 @@ function _liveDocId() {
 
 async function saveGameLive(index) {
   if (!window.__firestore) return;
-  // Live-Sync nur für Sinthern (nicht Buure / Garching / Alter Peter)
+  // Live-Sync nur für Sinthern (nicht Boore / Garching / Alter Peter)
   if (!istSinthernModus()) return;
   // Spielernamen komplett? Sonst noch nicht sinnvoll live zeigen
   for (let i = 0; i < spielerAnzahl; i++) {
@@ -4098,7 +4098,7 @@ function applyDayConfig() {
   const logo = document.getElementById('club-logo');
   const name = document.getElementById('club-name');
 
-  // Browser-Tab (Titel + Favicon) für Buure / Garching / Alter Peter anpassen;
+  // Browser-Tab (Titel + Favicon) für Boore / Garching / Alter Peter anpassen;
   // Sinthern behält Titel und Skat.png aus dem <head>.
   const setzeTab = (titel, icon) => {
     document.title = titel;
@@ -4109,7 +4109,7 @@ function applyDayConfig() {
     });
   };
 
-  if (vereinMode === '4buure') {
+  if (vereinMode === '4boore') {
     if (logo) logo.src = 'devierboore.png';
     if (name) name.textContent = 'de vier Boore';
     setzeTab('de vier Boore - Skatliste', 'devierboore.png');
@@ -4180,10 +4180,10 @@ function updateKartenAuswahl() {
   const special = isSpecialDay();
 
   // Feste Spielanzahl (nur EIN Wert, keine Auswahl):
-  //   "de 4 Buure" / Garching / Alter Peter → 48 (4er) / 36 (3er)
+  //   "de 4 Boore" / Garching / Alter Peter → 48 (4er) / 36 (3er)
   //   Sondertag ohne Verein-Override → 40 (4er) / 30 (3er)
   let festwert = null;
-  if (vereinMode === '4buure' || vereinMode === 'garching' || vereinMode === 'alterpeter') festwert = ist3er ? 36 : 48;
+  if (vereinMode === '4boore' || vereinMode === 'garching' || vereinMode === 'alterpeter') festwert = ist3er ? 36 : 48;
   else if (special && !vereinMode)  festwert = ist3er ? 30 : 40;
   if (festwert !== null) {
     container.innerHTML =
@@ -4216,14 +4216,14 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.29) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.30) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
 // ── Speicher-Abstraktion (localStorage → IndexedDB Fallback) ──────
 // Garching / Alter Peter mit eigenem Spielstand, damit sich eine Sinthern-Liste
 // auf demselben Gerät nicht mit der Liste eines anderen Vereins vermischt.
-// Sinthern und Buure teilen sich weiterhin 'skatSpielstand'.
+// Sinthern und Boore teilen sich weiterhin 'skatSpielstand'.
 const STORE_KEY = (['alterpeter', 'garching'].includes(getVereinsMode()))
   ? 'skatSpielstand_' + getVereinsMode()
   : 'skatSpielstand';
@@ -4844,7 +4844,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.29)
+    © 2026 by Frank Bertram (V1.30)
     </div>
 </body>
 </html>
