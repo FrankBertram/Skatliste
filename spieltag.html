@@ -238,6 +238,17 @@
         </div>
     </div>
     
+
+    <!-- Spieltag-Zeile: Spieltag wählen (Grundlage für Auslosung, Freigabe, Serien laden) -->
+    <div id="spieltagZeile" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 0 0;padding:8px 10px;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+        <label for="spieltagSelect" style="font-size:14px;font-weight:bold;white-space:nowrap;">Spieltag:</label>
+        <select id="spieltagSelect" style="font-size:14px;padding:5px;border:1px solid #ccc;border-radius:4px;width:auto;min-width:260px;margin:0;">
+            <option value="">-- Spieltag --</option>
+        </select>
+        <button id="freigabeBtn" onclick="showFreigabe()" title="Spieltag für die Skatliste-Tablets freigeben (Spielleiter)" style="background:#f57c00;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">🔑 Freigabe</button>
+        <button id="importBtn" onclick="importFromFirestore()" title="Ergebnisse des Spieltags aus Firestore laden" style="background:#1976d2;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Serien laden</button>
+    </div>
+
     <div class="container">
         <div class="left">
             <h3 style="margin-bottom:2px;">Mitspieler wählen: <span id="mitspielerAnzahl">0</span></h3>
@@ -262,19 +273,15 @@
             <h3 id="roundTitle">S1: Ergebnis eintragen</h3>
             <div id="importSection" style="display:none;flex-direction:column;gap:6px;margin:0 0 10px 0;">
                 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                    <button id="importBtn" onclick="importFromFirestore()" style="background:#1976d2;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Serien laden</button>
+                    <label for="importDate" style="font-size:13px;">Datum:</label>
                     <input type="date" id="importDate" style="font-size:13px;padding:5px;border:1px solid #ccc;border-radius:4px;width:auto;margin:0;">
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                     <button id="saveSerie1Btn" onclick="saveSerieToFirestore(1)" style="background:#388e3c;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Serie 1 → T0</button>
                     <button class="nur-2-serien" id="saveSerie2Btn" onclick="saveSerieToFirestore(2)" style="background:#388e3c;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Serie 2 → T0</button>
                     <button id="abreizgeldBtn" onclick="showAbreizgeld()" style="background:#6d4c41;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Abreizgeld</button>
-                    <button id="freigabeBtn" onclick="showFreigabe()" title="Spieltag für die Skatliste-Tablets freigeben (Spielleiter)" style="background:#f57c00;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">🔑 Freigabe</button>
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                    <select id="spieltagSelect" style="font-size:13px;padding:5px;border:1px solid #ccc;border-radius:4px;width:auto;margin:0;">
-                        <option value="">-- Spieltag --</option>
-                    </select>
                     <button id="signInBtn" onclick="signInGoogle()" style="background:#424242;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Anmelden</button>
                     <button id="signOutBtn" onclick="signOutGoogle()" style="display:none;background:#9e9e9e;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Abmelden</button>
                     <button id="copyUidBtn" onclick="copyUid()" style="display:none;background:#1976d2;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;" title="E-Mail mit der UID an den Admin vorbereiten (für die Spielleiter-Freischaltung)">✉️ UID an Admin</button>
@@ -548,6 +555,14 @@
             // DatePicker auf heute vorbelegen
             const dateInput = document.getElementById('importDate');
             if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+            // Heute gewählten Spieltag wiederherstellen (z. B. nach der Auslosung in turnier.html)
+            const WAHL_KEY = 'skat_spieltag_wahl_' + VEREIN.id;
+            try {
+                const w = JSON.parse(localStorage.getItem(WAHL_KEY) || 'null');
+                if (w && w.am === new Date().toISOString().slice(0, 10) && /^\d{4}-\d{2}-\d{2}$/.test(w.datum) && dateInput) {
+                    dateInput.value = w.datum;
+                }
+            } catch (e) { /* ignorieren */ }
 
             // Spieltag-Dropdown füllen: Spieltage der aktuellen Saison (alle 2 Wochen ab 2. Dienstag im Januar)
             const spieltagSelect = document.getElementById('spieltagSelect');
@@ -555,8 +570,14 @@
                 fuelleSpieltagSelect();
                 spieltagSelect.addEventListener('change', function() {
                     if (this.value && dateInput) dateInput.value = this.value;
+                    try {
+                        localStorage.setItem(WAHL_KEY, JSON.stringify({ datum: this.value, am: new Date().toISOString().slice(0, 10) }));
+                    } catch (e) { /* ignorieren */ }
                     // Beim Sonderspieltag nur Preisskat-Teilnehmer in der Auswahlliste zeigen
                     if (typeof window.applyPreisskatFilter === 'function') window.applyPreisskatFilter();
+                    // Auslosung/Setzliste des gewählten Spieltags für den Zwischenstand laden
+                    if (typeof window.ladeAuslosungAnzeige === 'function') window.ladeAuslosungAnzeige();
+                    else updateRanking();
                 });
             }
         })();
@@ -797,6 +818,13 @@ function loadPlayers(text) {
 
         // Markierte Spieler an die Turnierseite übergeben und dorthin wechseln.
         function auslosungStarten() {
+            const sel = document.getElementById('spieltagSelect');
+            const datum = sel ? sel.value : '';
+            if (!datum) {
+                alert('Bitte zuerst oben den Spieltag auswählen – die Auslosung wird für diesen Spieltag gespeichert.');
+                if (sel) sel.focus();
+                return;
+            }
             const marked = allPlayers.filter(p => {
                 const cb = document.getElementById('cb_' + p);
                 return cb && cb.checked;
@@ -810,7 +838,32 @@ function loadPlayers(text) {
             } catch (e) {
                 console.warn('Teilnehmer konnten nicht übergeben werden:', e);
             }
-            window.location.href = 'turnier.html' + (VEREIN.extern ? '?club=' + VEREIN.id : '');
+            const serie = currentRound === 2 ? 2 : 1;
+            window.location.href = 'turnier.html?datum=' + datum + '&serie=' + serie + (VEREIN.extern ? '&club=' + VEREIN.id : '');
+        }
+
+        // ===== Auslosung im Zwischenstand anzeigen =====
+        // Gespeicherte Auslosungen/Setzlisten je Spieltag und Serie (Schlüssel "<datum>_S<serie>"):
+        // lokal von turnier.html nach dem Speichern abgelegt und aus Firestore nachgeladen
+        // (ladeAuslosungAnzeige). Solange für die laufende Serie noch kein Ergebnis eingetragen ist,
+        // zeigt die Rangliste die Spieler nach den gelosten Tischen.
+        // (Funktion statt Konstante: updateRanking kann schon beim Wiederherstellen laufen)
+        function auslosungKey() { return 'skat_auslosung_' + VEREIN.id; }
+        function ladeGemerkteAuslosungen() {
+            try { return JSON.parse(localStorage.getItem(auslosungKey()) || '{}') || {}; } catch (e) { return {}; }
+        }
+        function merkeAuslosung(a) {
+            if (!a || !a.datum || !a.serie || !Array.isArray(a.tische)) return;
+            const alle = ladeGemerkteAuslosungen();
+            alle[a.datum + '_S' + a.serie] = { datum: a.datum, serie: String(a.serie), tische: a.tische };
+            Object.keys(alle).sort().slice(0, -10).forEach(k => delete alle[k]); // nur die letzten 10
+            try { localStorage.setItem(auslosungKey(), JSON.stringify(alle)); } catch (e) { /* voll */ }
+        }
+        function auslosungFuerAnzeige(serie) {
+            const sel = document.getElementById('spieltagSelect');
+            const datum = sel ? sel.value : '';
+            if (!datum) return null;
+            return ladeGemerkteAuslosungen()[datum + '_S' + serie] || null;
         }
 
         // Namens-Schlüssel für den Abgleich Firestore <-> Haupt-Spielerliste.
@@ -1387,10 +1440,37 @@ function updateRanking() {
         tischNr++;
     }
 
+    // Nach der Auslosung (turnier.html) und solange für die laufende Serie noch kein Ergebnis
+    // eingetragen ist: Spieler nach den gelosten Tischen (und Plätzen) zeigen, ohne Rang.
+    const auslosung = auslosungFuerAnzeige(currentRound);
+    const rundeOffen = playersToShow.every(p => {
+        const v = currentRound === 1 ? p.res1 : p.res2;
+        return v === '' || v == null;
+    });
+    const nachAuslosung = !!auslosung && rundeOffen && playersToShow.length > 0;
+    if (nachAuslosung) {
+        const platz = {};
+        auslosung.tische.forEach((t, ti) => (t.spieler || []).forEach((name, si) => {
+            if (name) platz[name] = { tisch: t.tisch != null ? t.tisch : ti + 1, sitz: si };
+        }));
+        playersToShow.forEach(p => { p.table = platz[p.name] ? platz[p.name].tisch : '–'; });
+        playersToShow.sort((a, b) => {
+            const pa = platz[a.name], pb = platz[b.name];
+            if (pa && pb) return (pa.tisch - pb.tisch) || (pa.sitz - pb.sitz);
+            if (pa) return -1;
+            if (pb) return 1;
+            return a.name.localeCompare(b.name, 'de');
+        });
+        const [y, m, d] = auslosung.datum.split('-');
+        const info = document.createElement('tr');
+        info.innerHTML = `<td colspan="6" style="background:#ede7f6;font-size:13px;">🎲 Tische laut Auslosung Serie ${auslosung.serie} (${d}.${m}.${y}) – Spieler je Tisch in Platzreihenfolge</td>`;
+        tbody.appendChild(info);
+    }
+
     // Maskiert in Serie 2: alphabetisch, ohne Rang und Tischlinien, damit die Reihenfolge
     // den Gesamtstand nicht verrät (Tischnummern wurden oben schon nach Punkten vergeben).
     // In Serie 1 bleibt die Sortierung nach Punkten (Grundlage der Setzliste für Serie 2).
-    const alphabetisch = maskiert && currentRound === 2;
+    const alphabetisch = !nachAuslosung && maskiert && currentRound === 2;
     if (alphabetisch) playersToShow.sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
     // Tabelle rendern
@@ -1404,7 +1484,7 @@ function updateRanking() {
         } else if (scoreKey !== prevScoreKey) {
             currentRank = i + 1;
         }
-        const rank = alphabetisch ? '' : ((i === 0 || scoreKey !== prevScoreKey) ? currentRank : '');
+        const rank = (alphabetisch || nachAuslosung) ? '' : ((i === 0 || scoreKey !== prevScoreKey) ? currentRank : '');
 
         const row = document.createElement('tr');
 
@@ -1793,7 +1873,7 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.15)
+    © 2026 by Frank Bertram (V1.16)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
@@ -4975,6 +5055,29 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 return false;
             }
         };
+
+        // Auslosung/Setzliste (turnierauslosungen/<datum>_S1 und _S2) des gewählten Spieltags
+        // lesen, lokal merken und die Rangliste neu zeichnen (Anzeige nach gelosten Tischen).
+        window.ladeAuslosungAnzeige = async function() {
+            const sel = document.getElementById('spieltagSelect');
+            const datum = sel ? sel.value : '';
+            if (datum) {
+                try {
+                    const snaps = await Promise.all(['1', '2'].map(s =>
+                        getDoc(doc(db, BEREICH + 'turnierauslosungen', `${datum}_S${s}`))));
+                    snaps.forEach((sn, i) => {
+                        if (!sn.exists()) return;
+                        const d = sn.data();
+                        merkeAuslosung({ datum, serie: String(i + 1),
+                            tische: (d.tische || []).map(t => ({ tisch: t.tisch, spieler: t.spieler || [] })) });
+                    });
+                } catch (err) {
+                    console.warn('Auslosung nicht geladen:', err && err.message);
+                }
+            }
+            updateRanking();
+        };
+        window.ladeAuslosungAnzeige();
 
         window.importFromFirestore = async function() {
             if (!window.skatImportHelper) {

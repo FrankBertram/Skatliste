@@ -584,7 +584,7 @@
 
     <div class="btn-row" id="btnFinalRow" style="display:none">
       <button class="btn-secondary" onclick="backToNames()">Namen ändern</button>
-      <button class="btn-primary" id="btnSave" onclick="saveDraw()">In Firestore speichern</button>
+      <button class="btn-primary" id="btnSave" onclick="saveDraw()">Setzliste speichern und zurück</button>
       <button class="btn-primary" onclick="redraw()">Neu auslosen</button>
     </div>
   </div>
@@ -630,7 +630,8 @@
   window.saveTurnierToFirestore = async function(data) {
     const user = auth.currentUser;
     const d = new Date();
-    const datum = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const datum = window.TURNIER_DATUM ||
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const id = `${datum}_S${data.serie}`;
     // Andere Vereine (?club=garching|boore): eigener Bereich vereine/<id>/turnierauslosungen
     const v = window.TURNIER_VEREIN;
@@ -639,7 +640,7 @@
     // die nur nach Rückfrage durch die Auslosung ersetzen.
     const vorhanden = await getDoc(ref);
     if (vorhanden.exists() && vorhanden.data().art === 'setzliste') {
-      if (!confirm('Für heute ist Serie ' + data.serie + ' bereits als Setzliste (nach Serie-1-Ergebnis) gespeichert.\n\nSetzliste durch diese Auslosung ersetzen?')) return null;
+      if (!confirm('Für ' + datum.split('-').reverse().join('.') + ' ist Serie ' + data.serie + ' bereits als Setzliste (nach Serie-1-Ergebnis) gespeichert.\n\nSetzliste durch diese Auslosung ersetzen?')) return null;
     }
     await setDoc(ref, {
       ...data,
@@ -665,6 +666,11 @@
       boore:    { id: 'boore',    name: 'de vier Boore',        logo: 'devierboore.png' }
     };
     return VEREINE[c] || null;
+  })();
+  // Spieltag und Serie von der Spieltag-Seite (?datum=YYYY-MM-DD&serie=1|2)
+  window.TURNIER_DATUM = (function() {
+    const d = new URLSearchParams(location.search).get('datum') || '';
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
   })();
   if (window.TURNIER_VEREIN) {
     const v = window.TURNIER_VEREIN;
@@ -803,8 +809,9 @@
 
     document.getElementById('stepNames').style.display = 'none';
     document.getElementById('stepDraw').style.display = 'block';
+    const tag = window.TURNIER_DATUM ? window.TURNIER_DATUM.split('-').reverse().join('.') + ' &middot; ' : '';
     document.getElementById('drawLabel').innerHTML =
-      `<span style="color:var(--accent-bright)">Serie ${serie}</span> &middot; ` + planText(players.length, tablePlan);
+      `<span style="color:var(--accent-bright)">${tag}Serie ${serie}</span> &middot; ` + planText(players.length, tablePlan);
     runDraw();
   }
 
@@ -1028,7 +1035,7 @@
     // Speicher-Button pro Auslosung zurücksetzen
     const btnSave = document.getElementById('btnSave');
     btnSave.disabled = false;
-    btnSave.textContent = 'In Firestore speichern';
+    btnSave.textContent = 'Setzliste speichern und zurück';
     const st = document.getElementById('saveStatus');
     st.textContent = '';
     st.className = 'save-status';
@@ -1108,8 +1115,11 @@
         return;
       }
       btn.textContent = 'Gespeichert';
-      status.textContent = 'In Firestore gespeichert ✓ (ID: ' + id + ')';
+      status.textContent = 'Gespeichert ✓ (' + id + ') – zurück zur Spieltag-Seite …';
       status.className = 'save-status ok';
+      merkeAuslosungLokal(id.split('_S')[0]);
+      // Zurück zur Spieltag-Seite (dort Tische laut Auslosung im Zwischenstand)
+      setTimeout(() => { location.href = document.getElementById('zurueckLink').href; }, 900);
     } catch (e) {
       btn.disabled = false;
       const code = e && e.code ? e.code : '';
@@ -1121,6 +1131,18 @@
       }
       status.className = 'save-status error';
     }
+  }
+
+  // Auslosung für die Spieltag-Seite merken (Anzeige im Zwischenstand, auch ohne Firestore-Lesen)
+  function merkeAuslosungLokal(datum) {
+    try {
+      const key = 'skat_auslosung_' + (window.TURNIER_VEREIN ? window.TURNIER_VEREIN.id : 'sinthern');
+      const alle = JSON.parse(localStorage.getItem(key) || '{}') || {};
+      alle[datum + '_S' + serie] = { datum, serie: String(serie),
+        tische: assignment.map(a => ({ tisch: a.table, spieler: a.members.filter(Boolean) })) };
+      Object.keys(alle).sort().slice(0, -10).forEach(k => delete alle[k]);
+      localStorage.setItem(key, JSON.stringify(alle));
+    } catch (e) { /* localStorage nicht verfügbar */ }
   }
 
   // --- Confetti ---
@@ -1144,14 +1166,20 @@
   // --- Init ---
   document.getElementById('namesInput').addEventListener('input', updatePlanPreview);
   // Teilnehmer aus der Spieltag-Seite (index.html) übernehmen, falls vorhanden
+  let teilnehmerUebernommen = false;
   try {
     const imported = localStorage.getItem('turnier_teilnehmer');
     if (imported && imported.trim()) {
       document.getElementById('namesInput').value = imported;
       localStorage.removeItem('turnier_teilnehmer');
+      teilnehmerUebernommen = true;
     }
   } catch (e) { /* localStorage nicht verfügbar */ }
+  const serieParam = new URLSearchParams(location.search).get('serie');
+  if (serieParam === '1' || serieParam === '2') document.getElementById('serieInput').value = serieParam;
   updatePlanPreview();
+  // Von der Spieltag-Seite: sofort auslosen (ohne Namensschritt)
+  if (teilnehmerUebernommen && !document.getElementById('btnDraw').disabled) startDraw();
 </script>
 
 </body>
