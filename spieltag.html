@@ -113,11 +113,30 @@
     row-gap: 8px;
 }		
 		.thick-line {border-top: 3px solid #333 !important;}
+        /* Anmeldesperre: ohne freigeschaltetes Google-Konto (Spielleiter) keine Daten anzeigen */
+        #anmeldeSperre { display: none; }
+        html.gesperrt #anmeldeSperre { display: flex; }
+        html.gesperrt body > :not(#anmeldeSperre):not(script) { display: none !important; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+    <!-- Anmeldesperre: wird erst nach Prüfung des Google-Kontos (Spielleiter des Vereins) aufgehoben -->
+    <script>document.documentElement.classList.add('gesperrt');</script>
+    <div id="anmeldeSperre" style="position:fixed;inset:0;align-items:center;justify-content:center;background:#f4f4f4;z-index:10000;font-family:Arial,sans-serif;">
+        <div style="background:white;padding:28px 32px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.15);max-width:440px;width:92%;text-align:center;">
+            <img data-skat-logo alt="Vereinslogo" style="height:64px;width:auto;">
+            <h2 style="margin:10px 0 4px 0;font-size:20px;"><span data-verein-name>1. Sintherner Skatclub</span></h2>
+            <div style="font-size:15px;color:#555;margin-bottom:16px;">Spieltag-Programm</div>
+            <p id="sperreText" style="font-size:14px;margin:0 0 16px 0;">Prüfe Anmeldung …</p>
+            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                <button id="sperreAnmelden" onclick="signInGoogle()" style="display:none;background:#1976d2;color:white;padding:10px 18px;border:none;border-radius:6px;cursor:pointer;font-size:15px;width:auto;margin:0;">Mit Google anmelden</button>
+                <button id="sperreUid" onclick="copyUid()" style="display:none;background:#00897b;color:white;padding:10px 18px;border:none;border-radius:6px;cursor:pointer;font-size:15px;width:auto;margin:0;">✉️ Freischaltung anfordern</button>
+                <button id="sperreAbmelden" onclick="signOutGoogle()" style="display:none;background:#9e9e9e;color:white;padding:10px 18px;border:none;border-radius:6px;cursor:pointer;font-size:15px;width:auto;margin:0;">Abmelden</button>
+            </div>
+        </div>
+    </div>
     <script>
         window.SKAT_LOGO_DATA = 'data:image/png;base64,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';
         // ===== Verein: ?club=garching | ?club=boore (auch boore); ohne Parameter = Sintherner Skatclub =====
@@ -1873,7 +1892,7 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.16)
+    © 2026 by Frank Bertram (V1.17)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
@@ -2121,7 +2140,56 @@ function updateRanking() {
             })
             .catch(err => console.warn('spieltag_config nicht lesbar:', err && err.message));
 
+        // ===== Anmeldesperre =====
+        // Nur der Admin oder ein Spielleiter des Vereins (spielleiter/<uid>, Feld verein,
+        // ohne Feld = sinthern) sieht das Programm. Bestätigte UID wird lokal gemerkt, damit
+        // ein kurzer Netzausfall am Spieltag nicht aussperrt (nur bei Netzfehlern genutzt).
+        const ADMIN_UID = 'ERwEUD2Dsddsij05p32oCb6EGs53';
+        const FREIGABE_OK_KEY = 'skat_spielleiter_ok_' + VEREIN.id;
+        function setzeSperre(gesperrt, text, knoepfe) {
+            document.documentElement.classList.toggle('gesperrt', gesperrt);
+            const t = document.getElementById('sperreText');
+            if (t) t.innerHTML = text || '';
+            const zeige = (id, an) => { const b = document.getElementById(id); if (b) b.style.display = an ? 'inline-block' : 'none'; };
+            zeige('sperreAnmelden', knoepfe === 'anmelden');
+            zeige('sperreUid', knoepfe === 'freischalten');
+            zeige('sperreAbmelden', knoepfe === 'freischalten' || knoepfe === 'abmelden');
+        }
+        async function pruefeSpielleiter(user) {
+            if (!user || user.isAnonymous) {
+                setzeSperre(true, 'Bitte mit einem freigeschalteten Google-Konto (Spielleiter) anmelden.', 'anmelden');
+                return;
+            }
+            const name = escapeHtmlAttr(user.displayName || user.email || user.uid);
+            if (user.uid === ADMIN_UID) { setzeSperre(false); return; }
+            setzeSperre(true, `Angemeldet als <b>${name}</b> – prüfe Freischaltung …`, 'abmelden');
+            try {
+                const sl = await getDoc(doc(db, 'spielleiter', user.uid));
+                const ok = sl.exists() && ((sl.data().verein || 'sinthern') === VEREIN.id);
+                if (auth.currentUser !== user) return; // inzwischen ab-/umgemeldet
+                if (ok) {
+                    try { localStorage.setItem(FREIGABE_OK_KEY, user.uid); } catch (e) { /* ignorieren */ }
+                    setzeSperre(false);
+                } else {
+                    try { localStorage.removeItem(FREIGABE_OK_KEY); } catch (e) { /* ignorieren */ }
+                    setzeSperre(true, `Das Konto <b>${name}</b> ist für „${escapeHtmlAttr(VEREIN.name)}“ nicht als Spielleiter freigeschaltet.<br><br>Über „Freischaltung anfordern“ eine E-Mail mit der UID an den Admin senden.`, 'freischalten');
+                }
+            } catch (err) {
+                // Netzfehler: zuletzt bestätigte Freischaltung dieses Kontos weiter gelten lassen
+                let gemerkt = null;
+                try { gemerkt = localStorage.getItem(FREIGABE_OK_KEY); } catch (e) { /* ignorieren */ }
+                if (auth.currentUser !== user) return;
+                if (gemerkt === user.uid && !(err && err.code === 'permission-denied')) {
+                    console.warn('Freischaltung offline nicht prüfbar – zuletzt bestätigt:', err && err.message);
+                    setzeSperre(false);
+                } else {
+                    setzeSperre(true, `Freischaltung konnte nicht geprüft werden (${escapeHtmlAttr((err && (err.code || err.message)) || String(err))}).<br>Bitte Internetverbindung prüfen und die Seite neu laden.`, 'abmelden');
+                }
+            }
+        }
+
         onAuthStateChanged(auth, user => {
+            pruefeSpielleiter(user);
             const statusEl = document.getElementById('authStatus');
             const signInBtn = document.getElementById('signInBtn');
             const signOutBtn = document.getElementById('signOutBtn');
