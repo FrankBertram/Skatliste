@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Seed: spieltag_config</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; }
+    h1 { font-size: 20px; }
+    button { padding: 10px 18px; font-size: 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin: 4px 6px 4px 0; }
+    #login-btn { background: #1976d2; color: #fff; }
+    #seed-btn  { background: #28a745; color: #fff; }
+    #seed-btn:disabled, #login-btn:disabled { background: #bbb; cursor: not-allowed; }
+    #status { margin-top: 16px; padding: 10px; background: #f5f5f5; border-radius: 6px; font-family: Consolas, monospace; font-size: 13px; white-space: pre-wrap; min-height: 60px; }
+    table { border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 4px 10px; text-align: left; }
+    th { background: #eee; }
+    .ok  { color: #28a745; }
+    .err { color: #c62828; }
+    .warn { color: #ff9800; }
+  </style>
+</head>
+<body>
+  <h1>Seed <code>spieltag_config</code> (Sinthern)</h1>
+
+  <p>Zu schreibende Docs (Doc-ID = YYYY-MM-DD, jeder Termin ist ein Dienstag in 2026):</p>
+  <table id="daten-tabelle"></table>
+
+  <p><b>1.</b> Mit dem Admin-Google-Konto anmelden (UID <code>ERwEUD2Dsddsij05p32oCb6EGs53</code>):</p>
+  <button id="login-btn">🔑 Mit Google anmelden</button>
+  <span id="user-info" style="margin-left:8px; font-size:13px; color:#555;"></span>
+
+  <p><b>2.</b> Danach schreiben:</p>
+  <button id="seed-btn" disabled>💾 Einträge schreiben</button>
+
+  <hr style="margin:24px 0;">
+  <h2 style="font-size:18px;">Einzelnen neuen Sonderspieltag anlegen</h2>
+  <form id="single-form" style="display:grid; grid-template-columns:auto 1fr; gap:8px 12px; max-width:520px; align-items:center;">
+    <label for="single-date">Datum (YYYY-MM-DD):</label>
+    <input type="date" id="single-date" required>
+
+    <label for="single-name">Name:</label>
+    <input type="text" id="single-name" placeholder="z. B. Herbstpreisskat" required>
+
+    <label for="single-s1">Startgeld Serie 1 (€):</label>
+    <input type="number" id="single-s1" step="0.5" value="10" required>
+
+    <label for="single-s2">Startgeld Serie 2 (€):</label>
+    <input type="number" id="single-s2" step="0.5" value="0" required>
+
+    <span></span>
+    <button type="submit" id="single-btn" disabled style="background:#6a1b9a; color:#fff; justify-self:start;">➕ Doc anlegen</button>
+  </form>
+
+  <div id="status">Nicht angemeldet.</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged }
+      from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDmiQvDu0pxQYoidaZfRVY0BXZjLOHhw7w",
+      authDomain: "skatverein-b77ef.firebaseapp.com",
+      projectId: "skatverein-b77ef",
+      storageBucket: "skatverein-b77ef.firebasestorage.app",
+      messagingSenderId: "763387283518",
+      appId: "1:763387283518:web:9edf27d79876cf2059296f"
+    };
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
+
+    const EINTRAEGE = [
+      { id: '2026-03-24', name: 'Frühjahrspreisskat',  startgeld_serie1: 10, startgeld_serie2: 0 },
+      { id: '2026-06-16', name: 'Sommerpreisskat',     startgeld_serie1: 10, startgeld_serie2: 0 },
+      { id: '2026-09-22', name: 'Herbstpreisskat',     startgeld_serie1: 10, startgeld_serie2: 0 },
+      { id: '2026-12-15', name: 'Weihnachtspreisskat', startgeld_serie1:  0, startgeld_serie2: 0 },
+    ];
+
+    const ADMIN_UID = 'ERwEUD2Dsddsij05p32oCb6EGs53';
+
+    // Tabelle rendern
+    const tbl = document.getElementById('daten-tabelle');
+    tbl.innerHTML = '<tr><th>Doc-ID</th><th>name</th><th>startgeld_serie1</th><th>startgeld_serie2</th></tr>' +
+      EINTRAEGE.map(e =>
+        `<tr><td>${e.id}</td><td>${e.name}</td><td>${e.startgeld_serie1}</td><td>${e.startgeld_serie2}</td></tr>`
+      ).join('');
+
+    const statusEl  = document.getElementById('status');
+    const loginBtn  = document.getElementById('login-btn');
+    const seedBtn   = document.getElementById('seed-btn');
+    const singleBtn = document.getElementById('single-btn');
+    const userInfo  = document.getElementById('user-info');
+    const log = (msg, cls) => {
+      const line = document.createElement('div');
+      if (cls) line.className = cls;
+      line.textContent = msg;
+      statusEl.appendChild(line);
+    };
+
+    loginBtn.addEventListener('click', async () => {
+      loginBtn.disabled = true;
+      try {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+      } catch (e) {
+        log('❌ Login fehlgeschlagen: ' + (e.message || e.code), 'err');
+        loginBtn.disabled = false;
+      }
+    });
+
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        userInfo.textContent = '';
+        seedBtn.disabled = true;
+        return;
+      }
+      userInfo.textContent = `angemeldet als ${user.email} (UID ${user.uid})`;
+      loginBtn.disabled = true;
+      if (user.uid === ADMIN_UID) {
+        seedBtn.disabled = false;
+        singleBtn.disabled = false;
+        log('✅ Admin-UID erkannt, Schreiben freigeschaltet.', 'ok');
+      } else {
+        log(`⚠️ UID stimmt nicht mit erwarteter Admin-UID überein (${ADMIN_UID}). Schreiben würde von den Rules abgewiesen werden.`, 'warn');
+      }
+    });
+
+    // Einzelnen Sonderspieltag anlegen
+    document.getElementById('single-form').addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const datum = document.getElementById('single-date').value;
+      const name  = document.getElementById('single-name').value.trim();
+      const s1    = parseFloat(document.getElementById('single-s1').value);
+      const s2    = parseFloat(document.getElementById('single-s2').value);
+      if (!datum || !name || isNaN(s1) || isNaN(s2)) {
+        log('❌ Bitte alle Felder ausfüllen.', 'err');
+        return;
+      }
+      singleBtn.disabled = true;
+      try {
+        await setDoc(doc(db, 'spieltag_config', datum), {
+          vereinId: 'sinthern',
+          name,
+          startgeld_serie1: s1,
+          startgeld_serie2: s2,
+          angelegtAm: serverTimestamp(),
+        });
+        log(`✅ Angelegt: ${datum} → ${name} (S1: ${s1} €, S2: ${s2} €)`, 'ok');
+        document.getElementById('single-name').value = '';
+      } catch (e) {
+        log('❌ Fehler: ' + (e.message || e.code), 'err');
+      }
+      singleBtn.disabled = false;
+    });
+
+    seedBtn.addEventListener('click', async () => {
+      seedBtn.disabled = true;
+      statusEl.innerHTML = '';
+      log('Schreibe ' + EINTRAEGE.length + ' Dokumente …');
+      let ok = 0, err = 0;
+      for (const eintrag of EINTRAEGE) {
+        try {
+          await setDoc(doc(db, 'spieltag_config', eintrag.id), {
+            vereinId: 'sinthern',
+            name: eintrag.name,
+            startgeld_serie1: eintrag.startgeld_serie1,
+            startgeld_serie2: eintrag.startgeld_serie2,
+            angelegtAm: serverTimestamp(),
+          });
+          log('  ✅ ' + eintrag.id + ' → ' + eintrag.name, 'ok');
+          ok++;
+        } catch (e) {
+          log('  ❌ ' + eintrag.id + ': ' + (e.message || e.code), 'err');
+          err++;
+        }
+      }
+      log(`\nFertig: ${ok} geschrieben, ${err} Fehler.`, err ? 'err' : 'ok');
+      seedBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>

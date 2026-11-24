@@ -1013,11 +1013,35 @@ function getVereinsMode() {
 function isVereinParamActive() { return true; }
 
 // Vereine ohne Firestore (kein Speichern, kein Live-Sync, keine Setzliste):
-// "de 4 Buure", "Skatfreunde Garching" (und das deaktivierte
-// "SC Alter Peter München") – nur lokal + PDF.
+// "de 4 Buure" (und das deaktivierte "SC Alter Peter München") – nur lokal + PDF.
 function istVereinOhneFirestore() {
   const m = getVereinsMode();
-  return m === '4buure' || m === 'alterpeter' || m === 'garching';
+  return m === '4buure' || m === 'alterpeter';
+}
+
+// Sintherner Skatclub (Default, auch Sondertage wie die Stadtmeisterschaft):
+// nur hier gibt es Live-Sync, Live-Ansicht und Setzliste/Auslosung.
+function istSinthernModus() {
+  const m = getVereinsMode();
+  return m === null || m === 'sinthern';
+}
+
+// Vereins-ID für Firestore (Feld "vereinId" in allen gespeicherten Dokumenten,
+// Stammdaten unter vereine/<id>): sinthern, garching, buure, alterpeter.
+// Sondertage ohne Vereinsauswahl (z. B. Stadtmeisterschaft) zählen zu Sinthern.
+function getVereinsId() {
+  const m = getVereinsMode();
+  if (m === '4buure') return 'buure';
+  if (m === 'garching' || m === 'alterpeter') return m;
+  return 'sinthern';
+}
+
+// Vereine mit eigenem Firestore-Bereich vereine/<id>/… – eigene Spielleiter,
+// eigene Freigabe, eigene Ergebnisse (nicht in der Sinthern-Wertung).
+const VEREINE_MIT_EIGENEM_BEREICH = ['garching'];
+function _vereinsBereich() {
+  const m = getVereinsMode();
+  return VEREINE_MIT_EIGENEM_BEREICH.includes(m) ? `vereine/${m}/` : '';
 }
 
 // Spieltag-Konfiguration aus Firestore (spieltag_config/{YYYY-MM-DD}):
@@ -1055,7 +1079,7 @@ function isTestMode() {
   const p = new URLSearchParams(location.search);
   return p.has('test') || location.hash.replace('#', '') === 'test';
 }
-function _spieltageCollection()    { return isTestMode() ? 'spieltage_test'      : 'spieltage'; }
+function _spieltageCollection()    { return isTestMode() ? 'spieltage_test'      : _vereinsBereich() + 'spieltage'; }
 function _spieltageLiveCollection() { return isTestMode() ? 'spieltage_live_test' : 'spieltage_live'; }
 
 // ── Spieltag-Freigabe durch den Spielleiter ───────────────────────
@@ -1068,6 +1092,7 @@ function _spieltageLiveCollection() { return isTestMode() ? 'spieltage_live_test
 // Test-Modus und Vereine ohne Firestore brauchen keine Freigabe.
 function _freigabeDatum() { return new Date().toISOString().split('T')[0]; }  // wie datum in spieltage
 function _freigabeNoetig() { return !isTestMode() && !istVereinOhneFirestore(); }
+function _freigabeCollection() { return _vereinsBereich() + 'freigabe'; }   // Sinthern: freigabe, Garching: vereine/garching/freigabe
 function _istRechteFehler(e) {
   return !!e && (e.code === 'permission-denied' || /permission/i.test(e.message || ''));
 }
@@ -1099,11 +1124,11 @@ async function pruefeFreigabeStatus() {
   const { db, doc, getDoc } = window.__firestore;
   const datum = _freigabeDatum();
   try {
-    const fg = await getDoc(doc(db, 'freigabe', datum));
+    const fg = await getDoc(doc(db, _freigabeCollection(), datum));
     if (!fg.exists() || fg.data().offen !== true) { _zeigeCodeButton(false); return; }
     const user = await _tabletAnmelden();
     if (!user) { _zeigeCodeButton(true); return; }
-    const g = await getDoc(doc(db, 'freigabe', datum, 'geraete', user.uid));
+    const g = await getDoc(doc(db, _freigabeCollection(), datum, 'geraete', user.uid));
     _zeigeCodeButton(!g.exists());
   } catch (e) {
     console.warn('[Freigabe] Status nicht prüfbar:', e?.code || e?.message);
@@ -1125,11 +1150,12 @@ async function freigabeCodeEingeben(grund) {
   }
   const { db, doc, setDoc, serverTimestamp } = window.__firestore;
   try {
-    await setDoc(doc(db, 'freigabe', _freigabeDatum(), 'geraete', user.uid), {
+    await setDoc(doc(db, _freigabeCollection(), _freigabeDatum(), 'geraete', user.uid), {
       code,
+      vereinId: getVereinsId(),
       angemeldetAm: serverTimestamp(),
       tisch: document.getElementById('tisch-auswahl')?.value || '',
-      verein: document.getElementById('club-name')?.textContent || ''
+      vereinName: document.getElementById('club-name')?.textContent || ''
     });
     _zeigeCodeButton(false);
     alert('✅ Tablet für den heutigen Spieltag freigeschaltet.');
@@ -1999,7 +2025,7 @@ function createCSVButton() {
   const container = document.getElementById("csv-export-container");
   if (!container || container.children.length > 0) return;
 
-  // Speichern-Button nur beim Sintherner Skatclub (nicht bei Buure / Garching / Alter Peter)
+  // Speichern-Button: Sinthern und Garching (nicht bei Buure / Alter Peter)
   if (istVereinOhneFirestore()) return;
 
   const csvBtn = document.createElement("button");
@@ -2279,8 +2305,8 @@ function createLiveViewButton() {
   const container = document.getElementById("live-view-container");
   if (!container || container.children.length > 0) return;
 
-  // Nur beim Sintherner Skatclub (nicht bei "de 4 Buure" / Alter Peter)
-  if (istVereinOhneFirestore()) return;
+  // Nur beim Sintherner Skatclub (nicht bei Buure / Garching / Alter Peter)
+  if (!istSinthernModus()) return;
 
   // Nur wenn per URL freigeschaltet: ?live oder ?live=1 (auch #live)
   const params = new URLSearchParams(location.search);
@@ -2944,7 +2970,7 @@ async function refreshTurnierauslosung() {
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
 
   // "de 4 Buure" / Alter Peter: Setzliste nie laden (nur Sintherner Skatclub)
-  if (istVereinOhneFirestore()) {
+  if (!istSinthernModus()) {
     console.log(`[Auslosung] Vereinsmodus ${vereinMode} – übersprungen`);
     return;
   }
@@ -3712,6 +3738,7 @@ async function saveSerieToFirestore() {
       datum, serie, tisch, spielerAnzahl, spieler,
       abreizgeld: abreizgeldTisch,   // Summe Abreizgeld des Tisches in €, ohne Spieleinsatz
       gespeichertAm: new Date().toISOString(),
+      vereinId: getVereinsId(),
       ...(isTestMode() ? { test: true } : {})
     };
     if (_freigabeNoetig()) await _tabletAnmelden();
@@ -3751,8 +3778,8 @@ function _liveDocId() {
 
 async function saveGameLive(index) {
   if (!window.__firestore) return;
-  // Nur für Sinthern (nicht "de 4 Buure" / Alter Peter)
-  if (istVereinOhneFirestore()) return;
+  // Live-Sync nur für Sinthern (nicht Buure / Garching / Alter Peter)
+  if (!istSinthernModus()) return;
   // Spielernamen komplett? Sonst noch nicht sinnvoll live zeigen
   for (let i = 0; i < spielerAnzahl; i++) {
     if (!spielerNamen[i] || spielerNamen[i] === `Spieler ${i+1}`) return;
@@ -3774,6 +3801,7 @@ async function saveGameLive(index) {
     if (_freigabeNoetig()) await _tabletAnmelden();
     await setDoc(doc(db, _spieltageLiveCollection(), id), {
       datum, serie: parseInt(serie), tisch: parseInt(tisch),
+      vereinId: getVereinsId(),
       spielerAnzahl,
       spieler: spielerNamen.slice(0, spielerAnzahl),
       spiele: { [String(index)]: eintrag },
@@ -3792,7 +3820,7 @@ async function saveGameLive(index) {
 // geöffneter zweiter Tab die Daten des ersten Tabs wegräumen.
 async function clearLiveDoc() {
   if (!window.__firestore) return;
-  if (istVereinOhneFirestore()) return;
+  if (!istSinthernModus()) return;
   const { db, doc, deleteDoc } = window.__firestore;
   const { id } = _liveDocId();
   if (_freigabeNoetig()) await _tabletAnmelden();
@@ -4188,7 +4216,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.27) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.29) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -4609,7 +4637,7 @@ async function refreshStartSpielerPreview() {
   if (_startDialogMode !== 'reset') return;
   if (!window.__firestore) return;
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
-  if (istVereinOhneFirestore()) { _renderStartSpielerPreview(null); return; }
+  if (!istSinthernModus()) { _renderStartSpielerPreview(null); return; }
   const serie = document.getElementById('start-serie-buttons')?.dataset.selected || '1';
   const tisch = document.getElementById('start-tisch-buttons')?.dataset.selected || '1';
   const reqId = ++_startDialogPreviewReqId;
@@ -4816,7 +4844,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.27)
+    © 2026 by Frank Bertram (V1.29)
     </div>
 </body>
 </html>

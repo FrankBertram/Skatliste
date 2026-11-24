@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spielleiter – Skatliste</title>
+  <link rel="icon" type="image/png" href="Skat.png">
+  <style>
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #f5f5f5; color: #222;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 16px; }
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    header img { height: 48px; width: auto; }
+    header h1 { font-size: 20px; margin: 0; }
+    header .sub { font-size: 13px; color: #666; }
+    .card {
+      background: #fff; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .card h2 { font-size: 16px; margin: 0 0 10px; }
+    .zeile { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    button {
+      padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer;
+      font-size: 14px; color: #fff; background: #1976d2;
+    }
+    button.grau { background: #9e9e9e; }
+    button.gruen { background: #2e7d32; }
+    button.rot { background: #d32f2f; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    input[type=date], select { font-size: 15px; padding: 5px 8px; border: 1px solid #bbb; border-radius: 5px; }
+    .status { font-size: 13px; color: #555; }
+    .code {
+      text-align: center; font-size: 46px; font-weight: bold; letter-spacing: 8px;
+      font-family: Consolas, monospace; margin: 10px 0;
+    }
+    .code.aus { color: #aaa; }
+    .hinweis { font-size: 12px; color: #888; margin: 8px 0 0; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { border-bottom: 1px solid #e0e0e0; padding: 5px 6px; text-align: left; }
+    th { background: #f0f0f0; font-weight: 600; }
+    td.r, th.r { text-align: right; }
+    .leer { color: #999; font-size: 14px; }
+    #links a { color: #1976d2; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img id="logo" src="Skat.png" alt="Vereinslogo">
+    <div>
+      <h1 id="titel">Spielleiter</h1>
+      <div class="sub" id="untertitel">Spieltag freigeben und Ergebnisse ansehen</div>
+    </div>
+  </header>
+
+  <div class="card zeile" id="links" style="gap:14px; font-size:14px;"></div>
+
+  <div class="card">
+    <h2>Anmeldung</h2>
+    <div class="zeile">
+      <button id="btn-login">Mit Google anmelden</button>
+      <button id="btn-logout" class="grau" style="display:none;">Abmelden</button>
+      <button id="btn-uid" class="grau" style="display:none;">UID kopieren</button>
+      <span class="status" id="login-status">nicht angemeldet</span>
+    </div>
+    <div class="zeile" id="verein-zeile" style="margin-top:10px; display:none;">
+      <span>Verein:</span>
+      <select id="verein-auswahl"></select>
+    </div>
+  </div>
+
+  <div class="card" id="karte-vereine" style="display:none;">
+    <h2>Vereine in Firestore (nur Admin)</h2>
+    <div class="status" style="margin-bottom:8px;">Legt die Stammdaten unter <code>vereine/&lt;Vereins-ID&gt;</code> an bzw. aktualisiert sie.
+      Die Vereins-ID wird in allen gespeicherten Dokumenten als Feld <code>vereinId</code> mitgeschrieben.</div>
+    <div id="vereine-liste" class="status"></div>
+    <div class="zeile" style="margin-top:8px;"><button id="btn-vereine">Vereine anlegen / aktualisieren</button></div>
+  </div>
+
+  <div class="card" id="karte-freigabe" style="display:none;">
+    <h2>Spieltag-Freigabe</h2>
+    <div class="zeile">
+      <span>Datum:</span>
+      <input type="date" id="datum">
+      <button class="grau" id="btn-aktualisieren">Aktualisieren</button>
+    </div>
+    <div id="freigabe-inhalt" style="margin-top:10px;">Lade …</div>
+    <div class="zeile" id="freigabe-knoepfe" style="margin-top:10px;"></div>
+    <p class="hinweis">Die Tablets geben den Code einmal pro Abend in der Skatliste ein
+      („🔑 Spieltag-Code eingeben“ oben bzw. beim ersten „☁️ Speichern“).
+      Ein neuer Code gilt nur für Tablets, die sich danach anmelden.</p>
+  </div>
+
+  <div class="card" id="karte-ergebnisse" style="display:none;">
+    <h2>Ergebnisse des Abends</h2>
+    <div id="ergebnisse">Lade …</div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, getDocs, collection, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDmiQvDu0pxQYoidaZfRVY0BXZjLOHhw7w",
+    authDomain: "skatverein-b77ef.firebaseapp.com",
+    projectId: "skatverein-b77ef",
+    storageBucket: "skatverein-b77ef.firebasestorage.app",
+    messagingSenderId: "763387283518",
+    appId: "1:763387283518:web:9edf27d79876cf2059296f"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  const ADMIN_UID = 'ERwEUD2Dsddsij05p32oCb6EGs53';
+
+  // Vereine: Firestore-Bereich (Präfix) wie in der Skatliste (_vereinsBereich)
+  const VEREINE = {
+    sinthern: { name: '1. Sintherner Skatclub', bereich: '',                   logo: 'Skat.png',
+                links: [['📋 Skatliste', 'index.html'], ['🏆 Spieltag-Programm', 'spieltag.html?firestore=1']] },
+    garching: { name: 'Skatfreunde Garching',   bereich: 'vereine/garching/', logo: 'logo_garching.jpg',
+                links: [['📋 Skatliste Garching', 'index.html?club=garching']] }
+  };
+
+  // Stammdaten aller Vereine (Dokument-ID = Vereins-ID, wie getVereinsId() in index.html)
+  const VEREINE_STAMMDATEN = {
+    sinthern:   { name: '1. Sintherner Skatclub 1992 e.V.', kurz: 'Sinthern',    logo: 'Skat.png',          firestore: true,  bereich: '',                  aktiv: true  },
+    garching:   { name: 'Skatfreunde Garching',             kurz: 'Garching',    logo: 'logo_garching.jpg', firestore: true,  bereich: 'vereine/garching/', aktiv: true  },
+    buure:      { name: 'de vier Boore',                    kurz: 'Boore',       logo: 'devierboore.png',   firestore: false, bereich: null,                aktiv: true  },
+    alterpeter: { name: 'SC Alter Peter München',           kurz: 'Alter Peter', logo: 'alterpeter.gif',    firestore: false, bereich: null,                aktiv: false }
+  };
+
+  const $ = id => document.getElementById(id);
+  const heute = () => new Date().toISOString().split('T')[0];   // UTC-Datum wie in der Skatliste
+  const euro = v => Number(v || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  let verein = null;          // aktueller Verein-Schlüssel
+  let erlaubteVereine = [];   // für den angemeldeten Spielleiter
+
+  $('datum').value = heute();
+
+  // Links zu den Programmen des Vereins (alle im selben Repo "Skatliste")
+  function zeigeLinks(v) {
+    $('links').innerHTML = VEREINE[v].links
+      .map(([text, href]) => `<a href="${href}" target="_blank" rel="noopener">${esc(text)}</a>`).join('');
+  }
+  {
+    const w = (new URLSearchParams(location.search).get('verein') || '').toLowerCase();
+    zeigeLinks(VEREINE[w] ? w : 'sinthern');
+  }
+
+  function setzeVerein(v) {
+    verein = v;
+    const info = VEREINE[v];
+    $('titel').textContent = 'Spielleiter – ' + info.name;
+    document.title = 'Spielleiter – ' + info.name;
+    $('logo').onerror = () => { $('logo').onerror = null; $('logo').src = 'Skat.png'; };
+    $('logo').src = info.logo;
+    zeigeLinks(v);
+    ladeAlles();
+  }
+
+  // ── Anmeldung ──
+  $('btn-login').onclick = () => signInWithPopup(auth, new GoogleAuthProvider())
+    .catch(e => alert('Anmeldung fehlgeschlagen: ' + (e?.message || e)));
+  $('btn-logout').onclick = () => signOut(auth);
+  $('btn-uid').onclick = async () => {
+    const uid = auth.currentUser?.uid || '';
+    try { await navigator.clipboard.writeText(uid); alert('UID kopiert:\n' + uid); }
+    catch { prompt('UID:', uid); }
+  };
+  $('verein-auswahl').onchange = e => setzeVerein(e.target.value);
+
+  async function zeigeVereine() {
+    const zeilen = [];
+    for (const [id, v] of Object.entries(VEREINE_STAMMDATEN)) {
+      let stand = 'noch nicht angelegt';
+      try {
+        const d = await getDoc(doc(db, 'vereine', id));
+        if (d.exists()) stand = 'angelegt';
+      } catch (e) { stand = 'nicht lesbar (Regeln veröffentlicht?)'; }
+      zeilen.push(`<code>${esc(id)}</code> – ${esc(v.name)}: <b>${stand}</b>`);
+    }
+    $('vereine-liste').innerHTML = zeilen.join('<br>');
+  }
+  $('btn-vereine').onclick = async () => {
+    $('btn-vereine').disabled = true;
+    try {
+      for (const [id, v] of Object.entries(VEREINE_STAMMDATEN)) {
+        await setDoc(doc(db, 'vereine', id), { vereinId: id, ...v, geaendertAm: serverTimestamp() }, { merge: true });
+      }
+      alert('✅ Vereine angelegt / aktualisiert.');
+    } catch (e) {
+      alert('Speichern fehlgeschlagen: ' + (e?.message || e));
+    }
+    $('btn-vereine').disabled = false;
+    zeigeVereine();
+  };
+  $('btn-aktualisieren').onclick = () => ladeAlles();
+  $('datum').onchange = () => ladeAlles();
+
+  onAuthStateChanged(auth, async user => {
+    $('btn-login').style.display  = user ? 'none' : '';
+    $('btn-logout').style.display = user ? '' : 'none';
+    $('btn-uid').style.display    = user ? '' : 'none';
+    $('karte-freigabe').style.display = 'none';
+    $('karte-ergebnisse').style.display = 'none';
+    $('karte-vereine').style.display = (user && user.uid === ADMIN_UID) ? '' : 'none';
+    if (user && user.uid === ADMIN_UID) zeigeVereine();
+    $('verein-zeile').style.display = 'none';
+    if (!user || user.isAnonymous) {
+      $('login-status').textContent = 'nicht angemeldet';
+      return;
+    }
+    $('login-status').textContent = (user.displayName || user.email || '') + ' – prüfe Spielleiter-Rechte …';
+
+    // Welche Vereine darf dieses Konto leiten?
+    if (user.uid === ADMIN_UID) {
+      erlaubteVereine = Object.keys(VEREINE);
+    } else {
+      try {
+        const sl = await getDoc(doc(db, 'spielleiter', user.uid));
+        erlaubteVereine = sl.exists() ? [sl.data().verein || 'sinthern'] : [];
+      } catch (e) {
+        erlaubteVereine = [];
+      }
+    }
+    erlaubteVereine = erlaubteVereine.filter(v => VEREINE[v]);
+    if (erlaubteVereine.length === 0) {
+      $('login-status').innerHTML = esc(user.displayName || user.email || '') +
+        ' – <b>kein Spielleiter</b>. Bitte die UID („UID kopieren“) an den Admin schicken.';
+      return;
+    }
+    $('login-status').textContent = (user.displayName || user.email || '') + ' – Spielleiter';
+
+    // Verein: URL-Parameter ?verein=…, sonst erster erlaubter
+    const wunsch = (new URLSearchParams(location.search).get('verein') || '').toLowerCase();
+    const start = erlaubteVereine.includes(wunsch) ? wunsch : erlaubteVereine[0];
+    const sel = $('verein-auswahl');
+    sel.innerHTML = erlaubteVereine.map(v => `<option value="${v}">${esc(VEREINE[v].name)}</option>`).join('');
+    sel.value = start;
+    $('verein-zeile').style.display = erlaubteVereine.length > 1 ? '' : 'none';
+    $('karte-freigabe').style.display = '';
+    $('karte-ergebnisse').style.display = '';
+    setzeVerein(start);
+  });
+
+  function ladeAlles() {
+    if (!verein || !auth.currentUser) return;
+    ladeFreigabe();
+    ladeErgebnisse();
+  }
+
+  // ── Freigabe ──
+  function neuerCode() {
+    const a = new Uint32Array(1);
+    crypto.getRandomValues(a);
+    return String(a[0] % 1000000).padStart(6, '0');
+  }
+
+  async function ladeFreigabe() {
+    const datum = $('datum').value || heute();
+    const bereich = VEREINE[verein].bereich;
+    const inhalt = $('freigabe-inhalt');
+    const knoepfe = $('freigabe-knoepfe');
+    inhalt.textContent = 'Lade …';
+    knoepfe.replaceChildren();
+    const fgRef = doc(db, bereich + 'freigabe', datum);
+    const codeRef = doc(db, bereich + 'freigabe_code', datum);
+    let fg, codeSnap, geraete;
+    try {
+      [fg, codeSnap, geraete] = await Promise.all([
+        getDoc(fgRef), getDoc(codeRef), getDocs(collection(db, bereich + 'freigabe', datum, 'geraete'))
+      ]);
+    } catch (e) {
+      inhalt.innerHTML = (e?.code === 'permission-denied')
+        ? 'Keine Berechtigung für diesen Verein (oder die Firestore-Regeln sind noch nicht veröffentlicht).'
+        : 'Fehler beim Laden: ' + esc(e?.message || e);
+      return;
+    }
+    const offen = fg.exists() && fg.data().offen === true;
+    const code = codeSnap.exists() ? codeSnap.data().code : null;
+
+    const status = offen
+      ? '<b style="color:#2e7d32;">offen</b> – Tablets können mit dem Code speichern.'
+      : (fg.exists() ? '<b style="color:#d32f2f;">geschlossen</b> – keine Speicherungen von Tablets.'
+                     : '<b style="color:#888;">noch nicht freigegeben</b>');
+    inhalt.innerHTML = `<div>Status: ${status}</div>` +
+      (code ? `<div class="code ${offen ? '' : 'aus'}" id="freigabe-code">${esc(code)}</div>` : '') +
+      `<div class="status">Angemeldete Tablets: <b>${geraete.size}</b></div>`;
+
+    const setze = async (istOffen, mitNeuemCode) => {
+      knoepfe.querySelectorAll('button').forEach(b => b.disabled = true);
+      try {
+        if (mitNeuemCode || !code) await setDoc(codeRef, { code: neuerCode(), vereinId: verein });
+        await setDoc(fgRef, { datum, vereinId: verein, offen: istOffen, geaendertAm: serverTimestamp(), uid: auth.currentUser.uid });
+      } catch (e) {
+        alert('Speichern fehlgeschlagen: ' + (e?.message || e));
+      }
+      ladeFreigabe();
+    };
+    const knopf = (text, klasse, fn) => {
+      const b = document.createElement('button');
+      b.textContent = text;
+      if (klasse) b.className = klasse;
+      b.onclick = fn;
+      return b;
+    };
+    if (!offen) knoepfe.append(knopf(fg.exists() ? 'Wieder öffnen' : 'Freigeben', 'gruen', () => setze(true, false)));
+    if (offen) knoepfe.append(knopf('Freigabe schließen', 'rot', () => {
+      if (confirm('Freigabe schließen? Danach können die Tablets nicht mehr speichern.')) setze(false, false);
+    }));
+    if (code) knoepfe.append(knopf('Neuer Code', '', () => {
+      if (confirm('Neuen Code erzeugen? Bereits angemeldete Tablets bleiben freigegeben.')) setze(offen, true);
+    }));
+  }
+
+  // ── Ergebnisse ──
+  async function ladeErgebnisse() {
+    const datum = $('datum').value || heute();
+    const bereich = VEREINE[verein].bereich;
+    const ziel = $('ergebnisse');
+    ziel.textContent = 'Lade …';
+    let snap;
+    try {
+      snap = await getDocs(query(collection(db, bereich + 'spieltage'), where('datum', '==', datum)));
+    } catch (e) {
+      ziel.textContent = 'Fehler beim Laden: ' + (e?.message || e);
+      return;
+    }
+    // je Serie + Tisch gilt das zuletzt gespeicherte Dokument
+    const neueste = {};
+    snap.forEach(ds => {
+      const x = ds.data();
+      if (x.test) return;
+      const key = `${x.serie}|${x.tisch}`;
+      if (!neueste[key] || String(x.gespeichertAm || '') > String(neueste[key].gespeichertAm || '')) neueste[key] = x;
+    });
+    const listen = Object.values(neueste).sort((a, b) =>
+      (Number(a.serie) - Number(b.serie)) || (Number(a.tisch) - Number(b.tisch)));
+    if (listen.length === 0) {
+      ziel.innerHTML = '<div class="leer">Für dieses Datum ist noch keine Liste gespeichert.</div>';
+      return;
+    }
+
+    // Gesamtwertung: Punkte je Spieler über alle Serien
+    const gesamt = {};
+    let abreizSumme = 0;
+    listen.forEach(l => {
+      abreizSumme += Number(l.abreizgeld) || 0;
+      (l.spieler || []).forEach(sp => {
+        const g = gesamt[sp.name] || (gesamt[sp.name] = { name: sp.name, s: {}, summe: 0 });
+        g.s[l.serie] = (g.s[l.serie] || 0) + (Number(sp.gesamtpunkte) || 0);
+        g.summe += Number(sp.gesamtpunkte) || 0;
+      });
+    });
+    const serien = [...new Set(listen.map(l => String(l.serie)))].sort();
+    const rang = Object.values(gesamt).sort((a, b) => b.summe - a.summe || a.name.localeCompare(b.name, 'de'));
+    let html = '<h3 style="font-size:15px;margin:0 0 6px;">Wertung</h3><table><tr><th class="r">Platz</th><th>Name</th>' +
+      serien.map(s => `<th class="r">Serie ${esc(s)}</th>`).join('') + '<th class="r">Gesamt</th></tr>';
+    let letzter = null, platz = 0;
+    rang.forEach((g, i) => {
+      if (g.summe !== letzter) { platz = i + 1; letzter = g.summe; }
+      html += `<tr><td class="r">${platz}.</td><td>${esc(g.name)}</td>` +
+        serien.map(s => `<td class="r">${g.s[s] ?? '–'}</td>`).join('') +
+        `<td class="r"><b>${g.summe}</b></td></tr>`;
+    });
+    html += '</table>';
+
+    html += '<h3 style="font-size:15px;margin:16px 0 6px;">Listen je Tisch</h3><table><tr><th>Serie</th><th>Tisch</th><th>Spieler (Punkte)</th><th class="r">Abreizgeld</th></tr>';
+    listen.forEach(l => {
+      const sp = (l.spieler || []).map(x => `${esc(x.name)} (${Number(x.gesamtpunkte) || 0})`).join(', ');
+      html += `<tr><td>${esc(l.serie)}</td><td>${esc(l.tisch)}</td><td>${sp}</td>` +
+        `<td class="r">${typeof l.abreizgeld === 'number' ? euro(l.abreizgeld) : '?'}</td></tr>`;
+    });
+    html += `<tr><td colspan="3"><b>Summe Abreizgeld</b></td><td class="r"><b>${euro(abreizSumme)}</b></td></tr></table>`;
+    ziel.innerHTML = html;
+  }
+</script>
+</body>
+</html>
