@@ -855,6 +855,7 @@
       <div id="start-spieler-label" style="font-size:12px; font-weight:bold; color:#555; margin-bottom:6px;">Spieler laut Auslosung:</div>
       <div id="start-spieler-grid" style="display:grid; gap:6px;"></div>
     </div>
+    <div id="start-spieler-hinweis" style="display:none; font-size:12px; color:#8d6e00; background:#fff8e1; border-radius:6px; padding:6px 8px;"></div>
 
     <div id="start-spieler-anzahl-row" style="display:flex; align-items:center; gap:10px;">
       <div style="font-weight:bold; font-size:15px; width:62px; flex-shrink:0;">Anzahl:</div>
@@ -2839,9 +2840,10 @@ async function loadFirebaseMitspieler() {
       console.warn("Firestore nicht verfügbar für Mitspieler-Liste");
       return null;
     }
-    const snap = await fs.getDoc(fs.doc(fs.db, "mitspieler", "Liste"));
+    // Garching / Boore: eigene Liste vereine/<id>/mitspieler/Liste (Haken "Auswahlliste" = Feld preisskat)
+    const snap = await fs.getDoc(fs.doc(fs.db, _vereinsBereich() + "mitspieler", "Liste"));
     if (!snap.exists()) {
-      console.warn("Firestore-Dokument 'mitspieler/Liste' nicht gefunden");
+      console.warn(`Firestore-Dokument '${_vereinsBereich()}mitspieler/Liste' nicht gefunden`);
       return null;
     }
     const data = snap.data() || {};
@@ -2877,7 +2879,9 @@ function showKurzMeldung(text, dauerMs = 3000) {
   el._timer = setTimeout(() => { el.style.display = "none"; }, dauerMs);
 }
 
+let _auslosungLadeFehler = null; // letzter Lesefehler (Anzeige im Neustart-Dialog)
 async function loadNeuesteTurnierauslosung(serie) {
+  _auslosungLadeFehler = null;
   try {
     const fs = window.__firestore;
     if (!fs || !fs.db || !fs.collection || !fs.query || !fs.where || !fs.getDocs) {
@@ -2890,11 +2894,32 @@ async function loadNeuesteTurnierauslosung(serie) {
     if (!isTestMode() && fs.doc && fs.getDoc) {
       const d = new Date();
       const heute = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const snapId = await fs.getDoc(fs.doc(fs.db, "turnierauslosungen", `${heute}_S${serie}`));
+      const snapId = await fs.getDoc(fs.doc(fs.db, _vereinsBereich() + "turnierauslosungen", `${heute}_S${serie}`));
       if (snapId.exists()) {
         const daten = snapId.data();
         console.log(`[Auslosung] ${heute}_S${serie} geladen (${daten.art || 'ohne Art'})`);
         return daten;
+      }
+      // Garching / Boore: Die Spieltag-Seite speichert unter dem dort gewählten Spieltag
+      // (<datum>_S<serie>). Weicht das vom heutigen Datum ab, die heute erstellte bzw. für
+      // heute bestimmte Auslosung/Setzliste der Serie nehmen (kleine Sammlung je Verein).
+      if (_vereinsBereich()) {
+        const qv = fs.query(
+          fs.collection(fs.db, _vereinsBereich() + "turnierauslosungen"),
+          fs.where("serie", "==", String(serie))
+        );
+        const sv = await fs.getDocs(qv);
+        const ms = x => x?.createdAt?.toMillis ? x.createdAt.toMillis()
+          : (x?.createdAt?.seconds ? x.createdAt.seconds * 1000 : (Date.parse(x?.createdAt) || 0));
+        const lokal = t => { const z = new Date(t); return `${z.getFullYear()}-${String(z.getMonth() + 1).padStart(2, '0')}-${String(z.getDate()).padStart(2, '0')}`; };
+        const kandidaten = sv.docs.map(x => x.data())
+          .filter(x => x.datum === heute || (ms(x) && lokal(ms(x)) === heute))
+          .sort((a, b) => ms(b) - ms(a));
+        if (kandidaten.length) {
+          console.log(`[Auslosung] Serie ${serie}: heute erstellte Auslosung/Setzliste vom Spieltag ${kandidaten[0].datum} genommen`);
+          return kandidaten[0];
+        }
+        return null;
       }
     }
     // Fallback (ältere Einträge mit Zufalls-ID, Test-Modus): neueste Auslosung der Serie.
@@ -2928,6 +2953,7 @@ async function loadNeuesteTurnierauslosung(serie) {
     return neuester;
   } catch (e) {
     console.warn("[Auslosung] Konnte nicht geladen werden:", e);
+    _auslosungLadeFehler = (e && (e.code || e.message)) || String(e);
     return null;
   }
 }
@@ -2969,22 +2995,24 @@ async function refreshTurnierauslosung() {
   const sondertag = isSpecialDay();
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
 
-  // "de 4 Boore" / Alter Peter: Setzliste nie laden (nur Sintherner Skatclub)
-  if (!istSinthernModus()) {
+  // Alter Peter (ohne Firestore): Setzliste nie laden
+  if (istVereinOhneFirestore()) {
     console.log(`[Auslosung] Vereinsmodus ${vereinMode} – übersprungen`);
     return;
   }
 
   // Normaler Tag: nur bei Serie 2 die neueste Auslosung übernehmen (still, keine Meldung wenn keine).
   // Sondertag: für beide Serien immer laden, mit Meldung falls nichts gefunden.
+  // Garching / Boore: für jede Serie laden, wenn für heute eine Auslosung/Setzliste gespeichert ist (still)
+  const vereinMitBereich = !!_vereinsBereich();
   const modusNormalSerie2 = !sondertag && serie === '2';
-  if (!sondertag && !modusNormalSerie2) {
+  if (!sondertag && !modusNormalSerie2 && !vereinMitBereich) {
     console.log("[Auslosung] Kein Sondertag und nicht Serie 2 – übersprungen");
     return;
   }
 
   // Sintherner Skatclub (Nicht-Sondertag): nur laden, wenn heute bereits eine Speicherung vorliegt
-  if (!sondertag) {
+  if (!sondertag && !vereinMitBereich) {
     const gibtEs = await existsSpieltagFuerHeute();
     if (!gibtEs) {
       console.log("[Auslosung] Keine Speicherung heute vorhanden – übersprungen");
@@ -3052,6 +3080,10 @@ async function refreshTurnierauslosung() {
 
 function getAktuelleMitspielerListe() {
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
+  // Garching / Boore: in Firestore gepflegte Liste (Spieltag-Programm → Mitspieler), sonst feste Liste
+  if (_vereinsBereich() && Array.isArray(firebaseMitspielerListe) && firebaseMitspielerListe.length > 0) {
+    return firebaseMitspielerListe;
+  }
   if (vereinMode === '4boore')   return MITSPIELER_BOORE;
   if (vereinMode === 'alterpeter') return MITSPIELER_ALTERPETER;
   if (vereinMode === 'garching')   return MITSPIELER_GARCHING;
@@ -4216,7 +4248,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.30) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.32) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -4637,16 +4669,26 @@ async function refreshStartSpielerPreview() {
   if (_startDialogMode !== 'reset') return;
   if (!window.__firestore) return;
   const vereinMode = isVereinParamActive() ? getVereinsMode() : null;
-  if (!istSinthernModus()) { _renderStartSpielerPreview(null); return; }
+  if (istVereinOhneFirestore()) { _renderStartSpielerPreview(null); return; }
   const serie = document.getElementById('start-serie-buttons')?.dataset.selected || '1';
   const tisch = document.getElementById('start-tisch-buttons')?.dataset.selected || '1';
   const reqId = ++_startDialogPreviewReqId;
   try {
     const auslosung = await loadNeuesteTurnierauslosung(serie);
     if (reqId !== _startDialogPreviewReqId) return; // veraltet
-    if (!auslosung) { _startDialogAuslosung = null; _renderStartSpielerPreview(null); return; }
+    if (!auslosung) {
+      _startDialogAuslosung = null; _renderStartSpielerPreview(null);
+      _zeigeStartHinweis(_auslosungLadeFehler
+        ? `Auslosung/Setzliste konnte nicht gelesen werden (${_auslosungLadeFehler}).`
+        : `Keine Auslosung/Setzliste für heute (Serie ${serie}) gefunden – Namen bitte manuell wählen.`);
+      return;
+    }
     const eintrag = findeAuslosungTischEintrag(auslosung, tisch);
-    if (!eintrag) { _startDialogAuslosung = null; _renderStartSpielerPreview(null); return; }
+    if (!eintrag) {
+      _startDialogAuslosung = null; _renderStartSpielerPreview(null);
+      _zeigeStartHinweis(`In der Auslosung/Setzliste Serie ${serie} gibt es keinen Tisch ${tisch}.`);
+      return;
+    }
     _startDialogAuslosung = eintrag;
     _renderStartSpielerPreview(eintrag);
     // Spieleranzahl-Buttons automatisch auf die Vorgabe setzen
@@ -4662,10 +4704,18 @@ async function refreshStartSpielerPreview() {
   }
 }
 
+function _zeigeStartHinweis(text) {
+  const el = document.getElementById('start-spieler-hinweis');
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.display = text ? '' : 'none';
+}
+
 // Rendert die Spieler-Kacheln (2x2 bei 4, 2+1 bei 3) oder blendet den Rahmen aus.
 // Zusätzlich: Wenn im Neustart-Dialog eine Vorwahl geladen wurde, wird die
 // Anzahl-Auswahl (3/4) ausgeblendet — die Vorgabe kommt aus der Auslosung.
 function _renderStartSpielerPreview(eintrag) {
+  _zeigeStartHinweis('');
   const box       = document.getElementById('start-spieler-preview');
   const grid      = document.getElementById('start-spieler-grid');
   const label     = document.getElementById('start-spieler-label');
@@ -4791,8 +4841,9 @@ window.addEventListener("load", async () => {
   applyDayConfig();  // Logo + Vereinsname je nach Datum / URL-Hash
   pruefeFreigabeStatus();  // Spieltag-Code-Knopf einblenden, falls nötig (nicht blockierend)
 
-  // An Sondertagen die Mitspieler-Liste aus Firebase nachladen (Preisskat = 'J')
-  if (isSpecialDay()) {
+  // An Sondertagen die Mitspieler-Liste aus Firebase nachladen (Preisskat = 'J'),
+  // bei Garching / Boore die Vereinsliste aus vereine/<id>/mitspieler/Liste
+  if (isSpecialDay() || _vereinsBereich()) {
     loadFirebaseMitspieler().then(list => {
       if (list && list.length > 0) {
         firebaseMitspielerListe = list;
@@ -4844,7 +4895,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.30)
+    © 2026 by Frank Bertram (V1.32)
     </div>
 </body>
 </html>
