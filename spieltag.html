@@ -153,6 +153,9 @@
                     'Ranft, Bernd', 'Scheibe, Thorsten', 'Steinmüller, Gunter', 'Steinmüller, Ulrike', 'Wraikow, Nedjalko (Nicki)'] },
             boore: { id: 'boore', name: 'de vier Boore', logo: 'devierboore.png', bereich: 'vereine/boore/',
                 serien: 2, extern: true, startgeld: null, skatlisteClub: 'boore',
+                // Jahreswertung: Fehlen = 500 (Mitglieder ab dem ersten Ergebnis), ab dem 5. Ergebnis
+                // werden die schlechtesten 1..4 gestrichen (auch negative)
+                wertung: { abwesend: 500, streichen: 4, streichAb: 5 },
                 mitspieler: ['Bleckmann, Norbert', 'Gebhardt, Harry', 'Jost, Uwe', 'Langer, Kurt', 'Müller, Werner',
                     'Opitz, Jürgen', 'Pestotnik, Ralf', 'Schekerka, Herbert', 'Schwarz, Peter', 'Weyer, Wilfried', 'Winand, Hermann'] }
         };
@@ -1894,7 +1897,7 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.20)
+    © 2026 by Frank Bertram (V1.21)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
@@ -2514,6 +2517,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 pdf.setFontSize(7); pdf.setTextColor(120, 120, 120);
                 let footY = tableBottom + 4;
                 if (!data.extern) pdf.text('* negative Tagesergebnisse zählen immer für die Jahreswertung (kein Streichergebnis)', startX, footY);
+                else if (VEREIN.wertung) pdf.text((VEREIN.wertung ? `Durchgestrichen = Streichergebnis (ab dem ${VEREIN.wertung.streichAb}. Ergebnis die schlechtesten 1 bis ${VEREIN.wertung.streichen}, auch negative). Rot = nicht anwesend (${VEREIN.wertung.abwesend} Punkte, Mitglieder ab ihrem ersten Ergebnis).` : ''), startX, footY);
                 if (data.hasTie) {
                     footY += 3.5;
                     pdf.text('* Bei Punktgleichstand entscheidet das höchste Tagesergebnis, bei erneutem Gleichstand das zweithöchste usw.', startX, footY);
@@ -2560,9 +2564,11 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 // Mitspieler-Liste aus Firestore: Dokument 'mitspieler/Liste', Feld 'Mitspieler' (Array)
                 // Alt: Array von Strings. Neu: Array von Objekten { name, eintritt, mitglied }.
                 const extern = VEREIN.extern;
-                const listeSnap = extern ? null : await getDoc(doc(db, BEREICH + 'mitspieler', 'Liste'));
+                const WR = extern ? (VEREIN.wertung || null) : null; // eigene Wertungsregeln anderer Vereine
+                const listeSnap = (extern && !WR) ? null : await getDoc(doc(db, BEREICH + 'mitspieler', 'Liste')).catch(() => null);
                 const mitspieler = new Set();
                 const mitspielerInfo = {}; // name -> { eintritt, mitglied }
+                const extMitglieder = new Set(); // andere Vereine: Mitglieder (bekommen WR.abwesend bei Fehlen)
                 // Andere Vereine: keine Mitgliederliste – es zählen alle Spieler mit Ergebnissen der Saison
                 if (listeSnap && listeSnap.exists()) {
                     const arr = listeSnap.data().Mitspieler || [];
@@ -2571,6 +2577,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                         if (entry.mitglied !== true) return;
                         const name = (entry.name || '').trim();
                         if (!name) return;
+                        if (extern) { extMitglieder.add(name); mitspielerInfo[name] = { eintritt: entry.eintritt || '', mitglied: true }; return; }
                         mitspieler.add(name);
                         mitspielerInfo[name] = {
                             eintritt: entry.eintritt || '',
@@ -2677,6 +2684,8 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     const perDate = playerData[name] || {};
                     const eintrittIso = eintrittToIso((mitspielerInfo[name] || {}).eintritt);
                     const pairs = [];
+                    // Andere Vereine mit WR: Mitglieder erst ab ihrem ersten Ergebnis der Saison auffüllen
+                    const ersterTag = dates.map(d => d.iso).find(iso => perDate[iso]) || '';
                     dates.forEach(d => {
                         const afterEintritt = !eintrittIso || d.iso >= eintrittIso;
                         if (!afterEintritt) return;
@@ -2690,15 +2699,23 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                             byDate[d.iso] = sum;
                             if (has1 !== has2 && vereinSerien() === 2) single.add(d.iso);
                             pairs.push({ iso: d.iso, value: sum });
-                        } else if (!extern && d.iso <= todayIso && datesWithData.has(d.iso)) {
+                        } else if (d.iso <= todayIso && datesWithData.has(d.iso) &&
+                                   (!extern || (WR && WR.abwesend && extMitglieder.has(name) && ersterTag && d.iso >= ersterTag))) {
                             // Nur auffüllen, wenn der Tag tatsächlich gespielt wurde (Einträge vorhanden).
-                            byDate[d.iso] = DEFAULT_PUNKTE;
+                            const dv = extern ? WR.abwesend : DEFAULT_PUNKTE;
+                            byDate[d.iso] = dv;
                             missing.add(d.iso);
-                            pairs.push({ iso: d.iso, value: DEFAULT_PUNKTE });
+                            pairs.push({ iso: d.iso, value: dv });
                         }
                     });
+                    // Andere Vereine mit WR: ab dem WR.streichAb-ten Ergebnis die schlechtesten 1..WR.streichen
+                    // streichen (auch negative).
+                    if (WR && WR.streichen) {
+                        const anzahl = Math.min(WR.streichen, Math.max(0, pairs.length - (WR.streichAb || 1) + 1));
+                        pairs.slice().sort((a, b) => a.value - b.value).slice(0, anzahl).forEach(p => dropped.add(p.iso));
+                    }
                     // Streichresultate: nur Werte >= 0 sind streichbar, gestrichen werden die niedrigsten.
-                    if (pairs.length > KEEP_BEST) {
+                    else if (pairs.length > KEEP_BEST) {
                         const droppable = pairs.filter(p => p.value >= 0)
                             .slice().sort((a, b) => a.value - b.value);
                         const dropCount = Math.min(pairs.length - KEEP_BEST, droppable.length);
@@ -2885,6 +2902,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 html += '</tbody></table></div>';
                 html += '<div style="margin:8px 4px 0;font-size:11px;color:#555;font-family:Arial,sans-serif;line-height:1.5;">';
                 if (!extern) html += '<div><span style="color:#d32f2f;">*</span> negative Tagesergebnisse zählen immer für die Jahreswertung (kein Streichergebnis)</div>';
+                else if (WR) html += `<div>${(VEREIN.wertung ? `Durchgestrichen = Streichergebnis (ab dem ${VEREIN.wertung.streichAb}. Ergebnis die schlechtesten 1 bis ${VEREIN.wertung.streichen}, auch negative). Rot = nicht anwesend (${VEREIN.wertung.abwesend} Punkte, Mitglieder ab ihrem ersten Ergebnis).` : '')}</div>`;
                 if (tieNotes.length) {
                     html += '<div style="margin-top:4px;"><span style="color:#d32f2f;">*</span> Bei Punktgleichstand entscheidet das höchste Tagesergebnis, bei erneutem Gleichstand das zweithöchste usw.</div>';
                     tieNotes.forEach(n => { html += `<div style="margin-left:12px;">${n}</div>`; });
@@ -3556,14 +3574,17 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
         async function berechneJahresstand(datum) {
             const jahr = parseInt(datum.slice(0, 4), 10);
             const extern = VEREIN.extern;
+            const WR = extern ? (VEREIN.wertung || null) : null;
             const termine = new Set(saisonTermine(jahr).map(d => d.iso).filter(iso => iso < datum));
             const [snap, listeSnap] = await Promise.all([
                 ladeSpieltage(jahr),
-                extern ? Promise.resolve(null) : getDoc(doc(db, BEREICH + 'mitspieler', 'Liste')).catch(() => null)
+                (extern && !WR) ? Promise.resolve(null) : getDoc(doc(db, BEREICH + 'mitspieler', 'Liste')).catch(() => null)
             ]);
             const eintritt = {};
+            const mitglieder = new Set();
             if (listeSnap && listeSnap.exists()) (listeSnap.data().Mitspieler || []).forEach(e => {
                 if (!e || typeof e !== 'object' || !e.name) return;
+                if (e.mitglied === true) mitglieder.add(e.name.trim());
                 let v = e.eintritt;
                 if (v && typeof v.toDate === 'function') v = v.toDate().toISOString().slice(0, 10);
                 const s = String(v || '').trim();
@@ -3589,15 +3610,20 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 const perDate = daten[name];
                 if (!perDate) return { total: 0, tage: [], mitErgebnis: false };
                 const ab = eintritt[name] || '';
+                const erster = tage.find(iso => perDate[iso]) || '';
                 const werte = [], echte = [];
                 tage.forEach(iso => {
                     if (ab && iso < ab) return;
                     const day = perDate[iso];
                     if (day) { const v = (day['1'] || 0) + (day['2'] || 0); werte.push(v); echte.push(v); }
                     else if (!extern) werte.push(750);
+                    else if (WR && WR.abwesend && mitglieder.has(name) && iso >= erster) werte.push(WR.abwesend);
                 });
                 let total = werte.reduce((a, b) => a + b, 0);
-                if (werte.length > KEEP_BEST) {
+                if (WR && WR.streichen) {
+                    const anzahl = Math.min(WR.streichen, Math.max(0, werte.length - (WR.streichAb || 1) + 1));
+                    werte.slice().sort((a, b) => a - b).slice(0, anzahl).forEach(v => { total -= v; });
+                } else if (werte.length > KEEP_BEST) {
                     const streichbar = werte.filter(v => v >= 0).sort((a, b) => a - b);
                     streichbar.slice(0, Math.min(werte.length - KEEP_BEST, streichbar.length)).forEach(v => { total -= v; });
                 }
