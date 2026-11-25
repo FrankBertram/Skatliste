@@ -740,6 +740,7 @@
   <div id="pdf-export-container"></div>
   <div id="live-view-container"></div>
   <div id="neu-start-container"></div>
+  <div id="zurueck-container"></div>
 </div>
 
 <div class="table-wrapper" style="max-height:600px; overflow-y:auto; overflow-x:auto; width:100%; max-width:100%;">
@@ -2624,6 +2625,36 @@ function createNeuStartButton() {
   container.appendChild(btn);
 }
 
+// "Zurück" zur Startseite des Vereins (sinthern.html / garching.html / devierboore.html) –
+// wichtig, wenn die Skatliste als App (Homescreen-Kachel, ohne Adresszeile) läuft.
+// Der Spielstand ist laufend gespeichert und bleibt erhalten.
+function vereinsStartseite() {
+  const m = getVereinsMode();
+  if (m === '4boore') return 'devierboore.html';
+  if (m === 'garching') return 'garching.html';
+  return 'sinthern.html';
+}
+function createZurueckButton() {
+  const container = document.getElementById("zurueck-container");
+  if (!container || container.children.length > 0) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.innerHTML = "⌂ Zurück";
+  btn.title = "Zurück zur Startseite (Ranglisten) – die Liste bleibt gespeichert";
+  btn.style.cssText = `
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #9e9e9e, #757575);
+    color: white; border: none; border-radius: 6px;
+    font-size: 15px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  `;
+  btn.addEventListener("click", () => {
+    try { saveState(); } catch (e) {}
+    location.href = vereinsStartseite();
+  });
+  container.appendChild(btn);
+}
+
 function getInt(id) {
   return parseInt(document.getElementById(id)?.textContent || 0, 10);
 }
@@ -4266,7 +4297,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.33) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.34) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -4586,6 +4617,7 @@ function applyMobileLayout() {
     'pdf-export-container',
     'live-view-container',
     'neu-start-container',
+    'zurueck-container',
   ];
 
   if (isPhoneL) {
@@ -4609,6 +4641,8 @@ function applyMobileLayout() {
   if (pdfBtn && !pdfBtn.disabled) pdfBtn.innerHTML = isPhoneL ? 'PDF'           : '📄 PDF';
   if (liveBtn && !liveBtn.disabled) liveBtn.innerHTML = isPhoneL ? 'Live'       : '📺 Live';
   if (neuBtn && !neuBtn.disabled) neuBtn.innerHTML = isPhoneL ? 'Neu'           : '🗑 Neu';
+  const zurueckBtn = document.querySelector('#zurueck-container button');
+  if (zurueckBtn) zurueckBtn.innerHTML = isPhoneL ? '⌂' : '⌂ Zurück';
 
   _updateHeaderLabels();
   // Nach dem Struktur-Umbau die Skalierung neu berechnen — die tatsächliche
@@ -4892,6 +4926,7 @@ window.addEventListener("load", async () => {
     createLiveViewButton();
     createRotatePlayersButton();
     createNeuStartButton();
+    createZurueckButton();
     // Test-Modus-Badge einblenden, falls ?test in der URL steht
     if (isTestMode()) {
       const badge = document.getElementById('test-mode-badge');
@@ -4920,7 +4955,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.33)
+    © 2026 by Frank Bertram (V1.34)
     </div>
 </body>
 </html>
