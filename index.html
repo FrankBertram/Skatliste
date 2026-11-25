@@ -965,7 +965,9 @@ let spielerAnzahl = 4;  // 3 oder 4 — zentrale Steuerung
 let abreizgeldTisch = 0;           // Abreizgeld des Tisches ohne Startgeld/Spieleinsatz (für Firestore 'spieltage')
 let spielerFehlt = [0, 0, 0, 0];   // Boore: Anzahl gefehlter Spielabende, je +4 €
 let fehltPromptShown = false;       // Prompt nur einmal pro Liste
-let spielerPreset = null;           // Wenn per Turnierauslosung gesetzt: nur diese 4 Namen im Dropdown
+let spielerPreset = null;
+let spielerPresetDatum = null;   // Tag (YYYY-MM-DD), an dem das Preset gesetzt wurde – gilt nur an diesem Tag
+const heuteIsoLokal = () => new Date().toLocaleDateString('sv-SE');           // Wenn per Turnierauslosung gesetzt: nur diese 4 Namen im Dropdown
 
 function getSpielerAnzahl() {
   return parseInt(document.querySelector('input[name="spieleranzahl"]:checked')?.value || '4');
@@ -3163,7 +3165,8 @@ function generatePlayerNameButtons() {
       let listeAktuell = getAktuelleMitspielerListe();
       // Bei aktivem Preset (Turnierauslosung): nur die 4 vorgegebenen Namen zeigen
       // (plus "Gast" behalten wir raus, weil dann kein freier Spielername mehr rein soll)
-      if (Array.isArray(spielerPreset) && spielerPreset.length > 0) {
+      const presetAktiv = Array.isArray(spielerPreset) && spielerPreset.length > 0;
+      if (presetAktiv) {
         listeAktuell = spielerPreset.slice();
       }
       // Map: Name → Platz (1-basiert), an dem der Spieler bereits sitzt (außer eigenem Platz)
@@ -3189,6 +3192,13 @@ function generatePlayerNameButtons() {
         }
         select.appendChild(opt);
       });
+      // Bei Preset: Ausweg zur vollständigen Namensliste
+      if (presetAktiv) {
+        const optAlle = document.createElement("option");
+        optAlle.value = "__alle__";
+        optAlle.text = "▸ alle Spieler anzeigen …";
+        select.appendChild(optAlle);
+      }
 
       const gastInput = document.createElement("input");
       gastInput.type = "text";
@@ -3254,6 +3264,14 @@ function generatePlayerNameButtons() {
 
       select.addEventListener("change", () => {
         const wert = select.value;
+        if (wert === "__alle__") {
+          spielerPreset = null;
+          spielerPresetDatum = null;
+          saveState();
+          restoreButton();
+          btn.click(); // Auswahl mit allen Namen neu öffnen
+          return;
+        }
         if (wert === "Gast") {
           gastInput.style.display = "block";
           gastInput.focus();
@@ -4248,7 +4266,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.32) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.33) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -4319,7 +4337,8 @@ function _buildState() {
     karten: document.querySelector('input[name="karten"]:checked')?.value,
     spielerFehlt: spielerFehlt,
     fehltPromptShown: fehltPromptShown,
-    spielerPreset: spielerPreset
+    spielerPreset: spielerPreset,
+    spielerPresetDatum: spielerPresetDatum
   };
 }
 
@@ -4356,8 +4375,12 @@ function _applyState(state) {
     }
   }
   fehltPromptShown = !!state.fehltPromptShown;
-  spielerPreset = (Array.isArray(state.spielerPreset) && state.spielerPreset.length > 0)
+  // Preset (nur Namen laut Auslosung) gilt nur am Tag der Auslosung – eine alte Liste bietet wieder alle Namen an
+  spielerPresetDatum = state.spielerPresetDatum || null;
+  spielerPreset = (Array.isArray(state.spielerPreset) && state.spielerPreset.length > 0 &&
+                   spielerPresetDatum === heuteIsoLokal())
     ? state.spielerPreset.slice() : null;
+  if (!spielerPreset) spielerPresetDatum = null;
 
   const serieRadio = document.querySelector(`input[name="serie"][value="${state.serie}"]`);
   if (serieRadio) serieRadio.checked = true;
@@ -4795,8 +4818,10 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
         if (name) spielerNamen[i] = name;
       }
       spielerPreset = _startDialogAuslosung.spieler.slice(0, anz).filter(Boolean);
+      spielerPresetDatum = heuteIsoLokal();
     } else {
       spielerPreset = null;
+      spielerPresetDatum = null;
     }
     // Live-Doc mit den NEU gewählten Koordinaten löschen — aber nur wenn
     // dieser Tab vorher tatsächlich eigene Einträge hatte.
@@ -4895,7 +4920,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.32)
+    © 2026 by Frank Bertram (V1.33)
     </div>
 </body>
 </html>
