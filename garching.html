@@ -54,20 +54,18 @@
       <b>Auf dem iPhone/iPad zum Home-Bildschirm hinzufügen (in Safari):</b><br>
       Diese Seite (<code>garching.html</code>) offen lassen &rarr;
       „Teilen" antippen (Quadrat mit Pfeil) &rarr; „Zum Home-Bildschirm".
-      Das erzeugt eine „Garching"-Kachel, die die Liste immer im Garching-Modus öffnet.
+      Das erzeugt eine „Garching"-Kachel: Sie öffnet diese Seite ohne Adresszeile, von hier geht es zur Spielliste und zu den Ranglisten.
     </div>
     <a href="spielleiter.html?verein=garching" style="font-size:13px; color:#555;">Für Spielleiter: Spieltag freigeben &amp; Ergebnisse</a>
   </div>
   <script>
-    // Wird bereits vom Homescreen als PWA gestartet? Dann direkt in die App
-    // mit Query-Parameter, damit index.html den Garching-Modus erkennt.
-    // In Safari/Chrome bleiben wir auf dieser Landing, damit der Nutzer
-    // in Ruhe "Teilen → Zum Home-Bildschirm" ausführen kann.
+    // Als App vom Home-Bildschirm gestartet: diese Seite bleibt die Startseite (Spielliste und
+    // Ranglisten ohne Adresszeile), nur der Hinweis zum Anlegen der Kachel wird ausgeblendet.
     var isStandalone =
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
       window.navigator.standalone === true;
     if (isStandalone) {
-      location.replace('index.html?club=garching');
+      var h = document.querySelector('.hint'); if (h) h.style.display = 'none';
     }
   </script>
 </body>

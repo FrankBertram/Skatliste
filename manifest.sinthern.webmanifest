@@ -1,0 +1,26 @@
+{
+  "name": "1. Sintherner Skatclub - Ranglisten",
+  "short_name": "Sinthern",
+  "description": "Ranglisten (Gesamt und Spieltage) und Skatliste des 1. Sintherner Skatclub",
+  "start_url": "./sinthern.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#1976d2",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "Skat.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "Skat.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
