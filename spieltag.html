@@ -120,6 +120,7 @@
         /* Öffentliche Ranglisten (?ansicht=rangliste): ohne Anmeldung nur Jahres- und Tageswertung */
         #oeffentlichStart { display: none; }
         html.oeffentlich #oeffentlichStart { display: flex; }
+        html.oeffentlich.oeff-direkt #oeffentlichStart { display: none; } /* direkt geöffnet: keine Zwischenseite */
         html.oeffentlich body > :not(#oeffentlichStart):not(#gesamtlisteModal):not(#tageswertungModal):not(script) { display: none !important; }
         html.oeffentlich [data-nur-sinthern], html.oeffentlich [data-nicht-oeffentlich] { display: none !important; }
         @media (max-width: 700px) {
@@ -133,7 +134,11 @@
 </head>
 <body>
     <!-- Anmeldesperre: wird erst nach Prüfung des Google-Kontos (Spielleiter des Vereins) aufgehoben -->
-    <script>document.documentElement.classList.add(new URLSearchParams(location.search).get('ansicht') === 'rangliste' ? 'oeffentlich' : 'gesperrt');</script>
+    <script>(function () {
+        const q = new URLSearchParams(location.search), h = document.documentElement;
+        h.classList.add(q.get('ansicht') === 'rangliste' ? 'oeffentlich' : 'gesperrt');
+        if (q.get('ansicht') === 'rangliste' && /^(gesamt|spieltage)$/.test(q.get('zeige') || '')) h.classList.add('oeff-direkt');
+    })();</script>
     <div id="anmeldeSperre" style="position:fixed;inset:0;align-items:center;justify-content:center;background:#f4f4f4;z-index:10000;font-family:Arial,sans-serif;">
         <div style="background:white;padding:28px 32px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.15);max-width:440px;width:92%;text-align:center;">
             <img data-skat-logo alt="Vereinslogo" style="height:64px;width:auto;">
@@ -1919,7 +1924,7 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.22)
+    © 2026 by Frank Bertram (V1.23)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
@@ -2160,6 +2165,16 @@ function updateRanking() {
         if (OEFFENTLICH) {
             const zeige = new URLSearchParams(location.search).get('zeige');
             vereinsKonfigGeladen.then(() => {
+                // Direkt geöffnet (z. B. von devierboore.html): "Schließen" führt zur aufrufenden Seite zurück
+                if (document.documentElement.classList.contains('oeff-direkt')) {
+                    const zurueck = schliessen => function () {
+                        schliessen.apply(this, arguments);
+                        if (document.referrer && history.length > 1) history.back();
+                        else document.documentElement.classList.remove('oeff-direkt');
+                    };
+                    window.closeGesamtliste = zurueck(window.closeGesamtliste);
+                    window.closeTageswertung = zurueck(window.closeTageswertung);
+                }
                 if (zeige === 'gesamt') window.showGesamtliste();
                 else if (zeige === 'spieltage') window.showTageswertung();
             });
