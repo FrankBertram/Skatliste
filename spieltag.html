@@ -277,6 +277,7 @@
                 <button onclick="alleWaehlen(false)" style="font-size:11px;padding:3px 6px;margin:0;width:auto;">Keine</button>
                 <button onclick="loadMitspielerFromFirebase(this)" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#00897b;color:white;border:none;border-radius:4px;cursor:pointer;">Aus Firebase laden</button>
                 <button onclick="auslosungStarten()" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#6a1b9a;color:white;border:none;border-radius:4px;cursor:pointer;">Auslosung</button>
+                <button onclick="showSetzlisteJahresstand()" title="Markierte (anwesende) Spieler nach Jahresstand auf die Tische setzen" style="font-size:11px;padding:3px 6px;margin:0;width:auto;background:#00695c;color:white;border:none;border-radius:4px;cursor:pointer;">Setzliste</button>
             </div>
             <div class="checkbox-list" id="playerCheckboxes"></div>
             
@@ -299,6 +300,7 @@
                     <button id="saveSerie1Btn" onclick="saveSerieToFirestore(1)" style="background:#388e3c;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Serie 1 → T0</button>
                     <button class="nur-2-serien" id="saveSerie2Btn" onclick="saveSerieToFirestore(2)" style="background:#388e3c;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Serie 2 → T0</button>
                     <button id="abreizgeldBtn" onclick="showAbreizgeld()" style="background:#6d4c41;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Abreizgeld</button>
+                    <button id="loeschBtn" onclick="showSpieltagLoeschen()" title="Gespeicherte Ergebnisse, Live-Stände und Auslosung des gewählten Spieltags löschen (Spielleiter)" style="background:#c62828;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">🗑 Spieltag löschen</button>
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                     <button id="signInBtn" onclick="signInGoogle()" style="background:#424242;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-size:13px;width:auto;margin:0;">Anmelden</button>
@@ -874,7 +876,7 @@ function loadPlayers(text) {
         function merkeAuslosung(a) {
             if (!a || !a.datum || !a.serie || !Array.isArray(a.tische)) return;
             const alle = ladeGemerkteAuslosungen();
-            alle[a.datum + '_S' + a.serie] = { datum: a.datum, serie: String(a.serie), tische: a.tische };
+            alle[a.datum + '_S' + a.serie] = { datum: a.datum, serie: String(a.serie), tische: a.tische, ...(a.art ? { art: a.art } : {}) };
             Object.keys(alle).sort().slice(0, -10).forEach(k => delete alle[k]); // nur die letzten 10
             try { localStorage.setItem(auslosungKey(), JSON.stringify(alle)); } catch (e) { /* voll */ }
         }
@@ -1482,7 +1484,7 @@ function updateRanking() {
         });
         const [y, m, d] = auslosung.datum.split('-');
         const info = document.createElement('tr');
-        info.innerHTML = `<td colspan="6" style="background:#ede7f6;font-size:13px;">🎲 Tische laut Auslosung Serie ${auslosung.serie} (${d}.${m}.${y}) – Spieler je Tisch in Platzreihenfolge</td>`;
+        info.innerHTML = `<td colspan="6" style="background:#ede7f6;font-size:13px;">${auslosung.art === 'setzliste' ? '📋 Tische laut Setzliste' : '🎲 Tische laut Auslosung'} Serie ${auslosung.serie} (${d}.${m}.${y}) – Spieler je Tisch in Platzreihenfolge</td>`;
         tbody.appendChild(info);
     }
 
@@ -1892,7 +1894,7 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.17)
+    © 2026 by Frank Bertram (V1.20)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
@@ -3541,6 +3543,320 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             }
         };
 
+        // ===== Setzliste nach Jahresstand (statt Auslosung) =====
+        // Die markierten (anwesenden) Spieler werden nach dem Jahresstand vor dem gewählten Spieltag
+        // sortiert und wie bei der Serie-2-Setzliste auf Tische zu 4/3 verteilt (getTableSizes).
+        // Vor dem Speichern lassen sich je zwei Spieler durch Antippen tauschen. Gespeichert wird
+        // wie eine Auslosung unter turnierauslosungen/<datum>_S<serie> (art 'setzliste',
+        // grundlage 'jahresstand'), damit Zwischenstand und Tablets die Tische sofort kennen.
+        // Jahresstand wie in der Jahreswertung: reguläre Spieltage der Saison vor dem Datum,
+        // Sinthern mit 750 bei Abwesenheit (ab Eintritt) und Streichergebnissen (beste 18),
+        // andere Vereine Summe aller Spieltage. Spieler ohne Ergebnis kommen ans Ende.
+        let setzJahr = null; // { datum, serie, reihenfolge, punkte, tische, wahl }
+        async function berechneJahresstand(datum) {
+            const jahr = parseInt(datum.slice(0, 4), 10);
+            const extern = VEREIN.extern;
+            const termine = new Set(saisonTermine(jahr).map(d => d.iso).filter(iso => iso < datum));
+            const [snap, listeSnap] = await Promise.all([
+                ladeSpieltage(jahr),
+                extern ? Promise.resolve(null) : getDoc(doc(db, BEREICH + 'mitspieler', 'Liste')).catch(() => null)
+            ]);
+            const eintritt = {};
+            if (listeSnap && listeSnap.exists()) (listeSnap.data().Mitspieler || []).forEach(e => {
+                if (!e || typeof e !== 'object' || !e.name) return;
+                let v = e.eintritt;
+                if (v && typeof v.toDate === 'function') v = v.toDate().toISOString().slice(0, 10);
+                const s = String(v || '').trim();
+                const m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+                eintritt[e.name.trim()] = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : (/^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : '');
+            });
+            const daten = {}; const gespielt = new Set();
+            snap.forEach(ds => {
+                const x = ds.data();
+                if (!termine.has(x.datum)) return;
+                (x.spieler || []).forEach(s => {
+                    if (!s || !s.name) return;
+                    const v = parseFloat(s.gesamtpunkte);
+                    if (Number.isNaN(v)) return;
+                    gespielt.add(x.datum);
+                    const p = daten[s.name] || (daten[s.name] = {});
+                    (p[x.datum] || (p[x.datum] = {}))[String(x.serie)] = v;
+                });
+            });
+            const tage = [...gespielt].sort();
+            const KEEP_BEST = extern ? 999 : 18;
+            return function(name) {
+                const perDate = daten[name];
+                if (!perDate) return { total: 0, tage: [], mitErgebnis: false };
+                const ab = eintritt[name] || '';
+                const werte = [], echte = [];
+                tage.forEach(iso => {
+                    if (ab && iso < ab) return;
+                    const day = perDate[iso];
+                    if (day) { const v = (day['1'] || 0) + (day['2'] || 0); werte.push(v); echte.push(v); }
+                    else if (!extern) werte.push(750);
+                });
+                let total = werte.reduce((a, b) => a + b, 0);
+                if (werte.length > KEEP_BEST) {
+                    const streichbar = werte.filter(v => v >= 0).sort((a, b) => a - b);
+                    streichbar.slice(0, Math.min(werte.length - KEEP_BEST, streichbar.length)).forEach(v => { total -= v; });
+                }
+                return { total, tage: echte.sort((a, b) => b - a), mitErgebnis: true };
+            };
+        }
+        function setzJahrVerteilen() {
+            const sizes = getTableSizes(setzJahr.reihenfolge.length);
+            let idx = 0;
+            setzJahr.tische = sizes.map((g, t) => ({ tisch: t + 1, spieler: setzJahr.reihenfolge.slice(idx, idx += g) }));
+            setzJahr.wahl = null;
+        }
+        function setzJahrZeichnen() {
+            const box = document.getElementById('setzJahrModal');
+            const esc = escapeHtmlAttr;
+            const rang = {};
+            setzJahr.reihenfolge.forEach((n, i) => { rang[n] = i + 1; });
+            box.querySelector('.sj-inhalt').innerHTML = setzJahr.tische.map((t, ti) => `
+<div style="border:1px solid #b2dfdb;border-radius:6px;padding:6px 8px;min-width:200px;flex:1 1 200px;">
+  <div style="font-weight:bold;color:#00695c;margin-bottom:4px;">Tisch ${t.tisch} <span style="font-weight:normal;color:#777;font-size:12px;">(${t.spieler.length} Spieler)</span></div>
+  ${t.spieler.map((n, si) => {
+      const gew = setzJahr.wahl && setzJahr.wahl[0] === ti && setzJahr.wahl[1] === si;
+      const p = setzJahr.punkte[n];
+      return `<button type="button" onclick="setzJahrTippen(${ti},${si})" style="display:flex;justify-content:space-between;gap:8px;width:100%;margin:2px 0;padding:5px 8px;border:1px solid ${gew ? '#e65100' : '#ddd'};border-radius:4px;background:${gew ? '#ffe0b2' : '#fafafa'};color:#222;cursor:pointer;font-size:14px;text-align:left;">
+        <span>${rang[n]}. ${esc(n)}</span><span style="color:#666;">${p.mitErgebnis ? esc(p.total) : '–'}</span></button>`;
+  }).join('')}
+</div>`).join('');
+            box.querySelector('.sj-hinweis').textContent = setzJahr.wahl
+                ? 'Jetzt den Spieler antippen, mit dem getauscht werden soll (nochmal antippen = abwählen).'
+                : 'Zum Ändern zwei Spieler nacheinander antippen – sie tauschen die Plätze.';
+        }
+        window.setzJahrTippen = function(ti, si) {
+            const w = setzJahr.wahl;
+            if (!w) setzJahr.wahl = [ti, si];
+            else if (w[0] === ti && w[1] === si) setzJahr.wahl = null;
+            else {
+                const a = setzJahr.tische[w[0]].spieler, b = setzJahr.tische[ti].spieler;
+                [a[w[1]], b[si]] = [b[si], a[w[1]]];
+                setzJahr.wahl = null;
+            }
+            setzJahrZeichnen();
+        };
+        window.setzJahrNeu = function() { if (setzJahr) { setzJahrVerteilen(); setzJahrZeichnen(); } };
+        window.showSetzlisteJahresstand = async function() {
+            const sel = document.getElementById('spieltagSelect');
+            const datum = sel ? sel.value : '';
+            if (!datum) { alert('Bitte zuerst oben den Spieltag auswählen – die Setzliste wird für diesen Spieltag gespeichert.'); if (sel) sel.focus(); return; }
+            const anwesend = allPlayers.filter(p => { const cb = document.getElementById('cb_' + p); return cb && cb.checked; });
+            if (anwesend.length < 3) { alert('Bitte zuerst die anwesenden Spieler markieren (mindestens 3).'); return; }
+            const serie = currentRound === 2 ? 2 : 1;
+            let box = document.getElementById('setzJahrModal');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'setzJahrModal';
+                box.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2500;align-items:center;justify-content:center;font-family:Arial,sans-serif;';
+                box.innerHTML = `
+<div style="background:white;padding:20px;border-radius:8px;max-width:960px;width:96%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+  <h3 class="sj-titel" style="margin:0 0 4px 0;"></h3>
+  <p class="sj-info" style="margin:0 0 4px 0;font-size:13px;color:#555;"></p>
+  <p class="sj-hinweis" style="margin:0 0 10px 0;font-size:13px;color:#e65100;"></p>
+  <div class="sj-inhalt" style="display:flex;flex-wrap:wrap;gap:10px;overflow:auto;flex:1;align-items:flex-start;">Lade …</div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;">
+    <button onclick="setzJahrNeu()" style="background:#757575;color:white;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">Neu nach Jahresstand</button>
+    <button class="sj-speichern" onclick="setzJahrSpeichern(this)" style="background:#00695c;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">Setzliste speichern</button>
+    <button onclick="document.getElementById('setzJahrModal').style.display='none'" style="background:#9e9e9e;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">Abbrechen</button>
+  </div>
+</div>`;
+                document.body.appendChild(box);
+            }
+            const [y, m, d] = datum.split('-');
+            box.querySelector('.sj-titel').textContent = `Setzliste nach Jahresstand – ${d}.${m}.${y}, Serie ${serie}`;
+            box.querySelector('.sj-info').textContent = 'Lade Jahresstand …';
+            box.querySelector('.sj-hinweis').textContent = '';
+            box.querySelector('.sj-inhalt').innerHTML = '';
+            setzJahr = null;
+            box.style.display = 'flex';
+            try {
+                const stand = await berechneJahresstand(datum);
+                const punkte = {};
+                anwesend.forEach(n => { punkte[n] = stand(n); });
+                const vergleicheTage = (a, b) => {
+                    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+                        const av = i < a.length ? a[i] : -Infinity, bv = i < b.length ? b[i] : -Infinity;
+                        if (av !== bv) return bv - av;
+                    }
+                    return 0;
+                };
+                const reihenfolge = anwesend.slice().sort((a, b) => {
+                    const pa = punkte[a], pb = punkte[b];
+                    return (pb.mitErgebnis - pa.mitErgebnis) || (pb.total - pa.total)
+                        || vergleicheTage(pa.tage, pb.tage) || a.localeCompare(b, 'de');
+                });
+                setzJahr = { datum, serie, reihenfolge, punkte };
+                setzJahrVerteilen();
+                const ohne = reihenfolge.filter(n => !punkte[n].mitErgebnis).length;
+                box.querySelector('.sj-info').textContent = `${reihenfolge.length} anwesende Spieler, Jahresstand ${y} vor diesem Spieltag (Zahl rechts = Punkte).`
+                    + (ohne ? ` ${ohne} ohne Ergebnis in diesem Jahr stehen am Ende.` : '');
+                setzJahrZeichnen();
+            } catch (err) {
+                console.error(err);
+                box.querySelector('.sj-info').innerHTML = `<span style="color:#d32f2f;">Fehler beim Laden: ${escapeHtmlAttr(err.message || err)}</span>`;
+            }
+        };
+        window.setzJahrSpeichern = async function(btn) {
+            if (!setzJahr || !setzJahr.tische) return;
+            const tische = setzJahr.tische.map(t => ({ tisch: t.tisch, groesse: t.spieler.length, spieler: t.spieler.slice() }));
+            const ok = await window.saveTurnierauslosung({
+                serie: String(setzJahr.serie),
+                spielerAnzahl: setzJahr.reihenfolge.length,
+                tischAnzahl: tische.length,
+                tische,
+                grundlage: 'jahresstand',
+                bezeichnung: 'Setzliste (nach Jahresstand)'
+            }, btn);
+            if (!ok) return;
+            merkeAuslosung({ datum: setzJahr.datum, serie: String(setzJahr.serie), art: 'setzliste', tische: tische.map(t => ({ tisch: t.tisch, spieler: t.spieler })) });
+            try { updateRanking(); } catch (x) { /* ignorieren */ }
+            setTimeout(() => { document.getElementById('setzJahrModal').style.display = 'none'; }, 800);
+        };
+
+        // ===== Spieltag löschen (Spielleiter) =====
+        // Zeigt alle gespeicherten Daten zum Datum in importDate: Tischlisten/Nachträge (spieltage),
+        // Live-Stände (spieltage_live, nur Sinthern) und Auslosung/Setzliste (<datum>_S1/_S2).
+        // Markierte Einträge werden nach Rückfrage endgültig gelöscht.
+        let loeschEintraege = [];
+        window.showSpieltagLoeschen = async function() {
+            const dateEl = document.getElementById('importDate');
+            const datum = dateEl && dateEl.value;
+            if (!datum) { alert('Bitte zuerst oben einen Spieltag bzw. ein Datum wählen.'); return; }
+            const [y, m, d] = datum.split('-');
+            let box = document.getElementById('loeschModal');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'loeschModal';
+                box.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2500;align-items:center;justify-content:center;font-family:Arial,sans-serif;';
+                box.innerHTML = `
+<div style="background:white;padding:20px;border-radius:8px;max-width:720px;width:94%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+  <h3 class="lo-titel" style="margin:0 0 6px 0;"></h3>
+  <p style="margin:0 0 10px 0;font-size:13px;color:#555;">Markierte Einträge werden endgültig aus Firestore gelöscht (kein Papierkorb). Die Wertungen enthalten den Spieltag danach nicht mehr.</p>
+  <div class="lo-inhalt" style="font-size:14px;overflow:auto;flex:1;">Lade …</div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;">
+    <button onclick="loeschAlleMarkieren(true)" style="background:#757575;color:white;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">Alle</button>
+    <button onclick="loeschAlleMarkieren(false)" style="background:#757575;color:white;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">Keine</button>
+    <button class="lo-los" onclick="loescheMarkierte()" style="background:#c62828;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">🗑 Markierte löschen</button>
+    <button onclick="document.getElementById('loeschModal').style.display='none'" style="background:#9e9e9e;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;width:auto;margin:0;">Schließen</button>
+  </div>
+</div>`;
+                box.addEventListener('click', e => { if (e.target === box) box.style.display = 'none'; });
+                document.body.appendChild(box);
+            }
+            box.dataset.datum = datum;
+            box.querySelector('.lo-titel').textContent = `Spieltag löschen – ${d}.${m}.${y}`;
+            const inhalt = box.querySelector('.lo-inhalt');
+            inhalt.innerHTML = 'Lade …';
+            box.style.display = 'flex';
+            const esc = escapeHtmlAttr;
+            const zeitText = z => {
+                if (!z) return '';
+                const t = z.toDate ? z.toDate() : new Date(z);
+                return isNaN(t) ? String(z) : t.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            };
+            try {
+                const [erg, live, a1, a2] = await Promise.all([
+                    getDocs(query(collection(db, BEREICH + 'spieltage'), where('datum', '==', datum))),
+                    VEREIN.extern ? Promise.resolve(null)
+                        : getDocs(query(collection(db, 'spieltage_live'), where('datum', '==', datum))).catch(() => null),
+                    getDoc(doc(db, BEREICH + 'turnierauslosungen', datum + '_S1')).catch(() => null),
+                    getDoc(doc(db, BEREICH + 'turnierauslosungen', datum + '_S2')).catch(() => null)
+                ]);
+                loeschEintraege = [];
+                erg.forEach(ds => {
+                    const x = ds.data();
+                    const tisch = parseInt(x.tisch, 10);
+                    const namen = (x.spieler || []).map(p => (p && typeof p === 'object') ? (p.name || '') : p).filter(Boolean);
+                    loeschEintraege.push({ pfad: [BEREICH + 'spieltage', ds.id], gruppe: 'Ergebnisse',
+                        sort: `1_${x.serie}_${String(tisch || 0).padStart(3, '0')}`,
+                        text: `Serie ${esc(x.serie)} · ${tisch ? 'Tisch ' + tisch : 'T0 (Nachtrag / Gesamtliste)'}${x.test ? ' · <b>Test</b>' : ''}`,
+                        info: `${namen.length ? esc(namen.join(', ')) : ''}${x.gespeichertAm ? ' · gespeichert ' + esc(zeitText(x.gespeichertAm)) : ''}` });
+                });
+                if (live) live.forEach(ds => {
+                    const x = ds.data();
+                    loeschEintraege.push({ pfad: ['spieltage_live', ds.id], gruppe: 'Live-Stände (Zwischenstand der Tablets)',
+                        sort: `2_${x.serie}_${String(x.tisch || 0).padStart(3, '0')}`,
+                        text: `Serie ${esc(x.serie)} · Tisch ${esc(x.tisch)}`,
+                        info: esc((x.spieler || []).join(', ')) });
+                });
+                [a1, a2].forEach((ds, i) => {
+                    if (!ds || !ds.exists()) return;
+                    const x = ds.data();
+                    loeschEintraege.push({ pfad: [BEREICH + 'turnierauslosungen', ds.id], gruppe: 'Auslosung / Setzliste',
+                        sort: `3_${i + 1}`, auslosung: ds.id,
+                        text: `Serie ${i + 1} · ${x.art === 'setzliste' ? 'Setzliste' : 'Auslosung'}`,
+                        info: `${(x.tische || []).length ? (x.tische || []).length + ' Tische' : ''}` });
+                });
+                loeschEintraege.sort((a, b) => a.sort.localeCompare(b.sort));
+                if (!loeschEintraege.length) {
+                    inhalt.innerHTML = '<p style="color:#555;">Für diesen Tag sind keine Daten gespeichert.</p>';
+                    return;
+                }
+                let html = '', gruppe = '';
+                loeschEintraege.forEach((e, i) => {
+                    if (e.gruppe !== gruppe) {
+                        gruppe = e.gruppe;
+                        html += `<div style="font-weight:bold;margin:10px 0 4px 0;border-bottom:1px solid #ddd;">${esc(gruppe)}</div>`;
+                    }
+                    html += `<label style="display:flex;gap:8px;align-items:flex-start;padding:3px 0;cursor:pointer;">
+                        <input type="checkbox" class="lo-cb" data-i="${i}" style="width:auto;margin:3px 0 0 0;">
+                        <span><b>${e.text}</b>${e.info ? `<br><span style="font-size:12px;color:#666;">${e.info}</span>` : ''}</span></label>`;
+                });
+                inhalt.innerHTML = html;
+            } catch (err) {
+                console.error(err);
+                inhalt.innerHTML = `<span style="color:#d32f2f;">Fehler beim Laden: ${esc(err.message || err)}</span>`;
+            }
+        };
+
+        window.loeschAlleMarkieren = function(an) {
+            document.querySelectorAll('#loeschModal .lo-cb').forEach(cb => { cb.checked = an; });
+        };
+
+        window.loescheMarkierte = async function() {
+            const box = document.getElementById('loeschModal');
+            const datum = box.dataset.datum;
+            const [y, m, d] = datum.split('-');
+            const gewaehlt = [...box.querySelectorAll('.lo-cb:checked')].map(cb => loeschEintraege[+cb.dataset.i]).filter(Boolean);
+            if (!gewaehlt.length) { alert('Bitte die zu löschenden Einträge markieren.'); return; }
+            if (!auth.currentUser || auth.currentUser.isAnonymous) { alert('Löschen nur für angemeldete Spielleiter.'); return; }
+            const alle = gewaehlt.length === loeschEintraege.length;
+            if (!confirm(`${alle ? 'Den kompletten Spieltag' : (gewaehlt.length === 1 ? '1 Eintrag' : gewaehlt.length + ' Einträge')} vom ${d}.${m}.${y} endgültig löschen?\n\nDas kann nicht rückgängig gemacht werden.`)) return;
+            if (alle) {
+                const eingabe = prompt(`Zur Sicherheit bitte das Datum eingeben (${d}.${m}.${y}):`);
+                if (eingabe == null) return;
+                if (eingabe.trim() !== `${d}.${m}.${y}`) { alert('Datum stimmt nicht – nichts gelöscht.'); return; }
+            }
+            const knopf = box.querySelector('.lo-los');
+            knopf.disabled = true;
+            let ok = 0; const fehler = [];
+            for (const e of gewaehlt) {
+                try {
+                    await deleteDoc(doc(db, e.pfad[0], e.pfad[1]));
+                    ok++;
+                    if (e.auslosung) {
+                        const gemerkt = ladeGemerkteAuslosungen();
+                        if (gemerkt[e.auslosung]) {
+                            delete gemerkt[e.auslosung];
+                            try { localStorage.setItem(auslosungKey(), JSON.stringify(gemerkt)); } catch (x) { /* ignorieren */ }
+                        }
+                    }
+                } catch (err) {
+                    fehler.push(`${e.text.replace(/<[^>]+>/g, '')}: ${err.code || err.message || err}`);
+                }
+            }
+            knopf.disabled = false;
+            spieltageCacheLeeren();
+            try { updateRanking(); } catch (x) { /* ignorieren */ }
+            alert(`${ok} von ${gewaehlt.length} Einträgen gelöscht.` + (fehler.length ? `\n\nFehler:\n${fehler.join('\n')}` : ''));
+            showSpieltagLoeschen();
+        };
+
         // ===== Abreizgeld je Tisch und Serie (Feld 'abreizgeld' der 'spieltage'-Docs aus der 4erListe) =====
         // Liest direkt (ohne Zwischenspeicher), damit frisch gespeicherte Tische sofort erscheinen.
         window.showAbreizgeld = async function() {
@@ -3584,6 +3900,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 });
                 const euro = v => v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
                 const maxTisch = Math.max(7, ...Object.keys(werte).map(Number));
+                const zweiSerien = vereinSerien() !== 1; // Vereine mit nur einer Serie: keine Serie-2-Spalte
                 const summe = { '1': 0, '2': 0 };
                 let ohneFeld = false;
                 // Info-Spalte Serie 1: Startgeld (Spieler × Startgeld je Spieler) + Abreizgeld
@@ -3611,17 +3928,17 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #555;">Tisch</th>
                     <th ${th}>Serie 1</th>
                     ${mitStartgeld ? `<th style="text-align:right;padding:6px 10px;border-bottom:2px solid #555;color:#666;font-weight:normal;line-height:1.2;">S1 inkl. Startgeld<br><span style="font-size:11px;">(${euro(startgeldS1)} je Spieler)</span></th>` : ''}
-                    <th ${th}>Serie 2</th></tr></thead><tbody>`;
+                    ${zweiSerien ? `<th ${th}>Serie 2</th>` : ''}</tr></thead><tbody>`;
                 for (let t = 1; t <= maxTisch; t++) {
-                    html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 10px;">Tisch ${t}</td>${zelle(t, '1')}${mitStartgeld ? zelleMitStart(t) : ''}${zelle(t, '2')}</tr>`;
+                    html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 10px;text-align:left;">Tisch ${t}</td>${zelle(t, '1')}${mitStartgeld ? zelleMitStart(t) : ''}${zweiSerien ? zelle(t, '2') : ''}</tr>`;
                 }
                 const fuss = `style="${td}padding:7px 10px;font-weight:bold;border-top:2px solid #555;"`;
                 html += `</tbody><tfoot><tr><td style="padding:7px 10px;font-weight:bold;border-top:2px solid #555;">Summe</td>` +
                     `<td ${fuss}>${euro(summe['1'])}</td>` +
                     (mitStartgeld ? `<td style="${td}padding:7px 10px;font-weight:bold;border-top:2px solid #555;color:#666;">${euro(summeMitStart)}</td>` : '') +
-                    `<td ${fuss}>${euro(summe['2'])}</td></tr>` +
+                    (zweiSerien ? `<td ${fuss}>${euro(summe['2'])}</td>` : '') + `</tr>` +
                     `<tr><td style="padding:8px 10px;font-weight:bold;font-size:16px;">Gesamt</td>` +
-                    `<td colspan="${mitStartgeld ? 3 : 2}" style="${td}padding:8px 10px;font-weight:bold;font-size:16px;color:#2e7d32;">${euro(summe['1'] + summe['2'])}</td></tr></tfoot></table>`;
+                    `<td colspan="${(mitStartgeld ? 2 : 1) + (zweiSerien ? 1 : 0)}" style="${td}padding:8px 10px;font-weight:bold;font-size:16px;color:#2e7d32;">${euro(summe['1'] + summe['2'])}</td></tr></tfoot></table>`;
                 if (ohneFeld) html += '<p style="margin:10px 0 0;font-size:12px;color:#d32f2f;">? = Liste ohne Abreizgeld gespeichert (vor der Umstellung der 4erListe).</p>';
                 if (!Object.keys(werte).length) html += '<p style="margin:10px 0 0;font-size:13px;color:#555;">Für diesen Tag sind noch keine Tische gespeichert.</p>';
                 inhalt.innerHTML = html;
@@ -5093,7 +5410,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 const vorhanden = await getDoc(ref);
                 if (vorhanden.exists() && vorhanden.data().art !== 'setzliste') {
                     const [y, m, d] = datum.split('-');
-                    if (!confirm(`Für den ${d}.${m}.${y} ist Serie ${payload.serie} bereits ausgelost und gespeichert.\n\nAuslosung durch die Setzliste (nach Serie-1-Ergebnis) ersetzen?`)) {
+                    if (!confirm(`Für den ${d}.${m}.${y} ist Serie ${payload.serie} bereits ausgelost und gespeichert.\n\nAuslosung durch die ${payload.bezeichnung || 'Setzliste (nach Serie-1-Ergebnis)'} ersetzen?`)) {
                         if (btn) { btn.textContent = origLabel; btn.disabled = false; }
                         return false;
                     }
@@ -5106,6 +5423,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     spielerAnzahl: payload.spielerAnzahl,
                     tischAnzahl: payload.tischAnzahl,
                     tische: payload.tische,
+                    ...(payload.grundlage ? { grundlage: payload.grundlage } : {}),
                     uid: u.uid,
                     email: u.email || '',
                     angemeldetAls: u.displayName || u.email || '',
@@ -5136,7 +5454,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     snaps.forEach((sn, i) => {
                         if (!sn.exists()) return;
                         const d = sn.data();
-                        merkeAuslosung({ datum, serie: String(i + 1),
+                        merkeAuslosung({ datum, serie: String(i + 1), art: d.art,
                             tische: (d.tische || []).map(t => ({ tisch: t.tisch, spieler: t.spieler || [] })) });
                     });
                 } catch (err) {

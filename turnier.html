@@ -640,7 +640,7 @@
     // die nur nach Rückfrage durch die Auslosung ersetzen.
     const vorhanden = await getDoc(ref);
     if (vorhanden.exists() && vorhanden.data().art === 'setzliste') {
-      if (!confirm('Für ' + datum.split('-').reverse().join('.') + ' ist Serie ' + data.serie + ' bereits als Setzliste (nach Serie-1-Ergebnis) gespeichert.\n\nSetzliste durch diese Auslosung ersetzen?')) return null;
+      if (!confirm('Für ' + datum.split('-').reverse().join('.') + ' ist Serie ' + data.serie + ' bereits als Setzliste ' + (vorhanden.data().grundlage === 'jahresstand' ? '(nach Jahresstand)' : '(nach Serie-1-Ergebnis)') + ' gespeichert.\n\nSetzliste durch diese Auslosung ersetzen?')) return null;
     }
     await setDoc(ref, {
       ...data,
