@@ -342,7 +342,7 @@
     zeilen.forEach(z => {
       const n = z.x.spielerAnzahl || 4;
       html += `<tr><td>${esc(z.x.serie)}</td><td>${esc(z.x.tisch)}</td>` +
-        `<td>${esc((z.x.spieler || []).slice(0, n).join(', '))}</td>` +
+        `<td>${esc((z.x.spieler || []).slice(0, n).join('; '))}</td>` +
         `<td class="r">${z.anzahl}${z.x.karten ? ' / ' + esc(z.x.karten) : ''}</td>` +
         `<td>${z.x.archiv ? 'vor „Neu“' : 'aktuell'}${z.voll ? '' : ' <span title="ältere Live-Daten: ohne Spitzen, Hand, Schneider …" style="color:#b26a00;">(ohne Gewinnstufen)</span>'}</td>` +
         `<td>${uhr(z.x.archiv ? z.x.archiviertAm : z.x.zuletzt)}</td>` +
@@ -637,7 +637,7 @@
 
     html += '<h3 style="font-size:15px;margin:16px 0 6px;">Listen je Tisch</h3><table><tr><th>Serie</th><th>Tisch</th><th>Spieler (Punkte)</th><th class="r">Abreizgeld</th></tr>';
     listen.forEach(l => {
-      const sp = (l.spieler || []).map(x => `${esc(x.name)} (${Number(x.gesamtpunkte) || 0})`).join(', ');
+      const sp = (l.spieler || []).map(x => `${esc(x.name)} (${Number(x.gesamtpunkte) || 0})`).join('; ');
       html += `<tr><td>${esc(l.serie)}</td><td>${esc(l.tisch)}</td><td>${sp}</td>` +
         `<td class="r">${typeof l.abreizgeld === 'number' ? euro(l.abreizgeld) : '?'}</td></tr>`;
     });
