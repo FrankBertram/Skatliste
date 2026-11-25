@@ -1924,7 +1924,7 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.24)
+    © 2026 by Frank Bertram (V1.25)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
@@ -3006,8 +3006,10 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
             const members = new Set();
             const playerData = {};
             const datesWithData = new Set();
-            // Andere Vereine: nur Spieler mit Ergebnis zeigen (keine Mitgliederliste in Firestore)
-            if (!VEREIN.extern) try {
+            const eintritt = {}; // andere Vereine mit eigener Wertung: Mitglied -> Eintritt (ISO)
+            // Andere Vereine: nur Spieler mit Ergebnis zeigen – außer bei eigener Wertung (VEREIN.wertung),
+            // dann bekommen fehlende Mitglieder ab Eintritt den Abwesenheitswert (z. B. Boore 500)
+            if (!VEREIN.extern || VEREIN.wertung) try {
                 const listeSnap = await getDoc(doc(db, BEREICH + 'mitspieler', 'Liste'));
                 if (listeSnap.exists()) {
                     const arr = listeSnap.data().Mitspieler || [];
@@ -3017,6 +3019,10 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                             ? entry.trim()
                             : (entry.name || '').trim();
                         if (!name) return;
+                        if (VEREIN.extern) {
+                            if (typeof entry !== 'object' || entry.mitglied !== true) return;
+                            eintritt[name] = entry.eintritt || '';
+                        }
                         allNames.add(name);
                         if (typeof entry === 'object' && entry.mitglied === true) {
                             members.add(name);
@@ -3044,7 +3050,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     playerData[s.name][datum][serie] = val;
                 });
             });
-            return { allNames, members, playerData, datesWithData };
+            return { allNames, members, playerData, datesWithData, eintritt };
         }
 
         function isoToDeDateFull(iso) {
@@ -3105,8 +3111,8 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                     select.appendChild(opt);
                 });
                 select.value = String(pickDefaultSpieltagIndex(dates));
-                const { allNames, members, playerData, datesWithData } = await loadAllPlayersAndResults(dates);
-                tagesData = { dates, allNames, members, playerData, datesWithData };
+                const { allNames, members, playerData, datesWithData, eintritt } = await loadAllPlayersAndResults(dates);
+                tagesData = { dates, allNames, members, playerData, datesWithData, eintritt };
                 // Öffentliche Ansicht: mit dem letzten Spieltag mit Ergebnissen beginnen
                 if (OEFFENTLICH) {
                     for (let i = Number(select.value); i >= 0; i--) {
@@ -3123,7 +3129,7 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
 
         function renderTageswertung() {
             if (!tagesData) return;
-            const { dates, allNames, members, playerData, datesWithData } = tagesData;
+            const { dates, allNames, members, playerData, datesWithData, eintritt } = tagesData;
             const select = document.getElementById('tageswertungSelect');
             const content = document.getElementById('tageswertungContent');
             const idx = Number(select.value);
@@ -3137,6 +3143,14 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 const has2 = '2' in day;
                 const hasEntry = has1 || has2;
                 if (!hasEntry && !members.has(name)) return null;
+                if (VEREIN.extern && !hasEntry) {
+                    // andere Vereine (eigene Wertung): fehlendes Mitglied = Abwesenheitswert in der letzten Serie,
+                    // nur an regulären Spieltagen und ab Eintritt (wie in der Jahreswertung)
+                    if (date.extra || ((eintritt || {})[name] && date.iso < eintritt[name])) return null;
+                    const abw = VEREIN.wertung.abwesend || 0;
+                    const zwei = vereinSerien() === 2;
+                    return { name, s1: zwei ? 0 : abw, s2: zwei ? abw : 0, has1: false, has2: false, sum: abw, hasEntry };
+                }
                 const s1 = has1 ? day['1'] : 0;
                 const s2 = has2 ? day['2'] : (VEREIN.extern ? 0 : 750);
                 return { name, s1, s2, has1, has2, sum: s1 + s2, hasEntry };
