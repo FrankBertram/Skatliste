@@ -687,6 +687,7 @@
   <!-- Desktop/Tablet: Verein + Radios in zwei Zeilen -->
   <div class="header-desktop" style="display:flex; flex-direction:column; gap:8px; flex:1 1 auto; min-width:0;">
     <span id="club-name" style="font-size:20px; font-weight:bold;">1. Sintherner Skatclub</span>
+    <span id="rekonstruiert-badge" style="display:none; align-self:flex-start; padding:3px 10px; background:#6d4c41; color:#fff; font-size:12px; font-weight:bold; border-radius:12px; letter-spacing:1px;" title="Aus Live-Daten wiederhergestellt (Admin) – Speichern und Live-Übertragung sind gesperrt; „Neu“ beendet das">WIEDERHERGESTELLT – nur ansehen/drucken</span>
     <span id="test-mode-badge" style="display:none; align-self:flex-start; padding:3px 10px; background:#ff9800; color:#fff; font-size:12px; font-weight:bold; border-radius:12px; letter-spacing:1px;">TEST-MODUS</span>
     <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
       <span>Spieler:</span>
@@ -970,7 +971,15 @@ let abreizgeldTisch = 0;           // Abreizgeld des Tisches ohne Startgeld/Spie
 let spielerFehlt = [0, 0, 0, 0];   // Boore: Anzahl gefehlter Spielabende, je +4 €
 let fehltPromptShown = false;       // Prompt nur einmal pro Liste
 let spielerPreset = null;
-let spielerPresetDatum = null;   // Tag (YYYY-MM-DD), an dem das Preset gesetzt wurde – gilt nur an diesem Tag
+let spielerPresetDatum = null;
+let listeRekonstruiert = false;  // aus Live-Daten wiederhergestellt (Admin): kein Save, keine Live-Writes
+// Save-Knopf und Hinweis je nach Merker ein-/ausblenden
+function aktualisiereRekonstruiertAnzeige() {
+  const c = document.getElementById('csv-export-container');
+  if (c) c.style.display = listeRekonstruiert ? 'none' : '';
+  const b = document.getElementById('rekonstruiert-badge');
+  if (b) b.style.display = listeRekonstruiert ? '' : 'none';
+}   // Tag (YYYY-MM-DD), an dem das Preset gesetzt wurde – gilt nur an diesem Tag
 const heuteIsoLokal = () => new Date().toLocaleDateString('sv-SE');           // Wenn per Turnierauslosung gesetzt: nur diese 4 Namen im Dropdown
 
 function getSpielerAnzahl() {
@@ -3732,6 +3741,10 @@ function _initialsForName(name) {
 }
 
 async function saveSerieToFirestore() {
+  if (listeRekonstruiert) {
+    alert('ℹ️ Diese Liste wurde aus Live-Daten wiederhergestellt und kann nicht gespeichert werden. „🗑 Neu“ startet eine normale Liste.');
+    return;
+  }
   if (!window.__firestore) {
     console.warn("Firestore noch nicht initialisiert");
     return;
@@ -3863,7 +3876,7 @@ function _liveDocId() {
 }
 
 async function saveGameLive(index) {
-  if (!window.__firestore) return;
+  if (!window.__firestore || listeRekonstruiert) return;
   // Live-Sync nur für Sinthern (nicht Boore / Garching / Alter Peter)
   if (!istSinthernModus()) return;
   // Spielernamen komplett? Sonst noch nicht sinnvoll live zeigen
@@ -3910,7 +3923,7 @@ function _liveEintrag(s) {
 // Live-Ansicht keine Spiele, die vorher nicht übertragen wurden (z. B. eingetragen, bevor alle
 // Namen gewählt waren, ohne Netz oder vor Eingabe des Spieltag-Codes). Fehler bleiben still.
 async function saveLiveKomplett() {
-  if (!window.__firestore) return;
+  if (!window.__firestore || listeRekonstruiert) return;
   if (!istSinthernModus()) return;
   for (let i = 0; i < spielerAnzahl; i++) {
     if (!spielerNamen[i] || spielerNamen[i] === `Spieler ${i+1}`) return;
@@ -3994,6 +4007,8 @@ async function liveListeWiederherstellen(docId) {
   spielerPresetDatum = null;
   spielerFehlt = [0, 0, 0, 0];
   fehltPromptShown = false;
+  listeRekonstruiert = true;
+  aktualisiereRekonstruiertAnzeige();
   spielDaten = [];
   buildTableStructure();
   updateKartenAuswahl();
@@ -4037,7 +4052,7 @@ async function liveListeWiederherstellen(docId) {
   const dlg = document.getElementById('start-dialog');
   if (dlg && dlg.open) dlg.close();
   autoScalePage();
-  alert(`✅ Liste wiederhergestellt: ${indizes.length} Spiele.\n\nHinweis: Das Datum beim „☁️ Save“ ist immer der heutige Tag.`);
+  alert(`✅ Liste wiederhergestellt: ${indizes.length} Spiele.\n\nNur zum Ansehen und Drucken (PDF): Speichern und Live-Übertragung sind gesperrt, bis mit „🗑 Neu“ eine normale Liste beginnt.`);
 }
 
 // Beim Reset / "Neue Liste": Live-Doc mit den AKTUELL im DOM gewählten
@@ -4046,7 +4061,7 @@ async function liveListeWiederherstellen(docId) {
 // (z. B. dieser Tab hatte selbst Einträge), sonst könnte ein frisch
 // geöffneter zweiter Tab die Daten des ersten Tabs wegräumen.
 async function clearLiveDoc() {
-  if (!window.__firestore) return;
+  if (!window.__firestore || listeRekonstruiert) return;
   if (!istSinthernModus()) return;
   const { db, doc, deleteDoc, getDoc, setDoc, serverTimestamp } = window.__firestore;
   const { id } = _liveDocId();
@@ -4453,7 +4468,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.38) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.39) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -4525,7 +4540,8 @@ function _buildState() {
     spielerFehlt: spielerFehlt,
     fehltPromptShown: fehltPromptShown,
     spielerPreset: spielerPreset,
-    spielerPresetDatum: spielerPresetDatum
+    spielerPresetDatum: spielerPresetDatum,
+    listeRekonstruiert: listeRekonstruiert
   };
 }
 
@@ -4568,6 +4584,7 @@ function _applyState(state) {
                    spielerPresetDatum === heuteIsoLokal())
     ? state.spielerPreset.slice() : null;
   if (!spielerPreset) spielerPresetDatum = null;
+  listeRekonstruiert = state.listeRekonstruiert === true;
 
   const serieRadio = document.querySelector(`input[name="serie"][value="${state.serie}"]`);
   if (serieRadio) serieRadio.checked = true;
@@ -5015,7 +5032,9 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
     }
     // Live-Doc mit den NEU gewählten Koordinaten löschen — aber nur wenn
     // dieser Tab vorher tatsächlich eigene Einträge hatte.
-    if (hatteEintraege) clearLiveDoc();
+    if (hatteEintraege) clearLiveDoc();   // prüft den Merker sofort (synchron vor dem ersten await)
+    listeRekonstruiert = false;   // normale Liste ab jetzt
+    aktualisiereRekonstruiertAnzeige();
     buildTableStructure();
     updateKartenAuswahl();
     fillTable();
@@ -5083,6 +5102,7 @@ window.addEventListener("load", async () => {
     createRotatePlayersButton();
     createNeuStartButton();
     createZurueckButton();
+    aktualisiereRekonstruiertAnzeige();
     // Admin: Liste aus Live-Daten wiederherstellen (Link von spielleiter.html)
     const _wiederherstellen = new URLSearchParams(location.search).get('wiederherstellen');
     if (_wiederherstellen && istSinthernModus()) setTimeout(() => liveListeWiederherstellen(_wiederherstellen), 800);
@@ -5114,7 +5134,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.38)
+    © 2026 by Frank Bertram (V1.39)
     </div>
 </body>
 </html>
