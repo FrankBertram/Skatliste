@@ -652,6 +652,9 @@
       }
     }
 
+  /* Leere Knopf-Container (z. B. Live ohne ?live) nicht als Lücke anzeigen */
+  #live-view-container:empty, #rotate-players-container:empty, #csv-export-container:empty,
+  #pdf-export-container:empty, #neu-start-container:empty, #zurueck-container:empty { display: none !important; }
   </style>
 </head>
 <body>
@@ -2033,7 +2036,7 @@ function createCSVButton() {
   if (istVereinOhneFirestore()) return;
 
   const csvBtn = document.createElement("button");
-  csvBtn.innerHTML = "☁️ Speichern";
+  csvBtn.innerHTML = "☁️ Save";
   csvBtn.style.cssText = `
     padding: 6px 16px;
     margin-left: auto;
@@ -2365,7 +2368,7 @@ function openLiveDialog() {
   const q = query(collection(db, _spieltageLiveCollection()), where("datum", "==", heute));
   _liveUnsub = onSnapshot(q, snapshot => {
     snapshot.docChanges().forEach(ch => {
-      if (ch.type === 'removed') _liveTische.delete(ch.doc.id);
+      if (ch.type === 'removed' || ch.doc.data()?.archiv) _liveTische.delete(ch.doc.id); // Archiv-Kopie (vor "Neu") nicht zeigen
       else _liveTische.set(ch.doc.id, ch.doc.data());
     });
     renderLiveTabelle();
@@ -2639,13 +2642,13 @@ function createZurueckButton() {
   if (!container || container.children.length > 0) return;
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.innerHTML = "⌂ Zurück";
+  btn.innerHTML = "⇐";
   btn.title = "Zurück zur Startseite (Ranglisten) – die Liste bleibt gespeichert";
   btn.style.cssText = `
     padding: 6px 14px;
     background: linear-gradient(135deg, #9e9e9e, #757575);
     color: white; border: none; border-radius: 6px;
-    font-size: 15px; cursor: pointer;
+    font-size: 20px; font-weight: bold; line-height: 1; cursor: pointer;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   `;
   btn.addEventListener("click", () => {
@@ -3833,6 +3836,8 @@ async function saveSerieToFirestore() {
       if (!ok) return;
       await setDoc(docRef, daten);
     }
+    // Live-Ansicht vervollständigen (fehlende Spiele nachtragen)
+    await saveLiveKomplett();
     alert(isTestMode()
       ? "✅ Serie in Firebase (TEST-Collection) gespeichert!"
       : "✅ Serie in Firebase gespeichert!");
@@ -3870,14 +3875,7 @@ async function saveGameLive(index) {
 
   const { db, doc, setDoc, serverTimestamp } = window.__firestore;
   const { datum, serie, tisch, id } = _liveDocId();
-  const eintrag = {
-    nr: s.nr,
-    grundwert: s.grundwert || "",
-    spieler: (s.spieler == null ? null : parseInt(s.spieler)),
-    gewonnen: (s.gewonnen === true ? true : (s.gewonnen === false ? false : null)),
-    pluswert: (s.pluswert === "" || s.pluswert == null) ? 0 : Number(s.pluswert),
-    minuswert: (s.minuswert === "" || s.minuswert == null) ? 0 : Number(s.minuswert)
-  };
+  const eintrag = _liveEintrag(s);
   try {
     if (_freigabeNoetig()) await _tabletAnmelden();
     await setDoc(doc(db, _spieltageLiveCollection(), id), {
@@ -3885,6 +3883,7 @@ async function saveGameLive(index) {
       vereinId: getVereinsId(),
       spielerAnzahl,
       spieler: spielerNamen.slice(0, spielerAnzahl),
+      karten: parseInt(document.querySelector('input[name="karten"]:checked')?.value) || spielDaten.length,
       spiele: { [String(index)]: eintrag },
       zuletzt: serverTimestamp()
     }, { merge: true });
@@ -3892,6 +3891,153 @@ async function saveGameLive(index) {
     console.warn("Live-Save fehlgeschlagen:", e?.code || e?.message);
     if (_freigabeNoetig() && _istRechteFehler(e)) _zeigeCodeButton(true);
   }
+}
+
+function _liveEintrag(s) {
+  return {
+    nr: s.nr,
+    grundwert: s.grundwert || "",
+    spieler: (s.spieler == null ? null : parseInt(s.spieler)),
+    gewonnen: (s.gewonnen === true ? true : (s.gewonnen === false ? false : null)),
+    pluswert: (s.pluswert === "" || s.pluswert == null) ? 0 : Number(s.pluswert),
+    minuswert: (s.minuswert === "" || s.minuswert == null) ? 0 : Number(s.minuswert),
+    // vollständige Zeile (Spitzen, Hand, Schneider …) für "Liste wiederherstellen"
+    zeile: s.grundwert ? JSON.parse(JSON.stringify(s)) : null
+  };
+}
+
+// Beim Speichern ("☁️ Save"): Live-Doc komplett aus der Liste neu schreiben. So fehlen in der
+// Live-Ansicht keine Spiele, die vorher nicht übertragen wurden (z. B. eingetragen, bevor alle
+// Namen gewählt waren, ohne Netz oder vor Eingabe des Spieltag-Codes). Fehler bleiben still.
+async function saveLiveKomplett() {
+  if (!window.__firestore) return;
+  if (!istSinthernModus()) return;
+  for (let i = 0; i < spielerAnzahl; i++) {
+    if (!spielerNamen[i] || spielerNamen[i] === `Spieler ${i+1}`) return;
+  }
+  const { db, doc, setDoc, serverTimestamp } = window.__firestore;
+  const { datum, serie, tisch, id } = _liveDocId();
+  const spiele = {};
+  spielDaten.forEach((s, i) => { if (s && s.grundwert) spiele[String(i)] = _liveEintrag(s); });
+  try {
+    await setDoc(doc(db, _spieltageLiveCollection(), id), {
+      datum, serie: parseInt(serie), tisch: parseInt(tisch),
+      vereinId: getVereinsId(),
+      spielerAnzahl,
+      spieler: spielerNamen.slice(0, spielerAnzahl),
+      karten: parseInt(document.querySelector('input[name="karten"]:checked')?.value) || spielDaten.length,
+      spiele,
+      zuletzt: serverTimestamp()
+    });
+  } catch (e) {
+    console.warn("Live-Komplettierung fehlgeschlagen:", e?.code || e?.message);
+  }
+}
+
+// Liste aus Live-Daten wiederherstellen – NUR für den Admin, aufgerufen über die Karte
+// "Liste aus Live-Daten wiederherstellen" auf spielleiter.html: index.html?wiederherstellen=<docId>
+// (spieltage_live/<docId>, auch die Kopie "<id>_vorNeu"). Live-Einträge mit "zeile" enthalten
+// das ganze Spiel; ältere nur Spielart, Spieler, gewonnen und Wert (Gewinnstufen bleiben leer).
+const ADMIN_UID_LISTE = 'ERwEUD2Dsddsij05p32oCb6EGs53';
+async function liveListeWiederherstellen(docId) {
+  const fs = window.__firestore;
+  if (!fs || !docId) return;
+  // Parameter sofort aus der Adresse nehmen (kein erneutes Auslösen beim Neuladen)
+  try {
+    const url = new URL(location.href);
+    url.searchParams.delete('wiederherstellen');
+    history.replaceState(null, '', url.pathname + url.search + url.hash);
+  } catch (e) { /* egal */ }
+  try { if (fs.auth && fs.auth.authStateReady) await fs.auth.authStateReady(); } catch (e) {}
+  if (!fs.auth || !fs.auth.currentUser || fs.auth.currentUser.uid !== ADMIN_UID_LISTE) {
+    alert('Liste wiederherstellen ist nur für den Admin möglich (auf der Spielleiter-Seite mit Google anmelden).');
+    return;
+  }
+  let d = null;
+  try {
+    const snap = await fs.getDoc(fs.doc(fs.db, _spieltageLiveCollection(), docId));
+    d = snap.exists() ? snap.data() : null;
+  } catch (e) {
+    alert('❌ Live-Daten konnten nicht gelesen werden: ' + (e?.message || e));
+    return;
+  }
+  const spiele = (d && d.spiele) || {};
+  const indizes = Object.keys(spiele).map(Number)
+    .filter(i => !isNaN(i) && spiele[i] && spiele[i].grundwert).sort((a, b) => a - b);
+  if (!d || !indizes.length) {
+    alert(`Keine Live-Daten unter „${docId}“ gefunden.`);
+    return;
+  }
+  const n = (d.spielerAnzahl === 3) ? 3 : 4;
+  const sr = String(d.serie || '1');
+  const ti = String(d.tisch || '1');
+  const namen = (d.spieler || []).slice(0, n);
+  const voll = indizes.every(i => spiele[i].zeile);
+  const ok = confirm(
+    `Liste wiederherstellen (Admin)\n\n` +
+    `${d.datum || ''}, Serie ${sr}, Tisch ${ti} (${n}er)${d.archiv ? ' – Fassung vor „Neu“' : ''}\n` +
+    `Spieler: ${namen.join(', ')}\n` +
+    `${indizes.length} Spiele eingetragen (bis Spiel ${indizes[indizes.length - 1] + 1}).\n` +
+    (voll ? '' : '\nHinweis: ältere Live-Daten – Spitzen, Hand, Schneider usw. fehlen; Punkte und gewonnen/verloren stimmen.\n') +
+    `\nDie Liste auf diesem Gerät durch diese Liste ersetzen?`);
+  if (!ok) return;
+
+  spielerAnzahl = n;
+  const spRadio = document.querySelector(`input[name="spieleranzahl"][value="${n}"]`);
+  if (spRadio) spRadio.checked = true;
+  const srRadio = document.querySelector(`input[name="serie"][value="${sr}"]`);
+  if (srRadio) srRadio.checked = true;
+  const tiSelect = document.getElementById('tisch-auswahl');
+  if (tiSelect) tiSelect.value = ti;
+  for (let i = 0; i < 4; i++) spielerNamen[i] = namen[i] || `Spieler ${i + 1}`;
+  spielerPreset = null;
+  spielerPresetDatum = null;
+  spielerFehlt = [0, 0, 0, 0];
+  fehltPromptShown = false;
+  spielDaten = [];
+  buildTableStructure();
+  updateKartenAuswahl();
+  // Spielanzahl: aus dem Live-Doc, sonst die kleinste passende Auswahl
+  const benoetigt = indizes[indizes.length - 1] + 1;
+  const radios = [...document.querySelectorAll('input[name="karten"]')];
+  const werte = radios.map(r => parseInt(r.value)).filter(v => !isNaN(v)).sort((a, b) => a - b);
+  let karten = (d.karten && werte.includes(d.karten)) ? d.karten : (werte.find(v => v >= benoetigt) || werte[werte.length - 1]);
+  if (karten < benoetigt) karten = benoetigt;
+  radios.forEach(r => { r.checked = parseInt(r.value) === karten; });
+  resizeSpielDaten(karten);
+
+  indizes.forEach(i => {
+    const e = spiele[i];
+    const zeile = spielDaten[i];
+    if (!zeile) return;
+    if (e.zeile) {
+      Object.assign(zeile, e.zeile, { nr: i + 1 });
+      return;
+    }
+    // ältere Live-Daten: nur das Nötigste
+    const pass = (e.grundwert === 'E' || e.grundwert === 'Pass');
+    zeile.grundwert = e.grundwert;
+    zeile.spieler = pass ? null : e.spieler;
+    zeile.gewonnen = pass ? null : e.gewonnen;
+    const plus = Number(e.pluswert) || 0, minus = Number(e.minuswert) || 0;
+    zeile.pluswert = plus ? plus : '';
+    zeile.minuswert = minus ? minus : '';
+    if (!pass && e.spieler) {
+      zeile[`p${e.spieler}_delta`] = plus + minus;
+      zeile[`p${e.spieler}_gew`] = e.gewonnen === true ? 1 : 0;
+      zeile[`p${e.spieler}_verl`] = e.gewonnen === false ? 1 : 0;
+    }
+  });
+
+  fillTable();
+  generatePlayerNameButtons();
+  updateCopyright();
+  updateHeaderInfo();
+  saveState();
+  const dlg = document.getElementById('start-dialog');
+  if (dlg && dlg.open) dlg.close();
+  autoScalePage();
+  alert(`✅ Liste wiederhergestellt: ${indizes.length} Spiele.\n\nHinweis: Das Datum beim „☁️ Save“ ist immer der heutige Tag.`);
 }
 
 // Beim Reset / "Neue Liste": Live-Doc mit den AKTUELL im DOM gewählten
@@ -3902,9 +4048,19 @@ async function saveGameLive(index) {
 async function clearLiveDoc() {
   if (!window.__firestore) return;
   if (!istSinthernModus()) return;
-  const { db, doc, deleteDoc } = window.__firestore;
+  const { db, doc, deleteDoc, getDoc, setDoc, serverTimestamp } = window.__firestore;
   const { id } = _liveDocId();
   if (_freigabeNoetig()) await _tabletAnmelden();
+  // Vorher als Kopie "<id>_vorNeu" (archiv: true) aufheben, damit "♻ Liste aus Live-Daten
+  // wiederherstellen" auch nach einem versehentlichen "Neu" noch etwas findet.
+  try {
+    const alt = await getDoc(doc(db, _spieltageLiveCollection(), id));
+    const altDaten = alt.exists() ? alt.data() : null;
+    if (altDaten && Object.values(altDaten.spiele || {}).some(e => e && e.grundwert)) {
+      await setDoc(doc(db, _spieltageLiveCollection(), id + '_vorNeu'),
+        { ...altDaten, archiv: true, archiviertAm: serverTimestamp() });
+    }
+  } catch (e) { console.warn('Live-Archiv nicht gespeichert:', e?.code || e?.message); }
   try { await deleteDoc(doc(db, _spieltageLiveCollection(), id)); }
   catch (e) { /* silent — evtl. gab es noch kein Doc */ }
 }
@@ -4297,7 +4453,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.34) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.38) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -4637,12 +4793,12 @@ function applyMobileLayout() {
   const pdfBtn = document.querySelector('#pdf-export-container button');
   const liveBtn = document.querySelector('#live-view-container button');
   const neuBtn = document.querySelector('#neu-start-container button');
-  if (csvBtn && !csvBtn.disabled) csvBtn.innerHTML = isPhoneL ? 'Save'          : '☁️ Speichern';
+  if (csvBtn && !csvBtn.disabled) csvBtn.innerHTML = '☁️ Save';
   if (pdfBtn && !pdfBtn.disabled) pdfBtn.innerHTML = isPhoneL ? 'PDF'           : '📄 PDF';
   if (liveBtn && !liveBtn.disabled) liveBtn.innerHTML = isPhoneL ? 'Live'       : '📺 Live';
   if (neuBtn && !neuBtn.disabled) neuBtn.innerHTML = isPhoneL ? 'Neu'           : '🗑 Neu';
   const zurueckBtn = document.querySelector('#zurueck-container button');
-  if (zurueckBtn) zurueckBtn.innerHTML = isPhoneL ? '⌂' : '⌂ Zurück';
+  if (zurueckBtn) zurueckBtn.innerHTML = '⇐';
 
   _updateHeaderLabels();
   // Nach dem Struktur-Umbau die Skalierung neu berechnen — die tatsächliche
@@ -4927,6 +5083,9 @@ window.addEventListener("load", async () => {
     createRotatePlayersButton();
     createNeuStartButton();
     createZurueckButton();
+    // Admin: Liste aus Live-Daten wiederherstellen (Link von spielleiter.html)
+    const _wiederherstellen = new URLSearchParams(location.search).get('wiederherstellen');
+    if (_wiederherstellen && istSinthernModus()) setTimeout(() => liveListeWiederherstellen(_wiederherstellen), 800);
     // Test-Modus-Badge einblenden, falls ?test in der URL steht
     if (isTestMode()) {
       const badge = document.getElementById('test-mode-badge');
@@ -4955,7 +5114,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.34)
+    © 2026 by Frank Bertram (V1.38)
     </div>
 </body>
 </html>

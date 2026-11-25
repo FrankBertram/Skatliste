@@ -124,6 +124,14 @@
     <h2>Ergebnisse des Abends</h2>
     <div id="ergebnisse">Lade …</div>
   </div>
+
+  <div class="card" id="karte-live" style="display:none;">
+    <h2>Liste aus Live-Daten wiederherstellen (nur Admin)</h2>
+    <div class="status" style="margin-bottom:8px;">Live-Stände der Tablets für das oben gewählte Datum (nur Sinthern).
+      „In Skatliste öffnen“ lädt die Liste in die Skatliste auf <b>diesem Gerät</b> (die dort offene Liste wird ersetzt) –
+      zum Prüfen und Drucken (PDF). Achtung: „☁️ Save“ speichert immer unter dem heutigen Datum.</div>
+    <div id="live-listen">Lade …</div>
+  </div>
 </div>
 
 <script type="module">
@@ -249,6 +257,7 @@
     $('karte-freigabe').style.display = 'none';
     $('karte-ergebnisse').style.display = 'none';
     $('karte-konfig').style.display = 'none';
+    $('karte-live').style.display = 'none';
     $('karte-vereine').style.display = (user && user.uid === ADMIN_UID) ? '' : 'none';
     if (user && user.uid === ADMIN_UID) zeigeVereine();
     $('verein-zeile').style.display = 'none';
@@ -294,6 +303,52 @@
     ladeFreigabe();
     ladeErgebnisse();
     ladeKonfig();
+    ladeLiveListen();
+  }
+
+  // ── Admin: Live-Stände (spieltage_live) anzeigen und in der Skatliste wiederherstellen ──
+  // Die Skatliste übernimmt die Liste über index.html?wiederherstellen=<docId> (nur Admin).
+  async function ladeLiveListen() {
+    const karte = $('karte-live');
+    const istAdmin = auth.currentUser && auth.currentUser.uid === ADMIN_UID;
+    karte.style.display = (istAdmin && verein === 'sinthern') ? '' : 'none';
+    if (karte.style.display === 'none') return;
+    const datum = $('datum').value || heute();
+    const ziel = $('live-listen');
+    ziel.textContent = 'Lade …';
+    let snap;
+    try {
+      snap = await getDocs(query(collection(db, 'spieltage_live'), where('datum', '==', datum)));
+    } catch (e) {
+      ziel.textContent = 'Fehler beim Laden: ' + (e?.message || e);
+      return;
+    }
+    const uhr = t => (t && typeof t.toDate === 'function')
+      ? t.toDate().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '–';
+    const zeilen = [];
+    snap.forEach(ds => {
+      const x = ds.data();
+      const spiele = Object.values(x.spiele || {}).filter(e => e && e.grundwert);
+      const voll = spiele.length > 0 && spiele.every(e => e.zeile);
+      zeilen.push({ id: ds.id, x, anzahl: spiele.length, voll });
+    });
+    zeilen.sort((a, b) => (Number(a.x.serie) - Number(b.x.serie)) || (Number(a.x.tisch) - Number(b.x.tisch)) ||
+      (Number(!!a.x.archiv) - Number(!!b.x.archiv)));
+    if (!zeilen.length) {
+      ziel.innerHTML = '<div class="leer">Für dieses Datum gibt es keine Live-Stände.</div>';
+      return;
+    }
+    let html = '<table><tr><th>Serie</th><th>Tisch</th><th>Spieler</th><th class="r">Spiele</th><th>Fassung</th><th>Stand</th><th></th></tr>';
+    zeilen.forEach(z => {
+      const n = z.x.spielerAnzahl || 4;
+      html += `<tr><td>${esc(z.x.serie)}</td><td>${esc(z.x.tisch)}</td>` +
+        `<td>${esc((z.x.spieler || []).slice(0, n).join(', '))}</td>` +
+        `<td class="r">${z.anzahl}${z.x.karten ? ' / ' + esc(z.x.karten) : ''}</td>` +
+        `<td>${z.x.archiv ? 'vor „Neu“' : 'aktuell'}${z.voll ? '' : ' <span title="ältere Live-Daten: ohne Spitzen, Hand, Schneider …" style="color:#b26a00;">(ohne Gewinnstufen)</span>'}</td>` +
+        `<td>${uhr(z.x.archiv ? z.x.archiviertAm : z.x.zuletzt)}</td>` +
+        `<td>${z.anzahl ? `<a href="index.html?wiederherstellen=${encodeURIComponent(z.id)}" target="_blank" rel="noopener">In Skatliste öffnen</a>` : ''}</td></tr>`;
+    });
+    ziel.innerHTML = html + '</table>';
   }
 
   // ── Vereinskonfiguration (vereine/{verein}.konfig) ──
