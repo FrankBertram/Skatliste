@@ -32,6 +32,7 @@
       box-shadow: 0 4px 12px rgba(40,167,69,0.3);
     }
     .btn:active { transform: scale(0.98); }
+    .btn2 { font-size: 15px; padding: 11px 18px; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
     .hint {
       background: #fff; border-radius: 10px; padding: 14px 16px;
       font-size: 14px; color: #444; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
@@ -45,6 +46,10 @@
     <img src="devierboore.png" alt="de vier Boore" class="logo">
     <h1>de vier Boore – Skatliste</h1>
     <a class="btn" href="index.html?club=boore" id="open-btn">Spielliste öffnen ▶</a>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+      <a class="btn btn2" href="spieltag.html?club=boore&amp;ansicht=rangliste&amp;zeige=gesamt" style="background:linear-gradient(135deg,#7b1fa2,#4a148c);">🏆 Rangliste Gesamt</a>
+      <a class="btn btn2" href="spieltag.html?club=boore&amp;ansicht=rangliste&amp;zeige=spieltage" style="background:linear-gradient(135deg,#1e88e5,#1565c0);">📅 Spieltage</a>
+    </div>
     <div class="hint">
       <b>Auf dem iPhone/iPad zum Home-Bildschirm hinzufügen (in Safari):</b><br>
       Diese Seite (<code>devierboore.html</code>) offen lassen &rarr;
