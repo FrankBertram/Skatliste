@@ -1924,7 +1924,7 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.25)
+    © 2026 by Frank Bertram (V1.26)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
@@ -2169,10 +2169,11 @@ function updateRanking() {
                 if (document.documentElement.classList.contains('oeff-direkt')) {
                     const zurueck = schliessen => function () {
                         schliessen.apply(this, arguments);
-                        // zur aufrufenden Seite (z. B. devierboore.html), Boore sonst immer zur Boore-Startseite
+                        // zur aufrufenden Seite, sonst zur Startseite des Vereins (Skatliste-Repo)
+                        const STARTSEITE = { sinthern: 'sinthern.html', garching: 'garching.html', boore: 'devierboore.html' };
                         let ziel = '';
                         try { if (document.referrer && new URL(document.referrer).origin === location.origin) ziel = document.referrer; } catch (e) {}
-                        if (!ziel && VEREIN.id === 'boore') ziel = 'devierboore.html';
+                        if (!ziel) ziel = STARTSEITE[VEREIN.id] || '';
                         if (ziel && ziel !== location.href) location.replace(ziel);
                         else document.documentElement.classList.remove('oeff-direkt');
                     };
