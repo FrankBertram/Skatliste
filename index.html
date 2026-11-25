@@ -652,6 +652,17 @@
       }
     }
 
+  /* Wiederhergestellte Liste (Admin): fest – keine Auswahl, keine Namen-/Edit-Knöpfe, nur PDF und Zurück */
+  #rekonstruiert-info { display: none; }
+  html.rekonstruiert #rekonstruiert-info { display: flex; }
+  html.rekonstruiert #kopf-auswahl,
+  html.rekonstruiert #header-info,
+  html.rekonstruiert #player-btn-container-1, html.rekonstruiert #player-btn-container-2,
+  html.rekonstruiert #player-btn-container-3, html.rekonstruiert #player-btn-container-4,
+  html.rekonstruiert #rotate-players-container, html.rekonstruiert #csv-export-container,
+  html.rekonstruiert #live-view-container, html.rekonstruiert #neu-start-container,
+  html.rekonstruiert #freigabe-code-btn,
+  html.rekonstruiert .edit-btn, html.rekonstruiert tr.button-row { display: none !important; }
   /* Leere Knopf-Container (z. B. Live ohne ?live) nicht als Lücke anzeigen */
   #live-view-container:empty, #rotate-players-container:empty, #csv-export-container:empty,
   #pdf-export-container:empty, #neu-start-container:empty, #zurueck-container:empty { display: none !important; }
@@ -689,7 +700,8 @@
     <span id="club-name" style="font-size:20px; font-weight:bold;">1. Sintherner Skatclub</span>
     <span id="rekonstruiert-badge" style="display:none; align-self:flex-start; padding:3px 10px; background:#6d4c41; color:#fff; font-size:12px; font-weight:bold; border-radius:12px; letter-spacing:1px;" title="Aus Live-Daten wiederhergestellt (Admin) – Speichern und Live-Übertragung sind gesperrt; „Neu“ beendet das">WIEDERHERGESTELLT – nur ansehen/drucken</span>
     <span id="test-mode-badge" style="display:none; align-self:flex-start; padding:3px 10px; background:#ff9800; color:#fff; font-size:12px; font-weight:bold; border-radius:12px; letter-spacing:1px;">TEST-MODUS</span>
-    <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+    <div id="rekonstruiert-info" style="align-items:center; gap:22px; flex-wrap:wrap; font-size:16px;"></div>
+    <div id="kopf-auswahl" style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
       <span>Spieler:</span>
       <div class="radio-group radio-group-compact">
         <label class="radio-label"><input type="radio" name="spieleranzahl" value="4" checked>4</label>
@@ -973,12 +985,24 @@ let fehltPromptShown = false;       // Prompt nur einmal pro Liste
 let spielerPreset = null;
 let spielerPresetDatum = null;
 let listeRekonstruiert = false;  // aus Live-Daten wiederhergestellt (Admin): kein Save, keine Live-Writes
+let rekonstruiertDatum = '';     // Datum (YYYY-MM-DD) der wiederhergestellten Liste
 // Save-Knopf und Hinweis je nach Merker ein-/ausblenden
 function aktualisiereRekonstruiertAnzeige() {
-  const c = document.getElementById('csv-export-container');
-  if (c) c.style.display = listeRekonstruiert ? 'none' : '';
+  document.documentElement.classList.toggle('rekonstruiert', listeRekonstruiert);
   const b = document.getElementById('rekonstruiert-badge');
   if (b) b.style.display = listeRekonstruiert ? '' : 'none';
+  const info = document.getElementById('rekonstruiert-info');
+  if (info) {
+    if (!listeRekonstruiert) { info.innerHTML = ''; return; }
+    const [y, m, d] = (rekonstruiertDatum || '').split('-');
+    const datumDe = y ? `${d}.${m}.${y}` : '–';
+    const serie = document.querySelector('input[name="serie"]:checked')?.value || '1';
+    const tisch = document.getElementById('tisch-auswahl')?.value || '1';
+    const karten = document.querySelector('input[name="karten"]:checked')?.value || spielDaten.length;
+    const feld = (t, v) => `<span>${t}: <b>${v}</b></span>`;
+    info.innerHTML = feld('Datum', datumDe) + feld('Serie', serie) + feld('Tisch', tisch) +
+      feld('Spieler', spielerAnzahl) + feld('Anzahl Spiele', karten);
+  }
 }   // Tag (YYYY-MM-DD), an dem das Preset gesetzt wurde – gilt nur an diesem Tag
 const heuteIsoLokal = () => new Date().toLocaleDateString('sv-SE');           // Wenn per Turnierauslosung gesetzt: nur diese 4 Namen im Dropdown
 
@@ -2273,7 +2297,9 @@ async function exportPDF() {
     const marginX = 8;
 
     // Kopfzeile
-    const datum = new Date().toLocaleDateString('de-DE');
+    const datum = (listeRekonstruiert && rekonstruiertDatum)
+      ? rekonstruiertDatum.split('-').reverse().join('.') + ' (wiederhergestellt)'
+      : new Date().toLocaleDateString('de-DE');
     const serie = document.querySelector('input[name="serie"]:checked')?.value || '1';
     const tisch = document.getElementById('tisch-auswahl')?.value || '1';
     const vereinName = document.getElementById('club-name')?.textContent || '';
@@ -2297,7 +2323,7 @@ async function exportPDF() {
     const imgX = marginX + (availW - imgW) / 2;
     pdf.addImage(imgData, 'JPEG', imgX, imgTopY, imgW, imgH, undefined, 'FAST');
 
-    const isoDatum = new Date().toISOString().split('T')[0];
+    const isoDatum = (listeRekonstruiert && rekonstruiertDatum) || new Date().toISOString().split('T')[0];
     pdf.save(`Skatliste_${isoDatum}_S${serie}_T${tisch}.pdf`);
   } catch (e) {
     console.error('PDF-Export fehlgeschlagen:', e);
@@ -2661,6 +2687,16 @@ function createZurueckButton() {
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   `;
   btn.addEventListener("click", () => {
+    if (listeRekonstruiert) {
+      // Wiederhergestellte Liste schließen: Ansicht leeren, nächste Liste startet normal
+      // und zurück zur Spielleiter-Seite (von dort wurde sie geöffnet)
+      if (!confirm('Wiederhergestellte Liste schließen?')) return;
+      listeRekonstruiert = false;
+      try { if (_storageOK()) localStorage.removeItem(STORE_KEY); } catch (e) {}
+      Promise.resolve().then(() => _idbDel(STORE_KEY)).catch(() => {})
+        .finally(() => { location.href = 'spielleiter.html?verein=sinthern'; });
+      return;
+    }
     try { saveState(); } catch (e) {}
     location.href = vereinsStartseite();
   });
@@ -3553,6 +3589,7 @@ function getCurrentSpielIndex() {
 }
 
 function openNewModal(spielIndex = null) {
+  if (listeRekonstruiert) return;   // wiederhergestellte Liste ist fest
   const dialog = document.getElementById("spiel-dialog");
   const spielNummerSpan = document.getElementById("spielnummer-display");
   const spieleAnz = document.querySelector('input[name="karten"]:checked')?.value || '0';
@@ -3742,7 +3779,7 @@ function _initialsForName(name) {
 
 async function saveSerieToFirestore() {
   if (listeRekonstruiert) {
-    alert('ℹ️ Diese Liste wurde aus Live-Daten wiederhergestellt und kann nicht gespeichert werden. „🗑 Neu“ startet eine normale Liste.');
+    alert('ℹ️ Diese Liste wurde aus Live-Daten wiederhergestellt und kann nicht gespeichert werden.');
     return;
   }
   if (!window.__firestore) {
@@ -4008,7 +4045,7 @@ async function liveListeWiederherstellen(docId) {
   spielerFehlt = [0, 0, 0, 0];
   fehltPromptShown = false;
   listeRekonstruiert = true;
-  aktualisiereRekonstruiertAnzeige();
+  rekonstruiertDatum = d.datum || '';
   spielDaten = [];
   buildTableStructure();
   updateKartenAuswahl();
@@ -4048,11 +4085,12 @@ async function liveListeWiederherstellen(docId) {
   generatePlayerNameButtons();
   updateCopyright();
   updateHeaderInfo();
+  aktualisiereRekonstruiertAnzeige();
   saveState();
   const dlg = document.getElementById('start-dialog');
   if (dlg && dlg.open) dlg.close();
   autoScalePage();
-  alert(`✅ Liste wiederhergestellt: ${indizes.length} Spiele.\n\nNur zum Ansehen und Drucken (PDF): Speichern und Live-Übertragung sind gesperrt, bis mit „🗑 Neu“ eine normale Liste beginnt.`);
+  alert(`✅ Liste wiederhergestellt: ${indizes.length} Spiele.\n\nDie Liste ist fest – nur ansehen und drucken (PDF). „⇐“ schließt sie wieder.`);
 }
 
 // Beim Reset / "Neue Liste": Live-Doc mit den AKTUELL im DOM gewählten
@@ -4468,7 +4506,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.39) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.40) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -4541,7 +4579,8 @@ function _buildState() {
     fehltPromptShown: fehltPromptShown,
     spielerPreset: spielerPreset,
     spielerPresetDatum: spielerPresetDatum,
-    listeRekonstruiert: listeRekonstruiert
+    listeRekonstruiert: listeRekonstruiert,
+    rekonstruiertDatum: rekonstruiertDatum
   };
 }
 
@@ -4585,6 +4624,7 @@ function _applyState(state) {
     ? state.spielerPreset.slice() : null;
   if (!spielerPreset) spielerPresetDatum = null;
   listeRekonstruiert = state.listeRekonstruiert === true;
+  rekonstruiertDatum = listeRekonstruiert ? (state.rekonstruiertDatum || '') : '';
 
   const serieRadio = document.querySelector(`input[name="serie"][value="${state.serie}"]`);
   if (serieRadio) serieRadio.checked = true;
@@ -5034,6 +5074,7 @@ document.getElementById('start-confirm-btn').addEventListener('click', () => {
     // dieser Tab vorher tatsächlich eigene Einträge hatte.
     if (hatteEintraege) clearLiveDoc();   // prüft den Merker sofort (synchron vor dem ersten await)
     listeRekonstruiert = false;   // normale Liste ab jetzt
+    rekonstruiertDatum = '';
     aktualisiereRekonstruiertAnzeige();
     buildTableStructure();
     updateKartenAuswahl();
@@ -5134,7 +5175,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.39)
+    © 2026 by Frank Bertram (V1.40)
     </div>
 </body>
 </html>
