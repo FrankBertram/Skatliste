@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <!-- Logo 1. Sintherner Skatclub: Raute aus vier Rauten mit Kreuz, Herz, Karo, Pik -->
+  <rect width="100" height="100" fill="#fff"/>
+  <!-- Rauten -->
+  <polygon points="50,0 75,25 50,50 25,25" fill="#231f20"/>
+  <polygon points="25,25 50,50 25,75 0,50" fill="#ed1c24"/>
+  <polygon points="75,25 100,50 75,75 50,50" fill="#ed1c24"/>
+  <polygon points="50,50 75,75 50,100 25,75" fill="#231f20"/>
+  <g fill="#fff">
+    <!-- Kreuz (oben): drei dicke Blätter, schmaler Stiel mit dreieckigem Fuß -->
+    <circle cx="50" cy="17.6" r="5.9"/>
+    <circle cx="44" cy="27" r="5.9"/>
+    <circle cx="56" cy="27" r="5.9"/>
+    <circle cx="50" cy="25" r="3.5"/>
+    <path d="M49.1 27 L50.9 27 L51.4 31 L53.2 35.8 L46.8 35.8 L48.6 31 Z"/>
+    <!-- Herz (links): breit und rund -->
+    <path d="M24.6 60.3 C20.5 56.4 12.7 51.6 12.7 45.2 C12.7 41.4 15.6 38.9 19 38.9 C21.6 38.9 23.6 40.4 24.6 42.6 C25.6 40.4 27.6 38.9 30.2 38.9 C33.6 38.9 36.5 41.4 36.5 45.2 C36.5 51.6 28.7 56.4 24.6 60.3 Z"/>
+    <!-- Karo (rechts): Seiten nach innen gewölbt -->
+    <path d="M75 38.4 Q77.6 45.6 83.3 49.8 Q77.6 54 75 61.1 Q72.4 54 66.7 49.8 Q72.4 45.6 75 38.4 Z"/>
+    <!-- Pik (unten): breit, schmaler Stiel mit dreieckigem Fuß -->
+    <path d="M50 63.5 C46.5 68 39.2 72.4 39.2 78 C39.2 81 41.6 83 44.4 83 C46.6 83 48.3 81.9 49.2 80.4 L48.4 84 L46.6 87.3 L53.4 87.3 L51.6 84 L50.8 80.4 C51.7 81.9 53.4 83 55.6 83 C58.4 83 60.8 81 60.8 78 C60.8 72.4 53.5 68 50 63.5 Z"/>
+  </g>
+</svg>
