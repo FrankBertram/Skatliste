@@ -1924,7 +1924,7 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.26)
+    © 2026 by Frank Bertram (V1.27)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
@@ -3106,19 +3106,23 @@ ${code ? `<div style="text-align:center;margin:12px 0;">
                 const dates = getSpieltagDates();
                 select.innerHTML = '';
                 dates.forEach((d, i) => {
+                    if (OEFFENTLICH && d.extra) return; // öffentlich: keine Sondertage (z. B. Stadtmeisterschaft)
                     const opt = document.createElement('option');
                     opt.value = String(i);
                     opt.textContent = d.extra ? `${d.name} — ${d.dd}.${d.mm}.${d.yyyy}` : `ST ${i + 1} — ${d.dd}.${d.mm}.${d.yyyy}` + (SPIELTAG_NAMEN[d.iso] ? ` – ${SPIELTAG_NAMEN[d.iso]}` : '');
                     select.appendChild(opt);
                 });
-                select.value = String(pickDefaultSpieltagIndex(dates));
+                if (!OEFFENTLICH) select.value = String(pickDefaultSpieltagIndex(dates));
                 const { allNames, members, playerData, datesWithData, eintritt } = await loadAllPlayersAndResults(dates);
                 tagesData = { dates, allNames, members, playerData, datesWithData, eintritt };
-                // Öffentliche Ansicht: mit dem letzten Spieltag mit Ergebnissen beginnen
+                // Öffentliche Ansicht: immer der zuletzt gespielte reguläre Spieltag (mit Ergebnissen)
                 if (OEFFENTLICH) {
-                    for (let i = Number(select.value); i >= 0; i--) {
-                        if (dates[i] && datesWithData.has(dates[i].iso)) { select.value = String(i); break; }
-                    }
+                    let letzter = -1;
+                    dates.forEach((d, i) => {
+                        if (!d.extra && datesWithData.has(d.iso) && (letzter < 0 || d.iso > dates[letzter].iso)) letzter = i;
+                    });
+                    if (letzter >= 0) select.value = String(letzter);
+                    else if (select.options.length) select.value = select.options[select.options.length - 1].value;
                 }
                 select.onchange = () => renderTageswertung();
                 renderTageswertung();
