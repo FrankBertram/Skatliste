@@ -1664,7 +1664,7 @@ function fillTable() {
   //   Sinthern: 1–3 je 0,50 €, ab 4 je 1,00 €
   //   4 Boore:  1–2 je 0,50 €, 3–4 je 1,00 €, 5–6 je 1,50 €, ab 7 je 2,00 €
   //   Alter Peter: jedes verlorene Spiel 1,00 €
-  //   Garching: 1–3 je 0,50 €, 4–6 je 1,00 €, ab 7 je 2,00 €
+  //   Garching: Eingepasst 0,00 €; Verlorene 1–3 je 0,50 €, 4–6 je 1,00 €, ab 7 je 2,00 €
   const vereinModeAbreiz = isVereinParamActive() ? getVereinsMode() : null;
   const abreizRow = document.getElementById("abreizgeld-row");
   const abreizRegelEl = document.getElementById("abreiz-regel");
@@ -1687,18 +1687,19 @@ function fillTable() {
     abreizRegelEl.innerHTML = istAlterPeter
       ? '(Eingepasst: je 0,50 €, Verlorene: je 1,00 €)'
       : istGarching
-      ? '(Eingepasst: je 0,50 €, Verlorene 1–3: je 0,50 €, 4–6: je 1,00 €, ab 7: je 2,00 €)'
+      ? '(Eingepasst: 0,00 €, Verlorene 1–3: je 0,50 €, 4–6: je 1,00 €, ab 7: je 2,00 €)'
       : istBoore
       ? '(Eingepasst: je 0,50 €, Verlorene 1–2: je 0,50 €, 3–4: je 1,00 €, 5–6: je 1,50 €, ab 7: je 2,00 €)'
       : '(Eingepasst: je 0,50 €, Verlorene 1–3: je 0,50 €, ab 4: je 1,00 €)';
   }
+  const eingepasstPreis = istGarching ? 0 : 0.5;   // Garching: Eingepasst kostet nichts
   const abreizBetraege = new Array(n).fill(0);
   let abreizSumme = 0;
   if (abreizRow) {
     abreizRow.style.display = "";
     for (let i = 0; i < n; i++) {
       const verl = verlustZaehler[i] || 0;
-      const betrag = eingepasstZaehler * 0.5 + berechneEigenVerlust(verl);
+      const betrag = eingepasstZaehler * eingepasstPreis + berechneEigenVerlust(verl);
       abreizBetraege[i] = betrag;
       abreizSumme += betrag;
       const cell = document.getElementById(`abreiz-p${i+1}`);
@@ -4506,7 +4507,7 @@ function updateCopyright() {
   const width = screen.width;
   const height = screen.height;
   document.getElementById('copyright').innerHTML =
-    `© 2026 by Frank Bertram (V1.40) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
+    `© 2026 by Frank Bertram (V1.41) | ${spielerAnzahl}er Liste | Width: ${width}px | Height: ${height}px | Scale: ${scale}`;
 }
 
 
@@ -5175,7 +5176,7 @@ window.addEventListener("load", async () => {
 
 </script>
     <div id="copyright" style="font-size:8px;">
-    © 2026 by Frank Bertram (V1.40)
+    © 2026 by Frank Bertram (V1.41)
     </div>
 </body>
 </html>
