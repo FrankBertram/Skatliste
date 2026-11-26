@@ -1124,7 +1124,7 @@ function _spieltageLiveCollection() { return isTestMode() ? 'spieltage_live_test
 
 // ── Spieltag-Freigabe durch den Spielleiter ───────────────────────
 // Der Spielleiter gibt im Spieltag-Programm den Abend frei (freigabe/{datum},
-// offen = true) und erhält einen 6-stelligen Code (freigabe_code/{datum}, nur
+// offen = true) und erhält einen 4-stelligen Code (freigabe_code/{datum}, nur
 // für Spielleiter lesbar). Jedes Tablet meldet sich anonym bei Firebase an und
 // trägt sich mit dem Code unter freigabe/{datum}/geraete/{uid} ein. Die
 // Firestore-Regeln lassen Schreiben in spieltage/spieltage_live nur für

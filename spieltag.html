@@ -1924,7 +1924,7 @@ function updateRanking() {
         };
     </script>
     <div class="footer">
-    © 2026 by Frank Bertram (V1.27)
+    © 2026 by Frank Bertram (V1.28)
     </div>
 
     <div id="gesamtlisteModal" style="display:none;position:fixed;inset:0;background:white;z-index:2000;overflow:auto;padding:20px;box-sizing:border-box;">
@@ -2288,7 +2288,7 @@ function updateRanking() {
         function neuerFreigabeCode() {
             const a = new Uint32Array(1);
             crypto.getRandomValues(a);
-            return String(a[0] % 1000000).padStart(6, '0');
+            return String(a[0] % 10000).padStart(4, '0');
         }
 
         window.showFreigabe = async function() {

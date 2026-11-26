@@ -523,7 +523,7 @@
   function neuerCode() {
     const a = new Uint32Array(1);
     crypto.getRandomValues(a);
-    return String(a[0] % 1000000).padStart(6, '0');
+    return String(a[0] % 10000).padStart(4, '0');
   }
 
   async function ladeFreigabe() {
